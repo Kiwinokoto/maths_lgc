@@ -346,15 +346,25 @@ def validate_payload(raw: object) -> dict:
         first_name = display_name
         last_name = ""
         birth_date = ""
-    teacher_id_raw = raw.get("teacher_id")
-    course_session_raw = raw.get("course_session")
-    if teacher_id_raw is not None or course_session_raw is not None:
-        teacher_id = clean_teacher_id(teacher_id_raw)
-        course_session = clean_course_session(course_session_raw)
+    class_session_id = str(raw.get("class_session_id", "") or "").strip()
+    if class_session_id:
+        class_session = get_class_session(class_session_id)
+        if not class_session:
+            raise ValueError("Séance de classe invalide ou inconnue.")
+        teacher_id = class_session["teacher_id"]
+        course_session = class_session["course_session"]
+        group_label = class_session["group_label"]
     else:
-        # Compatibilité avec les données créées avant l'ajout du contexte de classe.
-        teacher_id = ""
-        course_session = ""
+        # Compatibilité avec les données historiques créées avant les liens de séance.
+        teacher_id_raw = raw.get("teacher_id")
+        course_session_raw = raw.get("course_session")
+        if teacher_id_raw is not None or course_session_raw is not None:
+            teacher_id = clean_teacher_id(teacher_id_raw)
+            course_session = clean_course_session(course_session_raw)
+        else:
+            teacher_id = ""
+            course_session = ""
+        group_label = ""
 
     session_id = str(raw.get("session_id", "") or "")
     if session_id and not STUDENT_ID_RE.fullmatch(session_id):
@@ -440,10 +450,12 @@ def validate_payload(raw: object) -> dict:
         "first_name": first_name,
         "last_name": last_name,
         "birth_date": birth_date,
+        "class_session_id": class_session_id,
         "teacher_id": teacher_id,
         "teacher_label": TEACHERS.get(teacher_id, ""),
         "course_session": course_session,
         "course_session_label": COURSE_SESSIONS.get(course_session, ""),
+        "group_label": group_label,
         "session_id": session_id,
         "stage": stage,
         "diagnostic": diagnostic,
@@ -469,10 +481,12 @@ def submission_history() -> list[dict]:
                 "first_name": payload.get("first_name") or row["display_name"],
                 "last_name": payload.get("last_name") or "",
                 "birth_date": payload.get("birth_date") or "",
+                "class_session_id": payload.get("class_session_id") or "",
                 "teacher_id": payload.get("teacher_id") or "",
                 "teacher_label": payload.get("teacher_label") or TEACHERS.get(payload.get("teacher_id") or "", ""),
                 "course_session": payload.get("course_session") or "",
                 "course_session_label": payload.get("course_session_label") or COURSE_SESSIONS.get(payload.get("course_session") or "", ""),
+                "group_label": payload.get("group_label") or "",
                 "session_id": payload.get("session_id") or (payload.get("activity") or {}).get("session_id") or "",
                 "stage": row["stage"],
                 "created_at": row["created_at"],
@@ -498,9 +512,11 @@ def latest_students() -> list[dict]:
     for row in rows:
         payload = json.loads(row["payload_json"])
         sid = row["student_id"]
+        class_session_id = payload.get("class_session_id") or ""
         teacher_id = payload.get("teacher_id") or ""
         course_session = payload.get("course_session") or ""
-        cohort_student_key = f"{sid}|{teacher_id}|{course_session}"
+        cohort_key = class_session_id or f"legacy:{teacher_id}|{course_session}"
+        cohort_student_key = f"{sid}|{cohort_key}"
         activity = payload.get("activity") or {}
         event_session_id = payload.get("session_id") or activity.get("session_id") or ""
         timelines.setdefault(cohort_student_key, []).append(
@@ -520,10 +536,12 @@ def latest_students() -> list[dict]:
         merged = {
             **current,
             "student_id": sid,
+            "class_session_id": class_session_id,
             "teacher_id": teacher_id,
             "teacher_label": payload.get("teacher_label") or TEACHERS.get(teacher_id, ""),
             "course_session": course_session,
             "course_session_label": payload.get("course_session_label") or COURSE_SESSIONS.get(course_session, ""),
+            "group_label": payload.get("group_label") or current.get("group_label") or "",
             "display_name": row["display_name"],
             "first_name": payload.get("first_name") or current.get("first_name") or row["display_name"],
             "last_name": payload.get("last_name") or current.get("last_name") or "",

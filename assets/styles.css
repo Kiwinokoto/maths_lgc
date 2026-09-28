@@ -7,9 +7,9 @@
   --muted: #756f82;
   --line: #e7deea;
   --line-strong: #d9cee0;
-  --accent: #6e63ff;
-  --accent-strong: #5549e8;
-  --accent-bright: #9a7cff;
+  --accent: #6656f2;
+  --accent-strong: #5041d8;
+  --accent-bright: #9c84ff;
   --accent-soft: #eeeaff;
   --blue: #5f7cff;
   --blue-soft: #edf1ff;
@@ -148,7 +148,7 @@ a:focus-visible {
   font-size: 1.15rem;
   background:
     linear-gradient(145deg, rgba(255,255,255,.22), transparent 45%),
-    linear-gradient(135deg, var(--accent-bright), var(--accent-strong));
+    linear-gradient(135deg, var(--accent), var(--accent-strong));
   box-shadow: 0 10px 25px rgba(85, 73, 232, .24);
 }
 
@@ -660,12 +660,14 @@ p { line-height: 1.65; }
 }
 
 .question:nth-child(3n + 2) .question-index {
-  background: linear-gradient(135deg, #f19aba, var(--rose));
+  color: #54283f;
+  background: linear-gradient(135deg, #f7b2ca, #ed91b7);
   box-shadow: 0 6px 14px rgba(232,121,168,.18);
 }
 
 .question:nth-child(3n) .question-index {
-  background: linear-gradient(135deg, #ffc06f, #f39b42);
+  color: #5e3514;
+  background: linear-gradient(135deg, #ffd08f, #ffb45d);
   box-shadow: 0 6px 14px rgba(243,155,66,.18);
 }
 
@@ -987,6 +989,11 @@ p { line-height: 1.65; }
   }
 
   .teacher-chip { display: none; }
+
+  body::after,
+  .hero::after {
+    display: none;
+  }
 
   .prehome-grid,
   .challenge-board,

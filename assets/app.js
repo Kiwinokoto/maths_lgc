@@ -187,12 +187,42 @@
       const cls = i < current ? 'done' : i === current ? 'current' : '';
       return `<span class="progress-dot ${cls}"></span>`;
     }).join('');
+    const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : 'bienvenue');
+    const pageTitles = {
+      bienvenue: 'Maths LGC · CAP PSR',
+      parcours: 'Mon parcours',
+      intro: 'À quoi servent les maths ?',
+      diagnostic: 'Mon point de départ',
+      correction: 'Correction guidée',
+      defi: 'Défi PSR',
+      bilan: 'Mon bilan'
+    };
+    const pageTitle = pageTitles[route] || 'Maths LGC · CAP PSR';
+    const previewLinks = [
+      ['parcours', 'Parcours'],
+      ['intro', 'Pourquoi ?'],
+      ['diagnostic', 'Diagnostic'],
+      ['correction', 'Correction'],
+      ['defi', 'Défi'],
+      ['bilan', 'Bilan']
+    ];
 
     app.innerHTML = `
       <header class="topbar">
-        <div class="brand"><span class="brand-mark">∑</span><span>Maths LGC · CAP PSR</span></div>
-        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : 'Support de rentrée · V1'}</span>
+        <div class="brand">
+          <a class="brand-home" href="#parcours" aria-label="Retour au parcours" title="Retour au parcours"><span class="brand-mark">∑</span></a>
+          <span class="brand-title">${pageTitle}</span>
+        </div>
+        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : 'CAP PSR · séance 1'}</span>
       </header>
+      ${teacherPreview ? `
+        <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
+          <span class="teacher-preview-label">Inspection prof</span>
+          <div class="teacher-preview-links">
+            ${previewLinks.map(([target, label]) => `<a class="${route === target ? 'current' : ''}" href="#${target}">${label}</a>`).join('')}
+          </div>
+        </nav>
+      ` : ''}
       <div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>
       ${content}
     `;
@@ -291,14 +321,37 @@
       <section class="card hero">
         <p class="eyebrow">Étape 1 · À quoi ça sert ?</p>
         <h2>En PSR, les maths sont partout.</h2>
-        <p class="lead">Peser, adapter une recette, lire un horaire, contrôler une quantité, rendre la monnaie, comparer des ventes : le but n’est pas d’apprendre des calculs “dans le vide”, mais de savoir choisir le bon outil au bon moment.</p>
+        <p class="lead">Tu utilises les maths pour préparer, servir et vérifier ton travail. On commence avec des situations simples et concrètes. Les mots plus techniques viendront petit à petit.</p>
         <div class="lesson-grid">
-          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">kg</span><h3>Produire</h3><p>Quantités, unités, proportions, temps et contrôles.</p></article>
-          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">⏱</span><h3>Servir</h3><p>Horaires, monnaie, prix, estimations et organisation.</p></article>
-          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">%</span><h3>Comprendre des données</h3><p>Tableaux, moyennes, fréquences et graphiques.</p></article>
-          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">→</span><h3>Résoudre un problème</h3><p>Repérer les informations utiles, calculer, vérifier et expliquer.</p></article>
+          <article class="info-tile use-case">
+            <span class="use-case-icon" aria-hidden="true">⚖</span>
+            <h3>Préparer</h3>
+            <p>Peser. Compter les portions. Changer les quantités.</p>
+            <span class="use-case-example">Exemple : 10 portions → 25 portions</span>
+            <span class="course-word">Mot du métier : « produire »</span>
+          </article>
+          <article class="info-tile use-case">
+            <span class="use-case-icon" aria-hidden="true">🕒</span>
+            <h3>Servir</h3>
+            <p>Lire l’heure. Vérifier un prix. Rendre la monnaie.</p>
+            <span class="use-case-example">Exemple : 20 € − 13,70 €</span>
+          </article>
+          <article class="info-tile use-case">
+            <span class="use-case-icon" aria-hidden="true">▥</span>
+            <h3>Lire des informations</h3>
+            <p>Lire un tableau ou un graphique. Comparer des résultats.</p>
+            <span class="use-case-example">Exemple : quel jour a vendu le plus ?</span>
+            <span class="course-word">Plus tard : moyenne, fréquence…</span>
+          </article>
+          <article class="info-tile use-case">
+            <span class="use-case-icon" aria-hidden="true">?</span>
+            <h3>Trouver une solution</h3>
+            <p>Comprendre ce qu’on cherche. Choisir un calcul. Vérifier la réponse.</p>
+            <span class="use-case-example">Exemple : est-ce que ma réponse est possible ?</span>
+            <span class="course-word">On dira aussi : « résoudre un problème »</span>
+          </article>
         </div>
-        <div class="callout"><strong>Objectif sur les deux années :</strong> devenir autonome face à une situation professionnelle, et pas seulement reproduire une méthode.</div>
+        <div class="callout simple-goal"><strong>Pendant les deux années :</strong> comprendre une situation, choisir le bon outil et vérifier ta réponse. Petit à petit, tu feras cela seul.</div>
         <div class="actions">
           <button class="btn btn-primary" id="intro-done">Voir mon parcours</button>
           <button class="btn btn-secondary" id="back-welcome">Retour</button>

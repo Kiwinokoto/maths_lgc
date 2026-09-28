@@ -590,6 +590,7 @@
   async function renderCorrection() {
     if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
     const canShowDetailedCorrections = teacherPreview || await refreshCorrectionsState(true);
+    if (location.hash.replace('#', '') !== 'correction') return;
     const result = diagnosticResult();
     const summary = result.weakDomains.length
       ? `Tes prochains points de travail prioritaires : ${result.weakDomains.join(', ')}.`
@@ -728,6 +729,7 @@
   async function renderChallenge() {
     if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
     await refreshCorrectionsState(true);
+    if (location.hash.replace('#', '') !== 'defi') return;
     shell(`
       <section class="card hero">
         <p class="eyebrow">Étape 4 · Défi PSR</p>

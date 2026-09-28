@@ -76,8 +76,8 @@
   const modules = [
     { title: 'Durées', text: 'Lire une heure, calculer une durée et prévoir quand commencer.', route: 'durees', available: true },
     { title: 'Recettes & proportionnalité', text: 'Adapter une fiche technique quand le nombre de portions change.', route: 'proportion', available: true },
-    { title: 'Pourcentages', text: 'Réductions, évolutions, parts et repères.', available: false },
-    { title: 'Données & statistiques', text: 'Lire un tableau, une moyenne, une fréquence et un graphique.', available: false },
+    { title: 'Pourcentages', text: 'Comprendre « sur 100 », calculer une part et une réduction.', route: 'pourcentages', available: true },
+    { title: 'Données & statistiques', text: 'Lire un tableau ou un graphique, comparer et calculer une moyenne.', route: 'donnees', available: true },
     { title: 'Équations', text: 'Trouver une quantité inconnue dans une situation simple.', available: false },
     { title: 'Graphiques & fonctions', text: 'Relier une grandeur à une autre et lire une évolution.', available: false },
     { title: 'Prix & commerce', text: 'Coûts, prix, facture, réduction et marge simple.', available: false },
@@ -241,7 +241,9 @@
       defi: 'Défi PSR',
       bilan: 'Mon bilan',
       durees: 'Durées · heures et minutes',
-      proportion: 'Recettes · changer les quantités'
+      proportion: 'Recettes · changer les quantités',
+      pourcentages: 'Pourcentages · comprendre « sur 100 »',
+      donnees: 'Données · lire et comparer'
     };
     const pageTitle = pageTitles[route] || 'Maths LGC · CAP PSR';
     const previewLinks = [
@@ -252,7 +254,9 @@
       ['defi', 'Défi'],
       ['bilan', 'Bilan'],
       ['durees', 'Durées'],
-      ['proportion', 'Recettes']
+      ['proportion', 'Recettes'],
+      ['pourcentages', 'Pourcentages'],
+      ['donnees', 'Données']
     ];
 
     app.innerHTML = `
@@ -261,7 +265,7 @@
           <a class="brand-home" href="#parcours" aria-label="Retour au parcours" title="Retour au parcours"><span class="brand-mark">∑</span></a>
           <span class="brand-title">${pageTitle}</span>
         </div>
-        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (route === 'durees' || route === 'proportion' ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
+        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (['durees','proportion','pourcentages','donnees'].includes(route) ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
       </header>
       ${teacherPreview ? `
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
@@ -271,7 +275,7 @@
           </div>
         </nav>
       ` : ''}
-      ${route === 'durees' || route === 'proportion' ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
+      ${['durees','proportion','pourcentages','donnees'].includes(route) ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
       ${content}
     `;
   }
@@ -292,6 +296,8 @@
     if (route === 'bilan') return renderBilan();
     if (route === 'durees') return renderDurationModule();
     if (route === 'proportion') return renderProportionModule();
+    if (route === 'pourcentages') return renderPercentageModule();
+    if (route === 'donnees') return renderDataModule();
     return renderPath();
   }
 
@@ -918,7 +924,7 @@
           <div class="actions">
             <button class="btn btn-primary" id="check-proportion">Vérifier</button>
             ${teacherPreview ? '<button class="btn btn-secondary" id="show-proportion-answers">Voir les réponses</button>' : ''}
-            <button class="btn btn-secondary" data-go="durees">Revoir les durées</button>
+            <button class="btn btn-secondary" data-go="pourcentages">Module suivant · Pourcentages</button>
             <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
           </div>
         </section>

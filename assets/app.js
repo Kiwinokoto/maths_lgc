@@ -87,17 +87,56 @@
         introDone: false,
         diagnosticDone: false,
         challengeDone: false,
+        studentId: createStudentId(),
+        displayName: '',
+        serverSync: 'pending',
         answers: {},
         selfEval: {},
         ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
       };
     } catch {
-      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, answers: {}, selfEval: {} };
+      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', serverSync: 'pending', answers: {}, selfEval: {} };
     }
   }
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function createStudentId() {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') return globalThis.crypto.randomUUID();
+    return 'student_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  async function syncProgress(stage, challenge = null) {
+    if (!state.displayName || !state.studentId) return;
+    const result = state.diagnosticDone ? diagnosticResult() : null;
+    const payload = {
+      student_id: state.studentId,
+      display_name: state.displayName,
+      stage,
+      self_eval: state.selfEval,
+      diagnostic: result ? {
+        score: result.score,
+        details: result.details.map(d => ({ id: d.id, domain: d.domain, correct: d.correct, value: d.value })),
+        weak_domains: result.weakDomains,
+        strong_domains: result.strongDomains
+      } : null,
+      challenge
+    };
+    try {
+      const response = await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
+      if (!response.ok) throw new Error('sync failed');
+      state.serverSync = 'saved';
+    } catch {
+      state.serverSync = 'offline';
+    }
+    saveState();
   }
 
   function normaliseText(value) {
@@ -125,10 +164,13 @@
 
   function diagnosticResult() {
     const details = diagnostic.map(q => ({ ...q, value: state.answers[q.id] ?? '', correct: isCorrect(q, state.answers[q.id]) }));
+    const weakDomains = [...new Set(details.filter(d => !d.correct).map(d => d.domain))];
+    const strongDomains = [...new Set(details.filter(d => d.correct && !weakDomains.includes(d.domain)).map(d => d.domain))];
     return {
       details,
       score: details.filter(d => d.correct).length,
-      weakDomains: [...new Set(details.filter(d => !d.correct).map(d => d.domain))]
+      weakDomains,
+      strongDomains
     };
   }
 
@@ -171,10 +213,18 @@
           <p class="eyebrow">Bienvenue en CAP PSR</p>
           <h1>Les maths qui servent vraiment.</h1>
           <p class="lead">Aujourd’hui, pas de note et pas de piège. On va repérer ce que tu sais déjà faire, voir à quoi servent les maths en PSR, puis relever un premier défi de restauration.</p>
+          <label class="info-tile" style="display:block;max-width:34rem">
+            <strong>Ton prénom ou le code donné par le professeur</strong>
+            <div class="answer-row" style="margin-top:10px">
+              <input id="display-name" type="text" maxlength="40" autocomplete="given-name" value="${escapeHtml(state.displayName || '')}" placeholder="Ex. Lina ou PSR-07" />
+            </div>
+            <small>Pas besoin de nom de famille.</small>
+          </label>
+          <p class="form-error hidden" id="name-error">Indique un prénom ou un code avant de commencer.</p>
           <div class="actions">
             <button class="btn btn-primary" id="enter">Commencer</button>
           </div>
-          <p class="footer-note">La progression reste enregistrée uniquement sur cet appareil.</p>
+          <p class="footer-note">Ta progression reste sur cet appareil et peut être envoyée au tableau de suivi de la classe pour t’aider à choisir la suite.</p>
         </div>
         <div class="qr-placeholder" aria-label="Emplacement du futur QR code">
           <div class="qr-grid" aria-hidden="true"></div>
@@ -183,6 +233,13 @@
       </section>
     `, 0);
     document.querySelector('#enter').addEventListener('click', () => {
+      const name = document.querySelector('#display-name').value.trim();
+      if (!name) {
+        document.querySelector('#name-error').classList.remove('hidden');
+        return;
+      }
+      state.displayName = name.slice(0, 40);
+      state.studentId = state.studentId || createStudentId();
       state.entered = true;
       saveState();
       go('intro');
@@ -202,12 +259,44 @@
           <article class="info-tile"><h3>Résoudre un problème</h3><p>Repérer les informations utiles, calculer, vérifier et expliquer.</p></article>
         </div>
         <div class="callout"><strong>Objectif sur les deux années :</strong> devenir autonome face à une situation professionnelle, et pas seulement reproduire une méthode.</div>
+        <div class="callout">
+          <h3>Un même nombre, plusieurs écritures</h3>
+          <p>Une moitié, deux quarts et 50 % représentent exactement la même quantité.</p>
+          <div id="fraction-parts" style="display:grid;gap:6px;height:76px;margin:16px 0"></div>
+          <div class="actions" style="margin-top:0">
+            <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
+            <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
+            <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
+          </div>
+          <p id="fraction-label" style="font-weight:850;margin-bottom:0"></p>
+        </div>
         <div class="actions">
           <button class="btn btn-primary" id="intro-done">Voir mon parcours</button>
           <button class="btn btn-secondary" id="back-welcome">Retour</button>
         </div>
       </section>
     `, 1);
+    const showFraction = (numerator, denominator) => {
+      const parts = document.querySelector('#fraction-parts');
+      parts.style.gridTemplateColumns = `repeat(${denominator}, minmax(0, 1fr))`;
+      parts.replaceChildren();
+      for (let i = 0; i < denominator; i += 1) {
+        const part = document.createElement('span');
+        part.style.borderRadius = '12px';
+        part.style.border = '1px solid var(--line)';
+        part.style.background = i < numerator ? 'var(--accent)' : 'var(--surface)';
+        parts.append(part);
+      }
+      const percent = (numerator / denominator) * 100;
+      const equivalent = numerator / denominator === 0.5 ? ' = 1/2 = 2/4' : '';
+      document.querySelector('#fraction-label').textContent = `${numerator}/${denominator}${equivalent} = ${formatNumber(percent)} %`;
+    };
+    document.querySelectorAll('[data-fraction]').forEach(button => button.addEventListener('click', () => {
+      const [n, d] = button.dataset.fraction.split('/').map(Number);
+      showFraction(n, d);
+    }));
+    showFraction(1, 2);
+
     document.querySelector('#intro-done').addEventListener('click', () => {
       state.introDone = true;
       saveState();
@@ -293,6 +382,7 @@
       state.answers = answers;
       state.diagnosticDone = true;
       saveState();
+      syncProgress('diagnostic');
       go('correction');
     });
     document.querySelector('#diag-back').addEventListener('click', () => go('parcours'));
@@ -414,6 +504,13 @@
         feedback.innerHTML += '<div class="actions"><button class="btn btn-primary" id="to-summary">Voir mon bilan</button></div>';
         document.querySelector('#to-summary').addEventListener('click', () => go('bilan'));
       }
+      syncProgress('challenge', {
+        score: count,
+        portions,
+        factor_ok: factorOk,
+        time_ok: timeOk,
+        revenue_ok: revenueOk
+      });
     });
     document.querySelector('#challenge-back').addEventListener('click', () => go('parcours'));
   }

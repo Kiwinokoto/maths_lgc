@@ -780,7 +780,7 @@
       const feedback = document.querySelector('#duration-feedback');
       const count = checks.filter(Boolean).length;
       feedback.classList.remove('hidden');
-      feedback.innerHTML = `<strong>${count}/4 situations réussies.</strong>
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
         <div class="feedback-lines">
           <span>${checks[0] ? '✓' : '↻'} 9 h 35 + 50 min = <b>10 h 25</b></span>
           <span>${checks[1] ? '✓' : '↻'} 11 h 45 − 35 min = <b>11 h 10</b></span>
@@ -902,7 +902,7 @@
       const feedback = document.querySelector('#proportion-feedback');
       const count = checks.filter(Boolean).length;
       feedback.classList.remove('hidden');
-      feedback.innerHTML = `<strong>${count}/4 situations réussies.</strong>
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
         <div class="feedback-lines">
           <span>${checks[0] ? '✓' : '↻'} 15 ÷ 5 = 3, donc 400 × 3 = <b>1 200 g</b></span>
           <span>${checks[1] ? '✓' : '↻'} 20 ÷ 8 = 2,5, donc 2 × 2,5 = <b>5 L</b></span>

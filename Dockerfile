@@ -8,6 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY --chown=65532:65532 server.py index.html teacher.html ./
 COPY --chown=65532:65532 assets ./assets
 

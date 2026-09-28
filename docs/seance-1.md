@@ -35,7 +35,7 @@ Pour la première prise en main, privilégier des consignes courtes et des mots 
 
 ## Inscription et gestion du groupe
 
-Avant le cours, le professeur ouvre `/teacher`, choisit son nom (**Monsieur Kevin**, **Monsieur Waren** ou **Madame Fadhila**), conserve **Séance 1** et renseigne librement le groupe (par exemple « PSR 1 »). Le serveur crée alors une occurrence de séance avec :
+Avant le cours, le professeur ouvre `/teacher`, choisit son nom (**Monsieur Kevin**, **Monsieur Waren** ou **Madame Fadhila**), garde ou modifie le **numéro de séance** prérempli à 1, peut ajouter un **titre facultatif** (par exemple « Proportionnalité »), puis renseigne librement le groupe (par exemple « PSR 1 »). Le serveur crée alors une occurrence de séance avec :
 
 - un QR et un lien élève uniques ;
 - un code de séance de secours ;

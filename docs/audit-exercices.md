@@ -93,6 +93,7 @@ Le taux de taxe est toujours fourni dans l'énoncé ; aucun taux légal n'est de
 ## Politique de corrigé
 
 - La **vue enseignant** affiche toujours les solutions détaillées.
+- La vue `?preview=teacher` nécessite désormais une session enseignant authentifiée ouverte via `/teacher` ; le paramètre d'URL seul ne suffit plus.
 - Côté élève, les solutions détaillées du **diagnostic** et du **défi** sont verrouillées par défaut.
 - L'enseignant peut les débloquer globalement depuis `/teacher`.
 - Le verrou est persistant dans `data/class_state.json`, sans migration SQLite.

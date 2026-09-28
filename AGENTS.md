@@ -64,12 +64,14 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Passe UI V2 : vert retiré de la couleur d'action ; violet/indigo principal, accents chauds manga discrets, vert menthe vif/tendre conservé seulement pour les réussites/étapes terminées.
 - Passe accessibilité séance 1 : fond moins rosé, en-tête contextuel avec ∑ vers le parcours, intro simplifiée avec exemples concrets et vocabulaire technique introduit progressivement.
 - Modules V1 construits : `#durees` et `#proportion`, accessibles aux élèves après la séance 1 et toujours accessibles en prévisualisation prof. Feedback local uniquement, non synchronisé au serveur.
+- Timing V1 : jalons serveur légers (début de session, première ouverture de page, validations d'activités) réutilisant la table `submissions`, sans migration. Les temps calculés sont des indices de rythme uniquement, jamais une mesure de niveau.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes
-1. Tester la séance 1 et les deux premiers modules sur téléphone en conditions réelles.
-2. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs et réponses « Je ne sais pas ».
+1. Tester la séance 1, les deux premiers modules et les temps indicatifs sur téléphone en conditions réelles.
+2. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs, réponses « Je ne sais pas » et écarts de rythme sans interpréter les durées isolément.
 3. Ajuster la remédiation après la première classe réelle.
 4. Construire ensuite Pourcentages puis Données & statistiques avec la même règle « voir/comprendre avant de nommer ».
 5. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
-6. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.
+6. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
+7. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.

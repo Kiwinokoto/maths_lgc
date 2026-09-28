@@ -6,6 +6,9 @@
 
   const teacherPreview = new URLSearchParams(location.search).get('preview') === 'teacher';
   const state = loadState();
+  const activitySessionId = createStudentId();
+  const routesSeenThisSession = new Set();
+  let activitySessionStarted = false;
 
   const diagnostic = [
     {
@@ -121,6 +124,7 @@
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
+      session_id: activitySessionId,
       stage,
       self_eval: state.selfEval,
       diagnostic: result ? {
@@ -144,6 +148,46 @@
       state.serverSync = 'offline';
     }
     saveState();
+  }
+
+  async function syncActivity(event, route) {
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    const payload = {
+      student_id: state.studentId,
+      display_name: state.firstName,
+      first_name: state.firstName,
+      last_name: state.lastName,
+      birth_date: state.birthDate,
+      stage: 'activity',
+      activity: {
+        event,
+        route,
+        session_id: activitySessionId
+      }
+    };
+    try {
+      const response = await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
+      if (!response.ok) throw new Error('activity sync failed');
+    } catch {
+      // Le suivi temporel est indicatif : il ne doit jamais bloquer le cours.
+    }
+  }
+
+  function observeRoute(route) {
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (!activitySessionStarted) {
+      activitySessionStarted = true;
+      syncActivity('session_started', route);
+    }
+    if (!routesSeenThisSession.has(route)) {
+      routesSeenThisSession.add(route);
+      syncActivity('route_opened', route);
+    }
   }
 
   function normaliseText(value) {
@@ -239,6 +283,7 @@
       location.hash = 'bienvenue';
       return;
     }
+    if (!teacherPreview && hasIdentity && route !== 'bienvenue') observeRoute(route);
     if (route === 'bienvenue') return renderPrehome();
     if (route === 'intro') return renderIntro();
     if (route === 'diagnostic') return renderDiagnostic();
@@ -789,7 +834,10 @@
         </div>`;
     };
 
-    document.querySelector('#check-duration').addEventListener('click', showDurationFeedback);
+    document.querySelector('#check-duration').addEventListener('click', () => {
+      showDurationFeedback();
+      syncActivity('activity_checked', 'durees');
+    });
     document.querySelector('#show-duration-answers')?.addEventListener('click', () => {
       document.querySelector('#duration-q1').value = '10 h 25';
       document.querySelector('#duration-q2').value = '11 h 10';
@@ -911,7 +959,10 @@
         </div>`;
     };
 
-    document.querySelector('#check-proportion').addEventListener('click', showProportionFeedback);
+    document.querySelector('#check-proportion').addEventListener('click', () => {
+      showProportionFeedback();
+      syncActivity('activity_checked', 'proportion');
+    });
     document.querySelector('#show-proportion-answers')?.addEventListener('click', () => {
       document.querySelector('#prop-q1').value = '1200';
       document.querySelector('#prop-q2').value = '5';

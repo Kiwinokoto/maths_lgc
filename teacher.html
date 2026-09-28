@@ -11,11 +11,11 @@
     .teacher-login { max-width:620px; margin:8vh auto 0; }
     .teacher-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
     .teacher-input { min-height:46px; width:min(100%,420px); border:1px solid #cfc7ba; border-radius:12px; padding:.7rem .85rem; background:#fff; }
-    .teacher-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .teacher-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .teacher-stat { padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.7); }
     .teacher-stat strong { display:block; font-size:2rem; margin-top:4px; }
     .teacher-table-wrap { overflow:auto; border:1px solid var(--line); border-radius:16px; background:#fff; }
-    .teacher-table { width:100%; border-collapse:collapse; min-width:940px; }
+    .teacher-table { width:100%; border-collapse:collapse; min-width:1120px; }
     .teacher-table th,.teacher-table td { padding:12px 14px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
     .teacher-table th { position:sticky; top:0; background:#fbfaf7; z-index:1; }
     .teacher-inspect-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:16px; }
@@ -24,6 +24,8 @@
     .teacher-inspect-link small { display:block; margin-top:5px; color:var(--muted); font-weight:650; line-height:1.35; }
     .teacher-table tr:last-child td { border-bottom:0; }
     .teacher-muted { color:var(--muted); font-size:.86rem; }
+    .teacher-timing-note { margin:12px 0 20px; padding:13px 15px; border:1px solid #eadcc5; border-radius:13px; background:#fff7e9; color:#75542f; font-size:.84rem; line-height:1.5; }
+    .timing-cell { min-width:165px; white-space:pre-line; }
     .teacher-errors { display:flex; flex-wrap:wrap; gap:8px; }
     .teacher-status { min-height:1.4em; color:var(--muted); }
     @media (max-width:760px) { .teacher-stats,.teacher-inspect-grid { grid-template-columns:1fr; } }
@@ -68,8 +70,10 @@
       <div class="teacher-stats">
         <div class="teacher-stat"><span>Élèves vus</span><strong id="student-count">0</strong></div>
         <div class="teacher-stat"><span>Moyenne diagnostic</span><strong id="diagnostic-average">—</strong></div>
+        <div class="teacher-stat"><span>Temps médian diagnostic</span><strong id="diagnostic-median">—</strong></div>
         <div class="teacher-stat"><span>Défis terminés</span><strong id="challenge-complete">0</strong></div>
       </div>
+      <div class="teacher-timing-note"><strong>Temps indicatifs :</strong> ils donnent des indices de rythme, pas une mesure du niveau. Une explication collective, une pause, une aide du professeur ou un onglet laissé ouvert peuvent allonger fortement ces durées.</div>
 
       <section class="card hero">
         <p class="eyebrow">Inspection de la séance 1</p>
@@ -104,6 +108,7 @@
               <th>Forces</th>
               <th>À travailler</th>
               <th>Commencer par</th>
+              <th>Temps indicatifs</th>
               <th>Dernière activité</th>
             </tr>
           </thead>
@@ -152,6 +157,26 @@
     }
   }
 
+  function formatDuration(seconds) {
+    if (!Number.isFinite(seconds)) return '—';
+    const total = Math.max(0, Math.round(seconds));
+    const minutes = Math.floor(total / 60);
+    const rest = total % 60;
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return hours + ' h ' + String(mins).padStart(2, '0');
+    }
+    return minutes ? minutes + ' min ' + (rest ? String(rest).padStart(2, '0') + ' s' : '') : rest + ' s';
+  }
+
+  function median(values) {
+    const sorted = values.filter(Number.isFinite).slice().sort((a,b) => a-b);
+    if (!sorted.length) return null;
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
   function render(payload) {
     const students = payload.students || [];
     document.querySelector('#student-count').textContent = students.length;
@@ -159,6 +184,8 @@
     document.querySelector('#diagnostic-average').textContent = scores.length
       ? (scores.reduce((a,b) => a+b, 0) / scores.length).toFixed(1).replace('.', ',') + '/10'
       : '—';
+    const diagnosticTimes = students.map(s => (s.timing || {}).diagnostic_seconds).filter(Number.isFinite);
+    document.querySelector('#diagnostic-median').textContent = formatDuration(median(diagnosticTimes));
     document.querySelector('#challenge-complete').textContent = students.filter(s => (s.challenge || {}).score === 3).length;
     document.querySelector('#generated-at').textContent = payload.generated_at
       ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleString('fr-FR')
@@ -188,6 +215,11 @@
     students.forEach(student => {
       const row = document.createElement('tr');
       const fullName = [student.last_name, student.first_name || student.display_name].filter(Boolean).join(' ');
+      const timing = student.timing || {};
+      const timingLines = [];
+      if (Number.isFinite(timing.diagnostic_seconds)) timingLines.push('Diagnostic : ' + formatDuration(timing.diagnostic_seconds));
+      if (Number.isFinite(timing.challenge_seconds)) timingLines.push('Défi, 1er rendu : ' + formatDuration(timing.challenge_seconds));
+      if (Number.isFinite(timing.session_to_bilan_seconds)) timingLines.push('Début → bilan : ' + formatDuration(timing.session_to_bilan_seconds));
       const values = [
         fullName || student.display_name || '—',
         student.diagnostic ? student.diagnostic.score + '/10' : '—',
@@ -195,11 +227,13 @@
         (student.strengths || []).join(', ') || '—',
         (student.weaknesses || []).join(', ') || '—',
         student.recommended_start || '—',
+        timingLines.join('\n') || '—',
         student.updated_at ? new Date(student.updated_at).toLocaleString('fr-FR') : '—'
       ];
       values.forEach((value, index) => {
         const cell = document.createElement('td');
         cell.textContent = value;
+        if (index === 6) cell.className = 'timing-cell';
         if (index === 0) {
           const meta = document.createElement('div');
           meta.className = 'teacher-muted';

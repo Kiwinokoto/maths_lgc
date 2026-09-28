@@ -1,7 +1,9 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'maths-lgc-psr-v1';
+  const BASE_STORAGE_KEY = 'maths-lgc-psr-v1';
+  const requestedClassSessionId = new URLSearchParams(location.search).get('session') || '';
+  const STORAGE_KEY = requestedClassSessionId ? BASE_STORAGE_KEY + ':' + requestedClassSessionId : BASE_STORAGE_KEY;
   const app = document.querySelector('#app');
 
   const teacherPreviewRequested = new URLSearchParams(location.search).get('preview') === 'teacher';
@@ -12,6 +14,8 @@
   let activitySessionStarted = false;
   let correctionsUnlocked = false;
   let correctionsStateLoaded = false;
+  let classContext = null;
+  let classContextError = '';
 
   async function refreshCorrectionsState(force = false) {
     if (teacherPreview) {
@@ -20,10 +24,16 @@
       return true;
     }
     if (correctionsStateLoaded && !force) return correctionsUnlocked;
+    if (!state.classSessionId) {
+      correctionsUnlocked = false;
+      correctionsStateLoaded = true;
+      return false;
+    }
     try {
-      const response = await fetch('/api/class-state', { cache: 'no-store' });
+      const response = await fetch('/api/session?id=' + encodeURIComponent(state.classSessionId), { cache: 'no-store' });
       if (!response.ok) throw new Error('class state unavailable');
       const payload = await response.json();
+      classContext = payload;
       correctionsUnlocked = Boolean(payload.corrections_unlocked);
     } catch {
       correctionsUnlocked = false;
@@ -118,13 +128,14 @@
         firstName: '',
         lastName: '',
         birthDate: '',
+        classSessionId: requestedClassSessionId,
         serverSync: 'pending',
         answers: {},
         selfEval: {},
         ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
       };
     } catch {
-      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', serverSync: 'pending', answers: {}, selfEval: {} };
+      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', classSessionId: requestedClassSessionId, serverSync: 'pending', answers: {}, selfEval: {} };
     }
   }
 
@@ -138,7 +149,7 @@
   }
 
   async function syncProgress(stage, challenge = null) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     const result = state.diagnosticDone ? diagnosticResult() : null;
     const payload = {
       student_id: state.studentId,
@@ -146,6 +157,7 @@
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
+      class_session_id: state.classSessionId,
       session_id: activitySessionId,
       stage,
       self_eval: state.selfEval,
@@ -173,13 +185,14 @@
   }
 
   async function syncActivity(event, route) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     const payload = {
       student_id: state.studentId,
       display_name: state.firstName,
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
+      class_session_id: state.classSessionId,
       stage: 'activity',
       activity: {
         event,
@@ -201,7 +214,7 @@
   }
 
   function observeRoute(route) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     if (!activitySessionStarted) {
       activitySessionStarted = true;
       syncActivity('session_started', route);
@@ -312,7 +325,7 @@
   }
 
   function render() {
-    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate);
+    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate && state.classSessionId);
     const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered && hasIdentity ? 'parcours' : 'bienvenue'));
     if (!teacherPreview && !hasIdentity && route !== 'bienvenue') {
       location.hash = 'bienvenue';
@@ -341,12 +354,47 @@
   }
 
   function renderPrehome() {
+    if (!teacherPreview && !classContext) {
+      shell(`
+        <section class="card hero">
+          <p class="eyebrow">CAP PSR · Maths LGC</p>
+          <h1>Rejoins la séance de ton professeur.</h1>
+          <p class="lead">Scanne le QR code affiché par ton professeur ou ouvre le lien qu’il t’a envoyé. Tu arriveras automatiquement dans le bon groupe.</p>
+          ${classContextError ? `<div class="callout"><strong>Ce lien ne fonctionne pas :</strong> ${escapeHtml(classContextError)}</div>` : ''}
+          <div class="identity-card">
+            <div class="identity-heading">
+              <div>
+                <strong>Pas de QR ?</strong>
+                <p>Entre le code de séance donné par ton professeur.</p>
+              </div>
+            </div>
+            <div class="answer-row">
+              <input id="session-code" type="text" maxlength="64" autocomplete="off" placeholder="Code de séance" />
+              <button class="btn btn-primary" id="join-session">Rejoindre</button>
+            </div>
+          </div>
+          <p class="footer-note">Tu n’as pas à choisir ton professeur ni ton groupe : le lien de séance s’en charge.</p>
+        </section>
+      `, 0);
+      const join = () => {
+        const code = document.querySelector('#session-code').value.trim();
+        if (!code) return;
+        location.assign('/?session=' + encodeURIComponent(code));
+      };
+      document.querySelector('#join-session').addEventListener('click', join);
+      document.querySelector('#session-code').addEventListener('keydown', event => {
+        if (event.key === 'Enter') join();
+      });
+      return;
+    }
+
     shell(`
       <section class="card hero prehome-grid">
         <div>
-          <p class="eyebrow">Bienvenue en CAP PSR</p>
+          <p class="eyebrow">${teacherPreview ? 'Bienvenue en CAP PSR' : escapeHtml(classContext.course_session_label + ' · ' + classContext.group_label)}</p>
           <h1>Les maths qui servent vraiment.</h1>
           <p class="lead">Aujourd’hui, pas de note et pas de piège. On va repérer ce que tu sais déjà faire, voir à quoi servent les maths en PSR, puis relever un premier défi de restauration.</p>
+          ${teacherPreview ? '' : `<div class="callout"><strong>Ta séance :</strong> ${escapeHtml(classContext.teacher_label)} · ${escapeHtml(classContext.course_session_label)} · groupe <b>${escapeHtml(classContext.group_label)}</b>.</div>`}
           <div class="identity-card">
             <div class="identity-heading">
               <div>
@@ -369,7 +417,7 @@
                 <input id="birth-date" type="date" autocomplete="bday" min="1940-01-01" max="${new Date().toISOString().slice(0, 10)}" value="${escapeHtml(state.birthDate || '')}" />
               </label>
             </div>
-            <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail n’est demandée.</small>
+            <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail ni adresse postale n’est demandée.</small>
           </div>
           <p class="form-error hidden" id="name-error">Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.</p>
           <div class="actions">
@@ -377,9 +425,9 @@
           </div>
           <p class="footer-note">Ta progression reste sur cet appareil et peut être envoyée au tableau de suivi de la classe pour t’aider à choisir la suite.</p>
         </div>
-        <div class="qr-placeholder" aria-label="QR code vers maths.lagrandeclasse.fr">
-          <img class="qr-image" src="assets/qr-maths-lgc.svg" alt="QR code vers https://maths.lagrandeclasse.fr/" />
-          <div class="qr-label">Scanne pour ouvrir le cours<br><small>maths.lagrandeclasse.fr</small></div>
+        <div class="qr-placeholder">
+          <div class="brand-mark" aria-hidden="true">∑</div>
+          <div class="qr-label">${teacherPreview ? 'Prévisualisation enseignant' : escapeHtml(classContext.teacher_label)}<br><small>${teacherPreview ? 'navigation libre' : escapeHtml(classContext.group_label)}</small></div>
         </div>
       </section>
     `, 0);
@@ -400,6 +448,9 @@
       state.firstName = firstName.slice(0, 40);
       state.lastName = lastName.slice(0, 60);
       state.birthDate = birthDate;
+      state.classSessionId = classContext.class_session_id;
+      correctionsUnlocked = false;
+      correctionsStateLoaded = false;
       state.displayName = state.firstName;
       state.studentId = state.studentId || createStudentId();
       state.entered = true;
@@ -1993,7 +2044,7 @@
       const teacherToken = sessionStorage.getItem('maths-lgc-teacher-token') || '';
       if (teacherToken) {
         try {
-          const response = await fetch('/api/teacher/summary', {
+          const response = await fetch('/api/teacher/status', {
             headers: { Authorization: 'Bearer ' + teacherToken },
             cache: 'no-store'
           });
@@ -2012,6 +2063,17 @@
           </section>
         `;
         return;
+      }
+    } else if (requestedClassSessionId) {
+      try {
+        const response = await fetch('/api/session?id=' + encodeURIComponent(requestedClassSessionId), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Séance introuvable ou expirée.');
+        classContext = await response.json();
+        state.classSessionId = classContext.class_session_id;
+        saveState();
+      } catch (error) {
+        classContext = null;
+        classContextError = error.message || 'Séance introuvable.';
       }
     }
     window.addEventListener('hashchange', render);

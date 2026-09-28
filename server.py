@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import mimetypes
@@ -14,20 +15,35 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from threading import Lock
+from urllib.parse import parse_qs, urlencode, urlparse
+
+import qrcode
+from qrcode.image.svg import SvgPathImage
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("MATHS_DATA_DIR", ROOT / "data")).resolve()
 DB_PATH = DATA_DIR / "maths_lgc.sqlite3"
 CLASS_STATE_PATH = DATA_DIR / "class_state.json"
+SESSIONS_PATH = DATA_DIR / "sessions.json"
 HOST = os.environ.get("MATHS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("MATHS_PORT", "8080"))
 TEACHER_TOKEN = os.environ.get("MATHS_TEACHER_TOKEN", "")
+PUBLIC_BASE_URL = os.environ.get("MATHS_PUBLIC_URL", "https://maths.lagrandeclasse.fr").rstrip("/")
 MAX_BODY = 64 * 1024
 STUDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+CLASS_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 VALID_STAGES = {"diagnostic", "challenge", "bilan", "activity"}
 ACTIVITY_EVENTS = {"session_started", "route_opened", "activity_checked"}
 ACTIVITY_ROUTES = {"parcours", "intro", "diagnostic", "correction", "defi", "bilan", "durees", "proportion", "pourcentages", "donnees", "equations", "fonctions", "commerce", "probabilites"}
+TEACHERS = {
+    "kevin": "Monsieur Kevin",
+    "waren": "Monsieur Waren",
+    "fadhila": "Madame Fadhila",
+}
+COURSE_SESSIONS = {"seance-1": "Séance 1"}
+CLASS_STATE_LOCK = Lock()
+SESSIONS_LOCK = Lock()
 
 
 def utc_now() -> str:
@@ -71,33 +87,77 @@ def init_db() -> None:
         db.execute("CREATE INDEX IF NOT EXISTS idx_submissions_student ON submissions(student_id, id)")
 
 
-def read_class_state() -> dict:
-    default = {"corrections_unlocked": False, "updated_at": None}
+def _read_class_state_file() -> dict:
     try:
         raw = json.loads(CLASS_STATE_PATH.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return default
-    if not isinstance(raw, dict):
-        return default
-    return {
-        "corrections_unlocked": bool(raw.get("corrections_unlocked", False)),
-        "updated_at": raw.get("updated_at"),
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _cohort_key(teacher_id: str, course_session: str) -> str:
+    return f"{teacher_id}|{course_session}"
+
+
+def read_class_state(teacher_id: str = "", course_session: str = "") -> dict:
+    default = {
+        "teacher_id": teacher_id,
+        "teacher_label": TEACHERS.get(teacher_id, ""),
+        "course_session": course_session,
+        "course_session_label": COURSE_SESSIONS.get(course_session, ""),
+        "corrections_unlocked": False,
+        "updated_at": None,
     }
+    with CLASS_STATE_LOCK:
+        raw = _read_class_state_file()
+    if teacher_id and course_session:
+        cohorts = raw.get("cohorts")
+        if not isinstance(cohorts, dict):
+            return default
+        state = cohorts.get(_cohort_key(teacher_id, course_session))
+        if not isinstance(state, dict):
+            return default
+        return {
+            **default,
+            "corrections_unlocked": bool(state.get("corrections_unlocked", False)),
+            "updated_at": state.get("updated_at"),
+        }
+    # Compatibilité avec l'ancien verrou global, uniquement pour les anciens clients.
+    if "corrections_unlocked" in raw:
+        return {
+            **default,
+            "corrections_unlocked": bool(raw.get("corrections_unlocked", False)),
+            "updated_at": raw.get("updated_at"),
+        }
+    return default
 
 
-def write_class_state(*, corrections_unlocked: bool) -> dict:
+def write_class_state(*, teacher_id: str, course_session: str, corrections_unlocked: bool) -> dict:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     state = {
         "corrections_unlocked": bool(corrections_unlocked),
         "updated_at": utc_now(),
     }
-    temporary = CLASS_STATE_PATH.with_suffix(".tmp")
-    temporary.write_text(
-        json.dumps(state, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
-    )
-    temporary.replace(CLASS_STATE_PATH)
-    return state
+    with CLASS_STATE_LOCK:
+        raw = _read_class_state_file()
+        cohorts = raw.get("cohorts")
+        if not isinstance(cohorts, dict):
+            cohorts = {}
+        cohorts[_cohort_key(teacher_id, course_session)] = state
+        payload = {"version": 2, "cohorts": cohorts}
+        temporary = CLASS_STATE_PATH.with_suffix(".tmp")
+        temporary.write_text(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        temporary.replace(CLASS_STATE_PATH)
+    return {
+        "teacher_id": teacher_id,
+        "teacher_label": TEACHERS[teacher_id],
+        "course_session": course_session,
+        "course_session_label": COURSE_SESSIONS[course_session],
+        **state,
+    }
 
 
 def clean_name(value: object) -> str:
@@ -130,6 +190,142 @@ def clean_birth_date(value: object) -> str:
     return parsed.isoformat()
 
 
+def clean_teacher_id(value: object) -> str:
+    teacher_id = str(value or "").strip()
+    if teacher_id not in TEACHERS:
+        raise ValueError("Professeur invalide.")
+    return teacher_id
+
+
+def clean_course_session(value: object) -> str:
+    course_session = str(value or "").strip()
+    if course_session not in COURSE_SESSIONS:
+        raise ValueError("Séance invalide.")
+    return course_session
+
+
+def clean_group_label(value: object) -> str:
+    label = " ".join(str(value or "").split()).strip()
+    if not (1 <= len(label) <= 80):
+        raise ValueError("Le groupe doit contenir entre 1 et 80 caractères.")
+    if any(ord(ch) < 32 for ch in label):
+        raise ValueError("Le groupe contient un caractère invalide.")
+    return label
+
+
+def _read_sessions_file() -> dict:
+    try:
+        raw = json.loads(SESSIONS_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {"version": 1, "sessions": {}}
+    if not isinstance(raw, dict):
+        return {"version": 1, "sessions": {}}
+    sessions = raw.get("sessions")
+    if not isinstance(sessions, dict):
+        sessions = {}
+    return {"version": 1, "sessions": sessions}
+
+
+def _write_sessions_file(payload: dict) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    temporary = SESSIONS_PATH.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    temporary.replace(SESSIONS_PATH)
+
+
+def _hash_session_admin_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def public_session(session: dict) -> dict:
+    return {
+        "class_session_id": session["class_session_id"],
+        "teacher_id": session["teacher_id"],
+        "teacher_label": session["teacher_label"],
+        "course_session": session["course_session"],
+        "course_session_label": session["course_session_label"],
+        "group_label": session["group_label"],
+        "corrections_unlocked": bool(session.get("corrections_unlocked", False)),
+        "created_at": session["created_at"],
+        "updated_at": session.get("updated_at") or session["created_at"],
+    }
+
+
+def get_class_session(class_session_id: str) -> dict | None:
+    if not CLASS_SESSION_ID_RE.fullmatch(class_session_id):
+        return None
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        session = raw["sessions"].get(class_session_id)
+    return dict(session) if isinstance(session, dict) else None
+
+
+def create_class_session(*, teacher_id: str, course_session: str, group_label: str) -> tuple[dict, str]:
+    now = utc_now()
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        sessions = raw["sessions"]
+        while True:
+            class_session_id = secrets.token_urlsafe(15)
+            if CLASS_SESSION_ID_RE.fullmatch(class_session_id) and class_session_id not in sessions:
+                break
+        admin_token = secrets.token_urlsafe(32)
+        session = {
+            "class_session_id": class_session_id,
+            "teacher_id": teacher_id,
+            "teacher_label": TEACHERS[teacher_id],
+            "course_session": course_session,
+            "course_session_label": COURSE_SESSIONS[course_session],
+            "group_label": group_label,
+            "admin_token_hash": _hash_session_admin_token(admin_token),
+            "corrections_unlocked": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+        sessions[class_session_id] = session
+        _write_sessions_file(raw)
+    return public_session(session), admin_token
+
+
+def update_session_corrections(*, class_session_id: str, unlocked: bool) -> dict:
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        session = raw["sessions"].get(class_session_id)
+        if not isinstance(session, dict):
+            raise ValueError("Séance introuvable.")
+        session["corrections_unlocked"] = bool(unlocked)
+        session["updated_at"] = utc_now()
+        raw["sessions"][class_session_id] = session
+        _write_sessions_file(raw)
+    return public_session(session)
+
+
+def session_admin_authorized(class_session_id: str, supplied_token: str) -> bool:
+    session = get_class_session(class_session_id)
+    if not session or not supplied_token:
+        return False
+    supplied_hash = _hash_session_admin_token(supplied_token)
+    return secrets.compare_digest(supplied_hash, str(session.get("admin_token_hash", "")))
+
+
+def session_join_url(class_session_id: str) -> str:
+    return f"{PUBLIC_BASE_URL}/?{urlencode({'session': class_session_id})}"
+
+
+def session_qr_svg(class_session_id: str) -> bytes:
+    image = qrcode.make(
+        session_join_url(class_session_id),
+        image_factory=SvgPathImage,
+        box_size=8,
+        border=4,
+    )
+    svg = image.to_string()
+    return svg.encode("utf-8") if isinstance(svg, str) else svg
+
+
 def validate_payload(raw: object) -> dict:
     if not isinstance(raw, dict):
         raise ValueError("Corps JSON invalide.")
@@ -150,6 +346,26 @@ def validate_payload(raw: object) -> dict:
         first_name = display_name
         last_name = ""
         birth_date = ""
+    class_session_id = str(raw.get("class_session_id", "") or "").strip()
+    if class_session_id:
+        class_session = get_class_session(class_session_id)
+        if not class_session:
+            raise ValueError("Séance de classe invalide ou inconnue.")
+        teacher_id = class_session["teacher_id"]
+        course_session = class_session["course_session"]
+        group_label = class_session["group_label"]
+    else:
+        # Compatibilité avec les données historiques créées avant les liens de séance.
+        teacher_id_raw = raw.get("teacher_id")
+        course_session_raw = raw.get("course_session")
+        if teacher_id_raw is not None or course_session_raw is not None:
+            teacher_id = clean_teacher_id(teacher_id_raw)
+            course_session = clean_course_session(course_session_raw)
+        else:
+            teacher_id = ""
+            course_session = ""
+        group_label = ""
+
     session_id = str(raw.get("session_id", "") or "")
     if session_id and not STUDENT_ID_RE.fullmatch(session_id):
         raise ValueError("Identifiant de session invalide.")
@@ -234,6 +450,12 @@ def validate_payload(raw: object) -> dict:
         "first_name": first_name,
         "last_name": last_name,
         "birth_date": birth_date,
+        "class_session_id": class_session_id,
+        "teacher_id": teacher_id,
+        "teacher_label": TEACHERS.get(teacher_id, ""),
+        "course_session": course_session,
+        "course_session_label": COURSE_SESSIONS.get(course_session, ""),
+        "group_label": group_label,
         "session_id": session_id,
         "stage": stage,
         "diagnostic": diagnostic,
@@ -259,6 +481,12 @@ def submission_history() -> list[dict]:
                 "first_name": payload.get("first_name") or row["display_name"],
                 "last_name": payload.get("last_name") or "",
                 "birth_date": payload.get("birth_date") or "",
+                "class_session_id": payload.get("class_session_id") or "",
+                "teacher_id": payload.get("teacher_id") or "",
+                "teacher_label": payload.get("teacher_label") or TEACHERS.get(payload.get("teacher_id") or "", ""),
+                "course_session": payload.get("course_session") or "",
+                "course_session_label": payload.get("course_session_label") or COURSE_SESSIONS.get(payload.get("course_session") or "", ""),
+                "group_label": payload.get("group_label") or "",
                 "session_id": payload.get("session_id") or (payload.get("activity") or {}).get("session_id") or "",
                 "stage": row["stage"],
                 "created_at": row["created_at"],
@@ -284,9 +512,14 @@ def latest_students() -> list[dict]:
     for row in rows:
         payload = json.loads(row["payload_json"])
         sid = row["student_id"]
+        class_session_id = payload.get("class_session_id") or ""
+        teacher_id = payload.get("teacher_id") or ""
+        course_session = payload.get("course_session") or ""
+        cohort_key = class_session_id or f"legacy:{teacher_id}|{course_session}"
+        cohort_student_key = f"{sid}|{cohort_key}"
         activity = payload.get("activity") or {}
         event_session_id = payload.get("session_id") or activity.get("session_id") or ""
-        timelines.setdefault(sid, []).append(
+        timelines.setdefault(cohort_student_key, []).append(
             {
                 "stage": row["stage"],
                 "created_at": row["created_at"],
@@ -295,14 +528,20 @@ def latest_students() -> list[dict]:
             }
         )
         if row["stage"] == "activity":
-            activity_counts[sid] = activity_counts.get(sid, 0) + 1
+            activity_counts[cohort_student_key] = activity_counts.get(cohort_student_key, 0) + 1
         else:
-            attempts[sid] = attempts.get(sid, 0) + 1
+            attempts[cohort_student_key] = attempts.get(cohort_student_key, 0) + 1
 
-        current = by_student.get(sid, {})
+        current = by_student.get(cohort_student_key, {})
         merged = {
             **current,
             "student_id": sid,
+            "class_session_id": class_session_id,
+            "teacher_id": teacher_id,
+            "teacher_label": payload.get("teacher_label") or TEACHERS.get(teacher_id, ""),
+            "course_session": course_session,
+            "course_session_label": payload.get("course_session_label") or COURSE_SESSIONS.get(course_session, ""),
+            "group_label": payload.get("group_label") or current.get("group_label") or "",
             "display_name": row["display_name"],
             "first_name": payload.get("first_name") or current.get("first_name") or row["display_name"],
             "last_name": payload.get("last_name") or current.get("last_name") or "",
@@ -316,11 +555,11 @@ def latest_students() -> list[dict]:
             merged["challenge"] = payload["challenge"]
         if payload.get("self_eval") is not None:
             merged["self_eval"] = payload["self_eval"]
-        by_student[sid] = merged
+        by_student[cohort_student_key] = merged
 
     out = []
-    for sid, item in by_student.items():
-        item["submissions"] = attempts.get(sid, 0)
+    for cohort_student_key, item in by_student.items():
+        item["submissions"] = attempts.get(cohort_student_key, 0)
         diag = item.get("diagnostic") or {}
         weak = list(diag.get("weak_domains") or [])
         strong = list(diag.get("strong_domains") or [])
@@ -334,7 +573,7 @@ def latest_students() -> list[dict]:
         item["weaknesses"] = weak
 
         sessions: dict[str, dict] = {}
-        for event in timelines.get(sid, []):
+        for event in timelines.get(cohort_student_key, []):
             session_id = str(event.get("session_id") or "")
             if not session_id:
                 continue
@@ -408,7 +647,7 @@ def latest_students() -> list[dict]:
             "challenge_seconds": elapsed_seconds(challenge_opened_at, challenge_first_submitted_at),
             "bilan_opened_at": bilan_opened_at,
             "session_to_bilan_seconds": elapsed_seconds(bilan_session_started_at, bilan_opened_at),
-            "activity_events": activity_counts.get(sid, 0),
+            "activity_events": activity_counts.get(cohort_student_key, 0),
             "sessions_observed": len(sessions),
         }
         out.append(item)
@@ -416,11 +655,26 @@ def latest_students() -> list[dict]:
     return sorted(
         out,
         key=lambda x: (
+            str(x.get("teacher_label", "")).casefold(),
+            str(x.get("course_session", "")).casefold(),
             str(x.get("last_name", "")).casefold(),
             str(x.get("first_name", x.get("display_name", ""))).casefold(),
             str(x.get("birth_date", "")),
         ),
     )
+
+
+def filter_by_context(items: list[dict], teacher_id: str = "", course_session: str = "") -> list[dict]:
+    filtered = items
+    if teacher_id:
+        filtered = [item for item in filtered if item.get("teacher_id") == teacher_id]
+    if course_session:
+        filtered = [item for item in filtered if item.get("course_session") == course_session]
+    return filtered
+
+
+def filter_by_class_session(items: list[dict], class_session_id: str) -> list[dict]:
+    return [item for item in items if item.get("class_session_id") == class_session_id]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -453,35 +707,79 @@ class Handler(BaseHTTPRequestHandler):
         supplied = auth[7:] if auth.startswith("Bearer ") else self.headers.get("X-Teacher-Token", "")
         return bool(supplied) and secrets.compare_digest(supplied, TEACHER_TOKEN)
 
+    def _session_admin_authorized(self, class_session_id: str) -> bool:
+        supplied = self.headers.get("X-Session-Token", "")
+        return session_admin_authorized(class_session_id, supplied)
+
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+        teacher_filter = str((query.get("teacher") or [""])[0]).strip()
+        legacy_session_filter = str((query.get("session") or [""])[0]).strip()
+        class_session_id = str((query.get("id") or [""])[0]).strip()
+        if teacher_filter and teacher_filter not in TEACHERS:
+            return self._json(400, {"error": "Professeur invalide."})
+        if legacy_session_filter and path == "/api/class-state" and legacy_session_filter not in COURSE_SESSIONS:
+            return self._json(400, {"error": "Séance invalide."})
         if path == "/healthz":
             return self._json(200, {"ok": True})
+        if path == "/api/session":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            return self._json(200, public_session(session))
+        if path == "/api/session-qr":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            body = session_qr_svg(class_session_id)
+            self._headers(200, "image/svg+xml; charset=utf-8", len(body))
+            self.wfile.write(body)
+            return
         if path == "/api/class-state":
-            return self._json(200, read_class_state())
-        if path == "/api/teacher/summary":
+            return self._json(200, read_class_state(teacher_filter, legacy_session_filter))
+        if path in {"/api/teacher/status", "/api/teacher/summary"}:
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            students = latest_students()
+            return self._json(200, {"ok": True, "generated_at": utc_now()})
+        if path == "/api/teacher/session-summary":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            students = filter_by_class_session(latest_students(), class_session_id)
             return self._json(200, {
+                "session": public_session(session),
                 "students": students,
                 "count": len(students),
                 "generated_at": utc_now(),
-                "class_state": read_class_state(),
             })
-        if path == "/api/teacher/history":
-            if not self._authorized():
-                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            history = submission_history()
-            return self._json(200, {"submissions": history, "count": len(history), "generated_at": utc_now()})
-        if path == "/api/teacher/export.csv":
-            if not self._authorized():
-                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            rows = latest_students()
+        if path == "/api/teacher/session-history":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            history = filter_by_class_session(submission_history(), class_session_id)
+            return self._json(200, {
+                "session": public_session(session),
+                "submissions": history,
+                "count": len(history),
+                "generated_at": utc_now(),
+            })
+        if path == "/api/teacher/session-export.csv":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            rows = filter_by_class_session(latest_students(), class_session_id)
             buffer = io.StringIO()
             writer = csv.writer(buffer)
             writer.writerow([
-                "nom", "prenom", "date_naissance", "id", "derniere_activite",
+                "nom", "prenom", "date_naissance", "professeur", "seance", "groupe", "id", "derniere_activite",
                 "diagnostic", "je_ne_sais_pas", "defi", "forces", "a_travailler", "commencer_par",
                 "debut_session", "diagnostic_ouvert", "diagnostic_rendu", "temps_diagnostic_s",
                 "defi_ouvert", "premiere_reponse_defi", "temps_defi_s",
@@ -495,6 +793,9 @@ class Handler(BaseHTTPRequestHandler):
                     item.get("last_name", ""),
                     item.get("first_name", item.get("display_name", "")),
                     item.get("birth_date", ""),
+                    item.get("teacher_label", ""),
+                    item.get("course_session_label", ""),
+                    item.get("group_label", ""),
                     item["student_id"], item["updated_at"],
                     diag.get("score", ""), item.get("unknown_count", 0), challenge.get("score", ""),
                     " | ".join(item.get("strengths", [])),
@@ -524,9 +825,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
-        if path not in {"/api/progress", "/api/teacher/corrections"}:
+        allowed_paths = {
+            "/api/progress",
+            "/api/teacher/corrections",
+            "/api/teacher/sessions",
+            "/api/teacher/session-corrections",
+        }
+        if path not in allowed_paths:
             return self._json(404, {"error": "Route inconnue."})
-        if path == "/api/teacher/corrections" and not self._authorized():
+        if path in {"/api/teacher/corrections", "/api/teacher/sessions"} and not self._authorized():
             return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -539,10 +846,62 @@ class Handler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             return self._json(400, {"error": str(exc)})
 
+        if path == "/api/teacher/sessions":
+            if not isinstance(raw, dict):
+                return self._json(400, {"error": "Données de séance invalides."})
+            try:
+                teacher_id = clean_teacher_id(raw.get("teacher_id"))
+                course_session = clean_course_session(raw.get("course_session"))
+                group_label = clean_group_label(raw.get("group_label"))
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            session, admin_token = create_class_session(
+                teacher_id=teacher_id,
+                course_session=course_session,
+                group_label=group_label,
+            )
+            session_id = session["class_session_id"]
+            return self._json(201, {
+                "session": session,
+                "admin_token": admin_token,
+                "join_url": session_join_url(session_id),
+                "manage_url": f"{PUBLIC_BASE_URL}/teacher?session={session_id}#token={admin_token}",
+                "qr_url": f"/api/session-qr?id={session_id}",
+            })
+
+        if path == "/api/teacher/session-corrections":
+            if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):
+                return self._json(400, {"error": "État des corrigés invalide."})
+            class_session_id = str(raw.get("class_session_id", "") or "").strip()
+            if not get_class_session(class_session_id):
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            try:
+                session = update_session_corrections(
+                    class_session_id=class_session_id,
+                    unlocked=raw["unlocked"],
+                )
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, session)
+
         if path == "/api/teacher/corrections":
             if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):
                 return self._json(400, {"error": "État des corrigés invalide."})
-            return self._json(200, write_class_state(corrections_unlocked=raw["unlocked"]))
+            try:
+                teacher_id = clean_teacher_id(raw.get("teacher_id"))
+                course_session = clean_course_session(raw.get("course_session"))
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(
+                200,
+                write_class_state(
+                    teacher_id=teacher_id,
+                    course_session=course_session,
+                    corrections_unlocked=raw["unlocked"],
+                ),
+            )
 
         try:
             payload = validate_payload(raw)

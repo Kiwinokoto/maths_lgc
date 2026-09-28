@@ -33,6 +33,25 @@ Pour la première prise en main, privilégier des consignes courtes et des mots 
 - lecture d'une situation proportionnelle ;
 - ordre de grandeur.
 
+## Inscription et gestion du groupe
+
+Avant le cours, le professeur ouvre `/teacher`, choisit son nom (**Monsieur Kevin**, **Monsieur Waren** ou **Madame Fadhila**), conserve **Séance 1** et renseigne librement le groupe (par exemple « PSR 1 »). Le serveur crée alors une occurrence de séance avec :
+
+- un QR et un lien élève uniques ;
+- un code de séance de secours ;
+- un lien de gestion secret propre à cette occurrence.
+
+L'élève ouvre le QR/lien et n'a plus à choisir son professeur ni à recopier le groupe. Il renseigne uniquement nom, prénom et date de naissance. Dès son entrée dans le parcours, il apparaît dans la liste « Élèves inscrits » de cette séance.
+
+Le jeton enseignant commun sert uniquement à **créer** les séances et à prévisualiser le cours. Il ne permet plus de lire les résultats de toutes les classes. Les résultats, exports et commandes d'une séance nécessitent son secret de gestion propre.
+
+Pour les corrigés, le choix V1 reste volontairement **manuel plutôt qu'automatique** :
+- le corrigé est verrouillé par défaut pour chaque nouvelle séance ;
+- le professeur voit combien d'élèves sont inscrits et combien ont terminé le diagnostic ou le défi ;
+- il débloque le corrigé uniquement pour cette occurrence quand il juge le moment adapté.
+
+Ne pas débloquer automatiquement « quand tout le monde a fini » : une absence, un retard, un appareil perdu ou une inscription inachevée pourrait bloquer tout le groupe.
+
 ## Défi PSR
 
 La fiche de salade de fruits est volontairement simple. Le défi démarre sur **30 portions à partir d'une base de 10**, donc avec un coefficient rond **× 3** : l'objectif est d'identifier la méthode sans ajouter immédiatement une difficulté décimale. Le curseur reste manipulable pour explorer d'autres quantités. Le module Recettes & proportionnalité reprend ensuite le même raisonnement avec des coefficients décimaux (par exemple **× 2,4** puis **× 3,2**). Les questions du défi ajoutent aussi un calcul d'horaire et un chiffre d'affaires simple.

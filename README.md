@@ -7,7 +7,7 @@ Support interactif de mathématiques pour les CAP Production et service en resta
 La V1 est mobile-first, sans compte élève et sans build frontend :
 
 - pré-page d'accueil avec QR vers `https://maths.lagrandeclasse.fr/` ;
-- le professeur crée une séance avec son nom, « Séance 1 » et un groupe libre ; le serveur génère un lien/QR unique ;
+- le professeur crée une séance avec son nom, un numéro de séance prérempli à 1, un titre facultatif et un groupe libre ; le serveur génère un lien/QR unique ;
 - présentation des usages des maths en PSR ;
 - visualisation fractions ↔ pourcentages ;
 - parcours linéaire ;

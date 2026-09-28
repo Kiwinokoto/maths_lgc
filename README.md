@@ -7,7 +7,7 @@ Support interactif de mathématiques pour les CAP Production et service en resta
 La V1 est mobile-first, sans compte élève et sans build frontend :
 
 - pré-page d'accueil avec QR vers `https://maths.lagrandeclasse.fr/` ;
-- nom, prénom et date de naissance pour distinguer les homonymes ; seul le prénom est utilisé dans le parcours élève ;
+- nom, prénom et date de naissance pour distinguer les homonymes, plus professeur obligatoire et séance ; seul le prénom est utilisé dans le parcours élève ;
 - présentation des usages des maths en PSR ;
 - visualisation fractions ↔ pourcentages ;
 - parcours linéaire ;
@@ -20,9 +20,9 @@ La V1 est mobile-first, sans compte élève et sans build frontend :
 - tableau enseignant protégé avec export CSV et historique JSON complet.
 - huit modules post-diagnostic : **Durées**, **Recettes & proportionnalité**, **Pourcentages**, **Données & statistiques**, **Équations**, **Graphiques & fonctions**, **Prix & commerce** et **Probabilités**, avec manipulations interactives et feedback local.
 - jalons temporels serveur indicatifs : début de session, premières ouvertures des étapes et validations ; visibles dans le tableau enseignant et les exports.
-- corrigés détaillés du diagnostic et du défi verrouillés côté élève par défaut, avec déblocage enseignant global depuis `/teacher`.
+- corrigés détaillés du diagnostic et du défi verrouillés côté élève par défaut, avec déblocage manuel par professeur + séance depuis `/teacher` ;
 
-La collecte est limitée au besoin pédagogique de suivi : nom, prénom, date de naissance et résultats. Aucun email, aucune adresse et aucun compte élève. La date de naissance sert uniquement à distinguer les homonymes dans le tableau enseignant.
+La collecte est limitée au besoin pédagogique de suivi : nom, prénom, date de naissance, professeur, séance et résultats. Aucun email, aucune adresse et aucun compte élève. La date de naissance sert uniquement à distinguer les homonymes ; professeur et séance servent à séparer les groupes dans le tableau enseignant.
 
 Les temps observés sont volontairement grossiers : ils peuvent inclure une explication collective, une pause ou un onglet laissé ouvert. Ils ne doivent jamais être interprétés seuls ni utilisés comme note.
 
@@ -75,7 +75,7 @@ Le workflow ne redémarre pas Traefik et ne supprime pas les anciennes images Do
 
 ## Suivi enseignant
 
-La route `/teacher` affiche l'état courant de la classe. L'export CSV donne une vue synthétique. L'export JSON contient l'historique complet des tentatives afin d'analyser les erreurs initiales, les corrections et les difficultés persistantes après la séance.
+La route `/teacher` affiche l'état courant et permet de filtrer par professeur et séance, ou de garder une vue d'ensemble. Une liste compacte permet de vérifier les élèves inscrits et leur avancement. Les exports CSV/JSON respectent le filtre courant. L'export JSON contient l'historique complet des tentatives afin d'analyser les erreurs initiales, les corrections et les difficultés persistantes après la séance.
 
 ## Documentation
 

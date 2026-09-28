@@ -587,8 +587,9 @@
     return `<fieldset class="question"><legend><span class="question-index">${i+1}</span><span>${q.prompt}</span></legend><span class="question-domain">${q.domain}</span><div class="answer-row">${input}${q.suffix ? `<span>${q.suffix}</span>` : ''}<button class="unknown-answer" type="button" data-unknown="${q.id}">Je ne sais pas</button></div></fieldset>`;
   }
 
-  function renderCorrection() {
+  async function renderCorrection() {
     if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
+    const canShowDetailedCorrections = teacherPreview || await refreshCorrectionsState(true);
     const result = diagnosticResult();
     const summary = result.weakDomains.length
       ? `Tes prochains points de travail prioritaires : ${result.weakDomains.join(', ')}.`
@@ -603,22 +604,58 @@
               <div class="result-score"><span>10</span><small>situations</small></div>
               <div><h3>On repère ton point de départ.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
             </div>`}
+        ${!teacherPreview && !canShowDetailedCorrections ? `
+          <div class="correction-access locked">
+            <div><strong>Corrigés détaillés encore verrouillés</strong><p>Tu peux voir tes points de travail et continuer au défi. Le professeur ouvrira les solutions quand ce sera le bon moment pour la classe.</p></div>
+            <button class="btn btn-secondary" id="refresh-correction-access" type="button">Vérifier si le corrigé est ouvert</button>
+          </div>
+        ` : ''}
         ${result.details.map((d, i) => `<article class="correction ${teacherPreview ? '' : d.correct ? 'ok' : 'retry'}">
-          <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
-          ${teacherPreview ? '' : `<p><b>Ta réponse :</b> ${escapeHtml(d.value)}</p>`}
-          <p>${d.explain}</p>
-          ${d.id === 'q4' ? `
-            <div class="fraction-demo">
-              <h3>Voir la fraction</h3>
-              <p>Une même quantité peut s’écrire de plusieurs façons.</p>
-              <div id="fraction-parts" class="fraction-parts"></div>
-              <div class="actions fraction-actions">
-                <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
-                <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
-                <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
-              </div>
-              <p id="fraction-label" class="fraction-label"></p>
-            </div>` : ''}
+          <div class="correction-heading">
+            <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
+            <span class="pill">${d.domain}</span>
+          </div>
+          <div class="correction-prompt">
+            <span>Énoncé</span>
+            <p>${escapeHtml(d.prompt)}</p>
+          </div>
+          ${teacherPreview ? '' : `<div class="correction-student-answer"><span>Ta réponse</span><p>${escapeHtml(d.value || '—')}</p></div>`}
+          ${canShowDetailedCorrections ? `
+            <div class="correction-solution">
+              <span>Correction</span>
+              <p>${escapeHtml(d.explain)}</p>
+            </div>
+            ${d.id === 'q4' ? `
+              <div class="fraction-visuals">
+                <div class="fraction-demo">
+                  <h3>1 · Voir la fraction</h3>
+                  <p>Une même quantité peut être découpée en parts différentes.</p>
+                  <div id="fraction-parts" class="fraction-parts"></div>
+                  <div class="actions fraction-actions">
+                    <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
+                    <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
+                    <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
+                  </div>
+                  <p id="fraction-label" class="fraction-label"></p>
+                </div>
+                <div class="fraction-demo percent-correction-demo">
+                  <h3>2 · Voir le pourcentage sur 100 cases</h3>
+                  <p>Chaque case vaut 1 %. Pour 50 %, les 50 cases de gauche sont colorées.</p>
+                  <div id="correction-percent-grid" class="correction-percent-grid" aria-label="Grille de 100 cases"></div>
+                  <div class="actions fraction-actions">
+                    <button class="btn btn-secondary" type="button" data-correction-percent="25">25 %</button>
+                    <button class="btn btn-secondary" type="button" data-correction-percent="50">50 %</button>
+                    <button class="btn btn-secondary" type="button" data-correction-percent="75">75 %</button>
+                  </div>
+                  <p id="correction-percent-label" class="fraction-label"></p>
+                </div>
+              </div>` : ''}
+          ` : `
+            <div class="correction-solution locked-solution">
+              <span>Correction</span>
+              <p>Solution masquée jusqu’au déblocage par le professeur.</p>
+            </div>
+          `}
         </article>`).join('')}
         <div class="actions">
           <button class="btn btn-primary" id="to-challenge">Passer au défi PSR</button>
@@ -627,6 +664,7 @@
         </div>
       </section>
     `, 3);
+
     const fractionParts = document.querySelector('#fraction-parts');
     if (fractionParts) {
       const showFraction = (numerator, denominator) => {
@@ -649,6 +687,39 @@
       showFraction(1, 2);
     }
 
+    const correctionPercentGrid = document.querySelector('#correction-percent-grid');
+    if (correctionPercentGrid) {
+      const labels = {
+        25: '25 % = 25/100 = 1/4',
+        50: '50 % = 50/100 = 2/4 = 1/2',
+        75: '75 % = 75/100 = 3/4'
+      };
+      const showPercent = value => {
+        correctionPercentGrid.replaceChildren();
+        for (let i = 0; i < 100; i += 1) {
+          const row = Math.floor(i / 10);
+          const column = i % 10;
+          const leftToRightRank = column * 10 + row;
+          const cell = document.createElement('span');
+          cell.className = leftToRightRank < value ? 'filled' : '';
+          correctionPercentGrid.append(cell);
+        }
+        document.querySelector('#correction-percent-label').textContent = labels[value];
+      };
+      document.querySelectorAll('[data-correction-percent]').forEach(button => button.addEventListener('click', () => {
+        showPercent(Number(button.dataset.correctionPercent));
+      }));
+      showPercent(50);
+    }
+
+    document.querySelector('#refresh-correction-access')?.addEventListener('click', async () => {
+      const unlocked = await refreshCorrectionsState(true);
+      if (unlocked) renderCorrection();
+      else {
+        const button = document.querySelector('#refresh-correction-access');
+        if (button) button.textContent = 'Toujours verrouillé par le professeur';
+      }
+    });
     document.querySelector('#to-challenge').addEventListener('click', () => go('defi'));
     document.querySelector('#redo-diagnostic').addEventListener('click', () => go('diagnostic'));
     document.querySelector('#correction-back').addEventListener('click', () => go('parcours'));

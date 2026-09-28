@@ -127,17 +127,30 @@ jobs:
             sleep 2
           done
 
-          health_code="$(curl -k -sS -o /dev/null -w '%{http_code}'             --resolve "$PUBLIC_HOST:443:127.0.0.1"             "https://$PUBLIC_HOST/healthz")"
-          [ "$health_code" = "200" ] || {
-            echo "Unexpected /healthz code through Traefik: $health_code" >&2
-            exit 1
-          }
+          route_deadline=$(( $(date +%s) + 120 ))
+          health_code="000"
+          teacher_code="000"
 
-          teacher_code="$(curl -k -sS -o /dev/null -w '%{http_code}'             --resolve "$PUBLIC_HOST:443:127.0.0.1"             "https://$PUBLIC_HOST/api/teacher/summary")"
-          [ "$teacher_code" = "401" ] || {
-            echo "Teacher API is not protected as expected: HTTP $teacher_code" >&2
-            exit 1
-          }
+          while :; do
+            health_code="$(curl -k -sS -o /dev/null -w '%{http_code}'               --connect-timeout 3 --max-time 5               --resolve "$PUBLIC_HOST:443:127.0.0.1"               "https://$PUBLIC_HOST/healthz" 2>/dev/null || true)"
+            teacher_code="$(curl -k -sS -o /dev/null -w '%{http_code}'               --connect-timeout 3 --max-time 5               --resolve "$PUBLIC_HOST:443:127.0.0.1"               "https://$PUBLIC_HOST/api/teacher/summary" 2>/dev/null || true)"
 
-          echo "Maths LGC is healthy and routed through Traefik."
+            health_code="${health_code:-000}"
+            teacher_code="${teacher_code:-000}"
+
+            if [ "$health_code" = "200" ] && [ "$teacher_code" = "401" ]; then
+              echo "Maths LGC is healthy and routed through Traefik."
+              break
+            fi
+
+            if [ "$(date +%s)" -ge "$route_deadline" ]; then
+              echo "Traefik route did not become ready in time: health=$health_code teacher=$teacher_code" >&2
+              docker logs --tail 120 maths_lgc >&2 || true
+              docker logs --since 5m traefik 2>&1 | grep -Ei 'maths|acme|certificate|error' | tail -80 >&2 || true
+              exit 1
+            fi
+
+            echo "Waiting for Traefik route: health=$health_code teacher=$teacher_code"
+            sleep 2
+          done
           EOF

@@ -47,7 +47,8 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 ## État V1
 - Pré-page d'accueil avec vrai QR vers `https://maths.lagrandeclasse.fr/`.
 - Prénom/code court demandé avant démarrage.
-- Présentation des objectifs et mini-visualisation fractions ↔ pourcentages.
+- Présentation des objectifs centrée sur les usages concrets en PSR.
+- Mini-visualisation fractions ↔ pourcentages placée dans la correction du diagnostic, au niveau de la notion correspondante.
 - Parcours linéaire de séance de rentrée.
 - Auto-positionnement « les maths et moi ».
 - Diagnostic 10 questions sans note.
@@ -55,6 +56,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Premier défi PSR interactif (proportionnalité, durée, coût/CA).
 - Synchronisation serveur des résultats quand le réseau est disponible.
 - Tableau enseignant avec forces, difficultés, priorité de travail et exports.
+- Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, navigation sans remplir les exercices.
 - Historique complet des tentatives exportable pour analyse après séance.
 - Branche de déploiement en cours : `dev/deploy-lgc-vps`; ne pas merger avant présence des trois secrets.
 

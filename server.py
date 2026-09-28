@@ -24,11 +24,24 @@ PORT = int(os.environ.get("MATHS_PORT", "8080"))
 TEACHER_TOKEN = os.environ.get("MATHS_TEACHER_TOKEN", "")
 MAX_BODY = 64 * 1024
 STUDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
-VALID_STAGES = {"diagnostic", "challenge", "bilan"}
+VALID_STAGES = {"diagnostic", "challenge", "bilan", "activity"}
+ACTIVITY_EVENTS = {"session_started", "route_opened", "activity_checked"}
+ACTIVITY_ROUTES = {"parcours", "intro", "diagnostic", "correction", "defi", "bilan", "durees", "proportion"}
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def elapsed_seconds(start: str | None, end: str | None) -> int | None:
+    if not start or not end:
+        return None
+    try:
+        start_dt = datetime.fromisoformat(start)
+        end_dt = datetime.fromisoformat(end)
+    except ValueError:
+        return None
+    return max(0, int((end_dt - start_dt).total_seconds()))
 
 
 def connect_db() -> sqlite3.Connection:
@@ -161,6 +174,26 @@ def validate_payload(raw: object) -> dict:
     else:
         self_eval = None
 
+    activity = None
+    if stage == "activity":
+        raw_activity = raw.get("activity")
+        if not isinstance(raw_activity, dict):
+            raise ValueError("Événement d'activité invalide.")
+        event = str(raw_activity.get("event", ""))
+        route = str(raw_activity.get("route", ""))
+        session_id = str(raw_activity.get("session_id", ""))
+        if event not in ACTIVITY_EVENTS:
+            raise ValueError("Type d'événement d'activité invalide.")
+        if route not in ACTIVITY_ROUTES:
+            raise ValueError("Page d'activité invalide.")
+        if not STUDENT_ID_RE.fullmatch(session_id):
+            raise ValueError("Identifiant de session invalide.")
+        activity = {
+            "event": event,
+            "route": route,
+            "session_id": session_id,
+        }
+
     return {
         "student_id": student_id,
         "display_name": display_name,
@@ -171,6 +204,7 @@ def validate_payload(raw: object) -> dict:
         "diagnostic": diagnostic,
         "challenge": challenge,
         "self_eval": self_eval,
+        "activity": activity,
     }
 
 
@@ -195,6 +229,7 @@ def submission_history() -> list[dict]:
                 "diagnostic": payload.get("diagnostic"),
                 "challenge": payload.get("challenge"),
                 "self_eval": payload.get("self_eval"),
+                "activity": payload.get("activity"),
             }
         )
     return history
@@ -207,10 +242,24 @@ def latest_students() -> list[dict]:
         ).fetchall()
     by_student: dict[str, dict] = {}
     attempts: dict[str, int] = {}
+    activity_counts: dict[str, int] = {}
+    timelines: dict[str, list[dict]] = {}
+
     for row in rows:
         payload = json.loads(row["payload_json"])
         sid = row["student_id"]
-        attempts[sid] = attempts.get(sid, 0) + 1
+        timelines.setdefault(sid, []).append(
+            {
+                "stage": row["stage"],
+                "created_at": row["created_at"],
+                "activity": payload.get("activity"),
+            }
+        )
+        if row["stage"] == "activity":
+            activity_counts[sid] = activity_counts.get(sid, 0) + 1
+        else:
+            attempts[sid] = attempts.get(sid, 0) + 1
+
         current = by_student.get(sid, {})
         merged = {
             **current,
@@ -219,7 +268,7 @@ def latest_students() -> list[dict]:
             "first_name": payload.get("first_name") or current.get("first_name") or row["display_name"],
             "last_name": payload.get("last_name") or current.get("last_name") or "",
             "birth_date": payload.get("birth_date") or current.get("birth_date") or "",
-            "stage": row["stage"],
+            "stage": row["stage"] if row["stage"] != "activity" else current.get("stage", "activity"),
             "updated_at": row["created_at"],
         }
         if payload.get("diagnostic") is not None:
@@ -229,9 +278,10 @@ def latest_students() -> list[dict]:
         if payload.get("self_eval") is not None:
             merged["self_eval"] = payload["self_eval"]
         by_student[sid] = merged
+
     out = []
     for sid, item in by_student.items():
-        item["submissions"] = attempts[sid]
+        item["submissions"] = attempts.get(sid, 0)
         diag = item.get("diagnostic") or {}
         weak = list(diag.get("weak_domains") or [])
         strong = list(diag.get("strong_domains") or [])
@@ -243,7 +293,43 @@ def latest_students() -> list[dict]:
         item["recommended_start"] = weak[0] if weak else "Consolidation / défi PSR"
         item["strengths"] = strong
         item["weaknesses"] = weak
+
+        timeline = timelines.get(sid, [])
+        route_opened: dict[str, str] = {}
+        session_started_at = None
+        diagnostic_submitted_at = None
+        challenge_first_submitted_at = None
+        for event in timeline:
+            activity = event.get("activity") or {}
+            if event["stage"] == "activity":
+                if activity.get("event") == "session_started" and session_started_at is None:
+                    session_started_at = event["created_at"]
+                if activity.get("event") == "route_opened":
+                    route = str(activity.get("route", ""))
+                    if route and route not in route_opened:
+                        route_opened[route] = event["created_at"]
+            elif event["stage"] == "diagnostic" and diagnostic_submitted_at is None:
+                diagnostic_submitted_at = event["created_at"]
+            elif event["stage"] == "challenge" and challenge_first_submitted_at is None:
+                challenge_first_submitted_at = event["created_at"]
+
+        diagnostic_opened_at = route_opened.get("diagnostic")
+        challenge_opened_at = route_opened.get("defi")
+        bilan_opened_at = route_opened.get("bilan")
+        item["timing"] = {
+            "session_started_at": session_started_at,
+            "diagnostic_opened_at": diagnostic_opened_at,
+            "diagnostic_submitted_at": diagnostic_submitted_at,
+            "diagnostic_seconds": elapsed_seconds(diagnostic_opened_at, diagnostic_submitted_at),
+            "challenge_opened_at": challenge_opened_at,
+            "challenge_first_submitted_at": challenge_first_submitted_at,
+            "challenge_seconds": elapsed_seconds(challenge_opened_at, challenge_first_submitted_at),
+            "bilan_opened_at": bilan_opened_at,
+            "session_to_bilan_seconds": elapsed_seconds(session_started_at, bilan_opened_at),
+            "activity_events": activity_counts.get(sid, 0),
+        }
         out.append(item)
+
     return sorted(
         out,
         key=lambda x: (
@@ -306,11 +392,15 @@ class Handler(BaseHTTPRequestHandler):
             writer = csv.writer(buffer)
             writer.writerow([
                 "nom", "prenom", "date_naissance", "id", "derniere_activite",
-                "diagnostic", "je_ne_sais_pas", "defi", "forces", "a_travailler", "commencer_par"
+                "diagnostic", "je_ne_sais_pas", "defi", "forces", "a_travailler", "commencer_par",
+                "debut_session", "diagnostic_ouvert", "diagnostic_rendu", "temps_diagnostic_s",
+                "defi_ouvert", "premiere_reponse_defi", "temps_defi_s",
+                "bilan_ouvert", "temps_session_jusqu_bilan_s", "evenements_temps"
             ])
             for item in rows:
                 diag = item.get("diagnostic") or {}
                 challenge = item.get("challenge") or {}
+                timing = item.get("timing") or {}
                 writer.writerow([
                     item.get("last_name", ""),
                     item.get("first_name", item.get("display_name", "")),
@@ -320,6 +410,16 @@ class Handler(BaseHTTPRequestHandler):
                     " | ".join(item.get("strengths", [])),
                     " | ".join(item.get("weaknesses", [])),
                     item.get("recommended_start", ""),
+                    timing.get("session_started_at", ""),
+                    timing.get("diagnostic_opened_at", ""),
+                    timing.get("diagnostic_submitted_at", ""),
+                    timing.get("diagnostic_seconds", ""),
+                    timing.get("challenge_opened_at", ""),
+                    timing.get("challenge_first_submitted_at", ""),
+                    timing.get("challenge_seconds", ""),
+                    timing.get("bilan_opened_at", ""),
+                    timing.get("session_to_bilan_seconds", ""),
+                    timing.get("activity_events", 0),
                 ])
             body = buffer.getvalue().encode("utf-8-sig")
             self.send_response(200)

@@ -4,11 +4,33 @@
   const STORAGE_KEY = 'maths-lgc-psr-v1';
   const app = document.querySelector('#app');
 
-  const teacherPreview = new URLSearchParams(location.search).get('preview') === 'teacher';
+  const teacherPreviewRequested = new URLSearchParams(location.search).get('preview') === 'teacher';
+  let teacherPreview = false;
   const state = loadState();
   const activitySessionId = createStudentId();
   const routesSeenThisSession = new Set();
   let activitySessionStarted = false;
+  let correctionsUnlocked = false;
+  let correctionsStateLoaded = false;
+
+  async function refreshCorrectionsState(force = false) {
+    if (teacherPreview) {
+      correctionsUnlocked = true;
+      correctionsStateLoaded = true;
+      return true;
+    }
+    if (correctionsStateLoaded && !force) return correctionsUnlocked;
+    try {
+      const response = await fetch('/api/class-state', { cache: 'no-store' });
+      if (!response.ok) throw new Error('class state unavailable');
+      const payload = await response.json();
+      correctionsUnlocked = Boolean(payload.corrections_unlocked);
+    } catch {
+      correctionsUnlocked = false;
+    }
+    correctionsStateLoaded = true;
+    return correctionsUnlocked;
+  }
 
   const diagnostic = [
     {
@@ -279,6 +301,7 @@
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
           <span class="teacher-preview-label">Inspection prof</span>
           <div class="teacher-preview-links">
+            <a href="/teacher">Tableau prof</a>
             ${previewLinks.map(([target, label]) => `<a class="${route === target ? 'current' : ''}" href="#${target}">${label}</a>`).join('')}
           </div>
         </nav>
@@ -566,8 +589,10 @@
     return `<fieldset class="question"><legend><span class="question-index">${i+1}</span><span>${q.prompt}</span></legend><span class="question-domain">${q.domain}</span><div class="answer-row">${input}${q.suffix ? `<span>${q.suffix}</span>` : ''}<button class="unknown-answer" type="button" data-unknown="${q.id}">Je ne sais pas</button></div></fieldset>`;
   }
 
-  function renderCorrection() {
+  async function renderCorrection() {
     if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
+    const canShowDetailedCorrections = teacherPreview || await refreshCorrectionsState(true);
+    if (location.hash.replace('#', '') !== 'correction') return;
     const result = diagnosticResult();
     const summary = result.weakDomains.length
       ? `Tes prochains points de travail prioritaires : ${result.weakDomains.join(', ')}.`
@@ -582,22 +607,58 @@
               <div class="result-score"><span>10</span><small>situations</small></div>
               <div><h3>On repère ton point de départ.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
             </div>`}
+        ${!teacherPreview && !canShowDetailedCorrections ? `
+          <div class="correction-access locked">
+            <div><strong>Corrigés détaillés encore verrouillés</strong><p>Tu peux voir tes points de travail et continuer au défi. Le professeur ouvrira les solutions quand ce sera le bon moment pour la classe.</p></div>
+            <button class="btn btn-secondary" id="refresh-correction-access" type="button">Vérifier si le corrigé est ouvert</button>
+          </div>
+        ` : ''}
         ${result.details.map((d, i) => `<article class="correction ${teacherPreview ? '' : d.correct ? 'ok' : 'retry'}">
-          <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
-          ${teacherPreview ? '' : `<p><b>Ta réponse :</b> ${escapeHtml(d.value)}</p>`}
-          <p>${d.explain}</p>
-          ${d.id === 'q4' ? `
-            <div class="fraction-demo">
-              <h3>Voir la fraction</h3>
-              <p>Une même quantité peut s’écrire de plusieurs façons.</p>
-              <div id="fraction-parts" class="fraction-parts"></div>
-              <div class="actions fraction-actions">
-                <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
-                <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
-                <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
-              </div>
-              <p id="fraction-label" class="fraction-label"></p>
-            </div>` : ''}
+          <div class="correction-heading">
+            <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
+            <span class="pill">${d.domain}</span>
+          </div>
+          <div class="correction-prompt">
+            <span>Énoncé</span>
+            <p>${escapeHtml(d.prompt)}</p>
+          </div>
+          ${teacherPreview ? '' : `<div class="correction-student-answer"><span>Ta réponse</span><p>${escapeHtml(d.value || '—')}</p></div>`}
+          ${canShowDetailedCorrections ? `
+            <div class="correction-solution">
+              <span>Correction</span>
+              <p>${escapeHtml(d.explain)}</p>
+            </div>
+            ${d.id === 'q4' ? `
+              <div class="fraction-visuals">
+                <div class="fraction-demo">
+                  <h3>1 · Voir la fraction</h3>
+                  <p>Une même quantité peut être découpée en parts différentes.</p>
+                  <div id="fraction-parts" class="fraction-parts"></div>
+                  <div class="actions fraction-actions">
+                    <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
+                    <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
+                    <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
+                  </div>
+                  <p id="fraction-label" class="fraction-label"></p>
+                </div>
+                <div class="fraction-demo percent-correction-demo">
+                  <h3>2 · Voir le pourcentage sur 100 cases</h3>
+                  <p>Chaque case vaut 1 %. Pour 50 %, les 50 cases de gauche sont colorées.</p>
+                  <div id="correction-percent-grid" class="correction-percent-grid" aria-label="Grille de 100 cases"></div>
+                  <div class="actions fraction-actions">
+                    <button class="btn btn-secondary" type="button" data-correction-percent="25">25 %</button>
+                    <button class="btn btn-secondary" type="button" data-correction-percent="50">50 %</button>
+                    <button class="btn btn-secondary" type="button" data-correction-percent="75">75 %</button>
+                  </div>
+                  <p id="correction-percent-label" class="fraction-label"></p>
+                </div>
+              </div>` : ''}
+          ` : `
+            <div class="correction-solution locked-solution">
+              <span>Correction</span>
+              <p>Solution masquée jusqu’au déblocage par le professeur.</p>
+            </div>
+          `}
         </article>`).join('')}
         <div class="actions">
           <button class="btn btn-primary" id="to-challenge">Passer au défi PSR</button>
@@ -606,6 +667,7 @@
         </div>
       </section>
     `, 3);
+
     const fractionParts = document.querySelector('#fraction-parts');
     if (fractionParts) {
       const showFraction = (numerator, denominator) => {
@@ -628,18 +690,54 @@
       showFraction(1, 2);
     }
 
+    const correctionPercentGrid = document.querySelector('#correction-percent-grid');
+    if (correctionPercentGrid) {
+      const labels = {
+        25: '25 % = 25/100 = 1/4',
+        50: '50 % = 50/100 = 2/4 = 1/2',
+        75: '75 % = 75/100 = 3/4'
+      };
+      const showPercent = value => {
+        correctionPercentGrid.replaceChildren();
+        for (let i = 0; i < 100; i += 1) {
+          const row = Math.floor(i / 10);
+          const column = i % 10;
+          const leftToRightRank = column * 10 + row;
+          const cell = document.createElement('span');
+          cell.className = leftToRightRank < value ? 'filled' : '';
+          correctionPercentGrid.append(cell);
+        }
+        document.querySelector('#correction-percent-label').textContent = labels[value];
+      };
+      document.querySelectorAll('[data-correction-percent]').forEach(button => button.addEventListener('click', () => {
+        showPercent(Number(button.dataset.correctionPercent));
+      }));
+      showPercent(50);
+    }
+
+    document.querySelector('#refresh-correction-access')?.addEventListener('click', async () => {
+      const unlocked = await refreshCorrectionsState(true);
+      if (unlocked) renderCorrection();
+      else {
+        const button = document.querySelector('#refresh-correction-access');
+        if (button) button.textContent = 'Toujours verrouillé par le professeur';
+      }
+    });
     document.querySelector('#to-challenge').addEventListener('click', () => go('defi'));
     document.querySelector('#redo-diagnostic').addEventListener('click', () => go('diagnostic'));
     document.querySelector('#correction-back').addEventListener('click', () => go('parcours'));
   }
 
-  function renderChallenge() {
+  async function renderChallenge() {
     if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
+    await refreshCorrectionsState(true);
+    if (location.hash.replace('#', '') !== 'defi') return;
     shell(`
       <section class="card hero">
         <p class="eyebrow">Étape 4 · Défi PSR</p>
         <h2>Préparer le service.</h2>
         <p class="lead">La fiche technique ci-dessous est prévue pour 10 portions de salade de fruits. Le nombre de clients change : adapte la production, puis réponds aux questions du service.</p>
+        ${teacherPreview ? '<div class="callout"><strong>Vue prof :</strong> tu peux afficher le corrigé du défi sans enregistrer de résultat élève.</div>' : ''}
         <div class="challenge-board">
           <div class="recipe-card">
             <h3>Fiche technique · 10 portions</h3>
@@ -670,9 +768,14 @@
         </div>
         <div class="question-list">
           <fieldset class="question">
-            <legend><span class="question-index">1</span><span>Pour le nombre de portions choisi ci-dessus, quel calcul permet de passer de la recette de base à la nouvelle recette ?</span></legend>
+            <legend><span class="question-index">1</span><span>Pour le nombre de portions choisi ci-dessus, comment trouver le coefficient qui permet d’adapter toutes les quantités de la recette ?</span></legend>
             <span class="question-domain">Proportionnalité</span>
-            <div class="answer-row"><select id="factor-choice"><option value="">Choisir…</option><option value="divide">10 ÷ nombre de portions</option><option value="multiply">nombre de portions ÷ 10</option><option value="add">nombre de portions + 10</option></select></div>
+            <div class="answer-row"><select id="factor-choice">
+              <option value="">Choisir…</option>
+              <option value="wrong-inverse">Faire 10 ÷ nombre de portions</option>
+              <option value="coefficient">Faire nombre de portions ÷ 10, puis multiplier chaque quantité par ce résultat</option>
+              <option value="wrong-add">Ajouter 10 au nombre de portions</option>
+            </select></div>
           </fieldset>
           <fieldset class="question">
             <legend><span class="question-index">2</span><span>Le service commence à 11 h 45. La préparation et la mise en place demandent 35 minutes. Au plus tard, à quelle heure faut-il commencer ?</span></legend>
@@ -680,7 +783,7 @@
             <div class="answer-row"><input id="start-time" type="text" placeholder="ex. 11 h 10" /></div>
           </fieldset>
           <fieldset class="question">
-            <legend><span class="question-index">3</span><span>Si chaque portion est vendue 2,50 €, quel chiffre d’affaires correspond au nombre de portions choisi ?</span></legend>
+            <legend><span class="question-index">3</span><span>Si chaque portion est vendue 2,50 € et que toutes les portions produites sont vendues, quel chiffre d’affaires obtient-on ?</span></legend>
             <span class="question-domain">Prix & calcul</span>
             <div class="answer-row"><input id="revenue" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div>
           </fieldset>
@@ -688,7 +791,7 @@
         <div id="challenge-feedback" class="callout hidden"></div>
         <div class="actions">
           <button class="btn btn-primary" id="check-challenge">Vérifier le défi</button>
-          ${teacherPreview ? '<button class="btn btn-secondary" id="preview-bilan">Voir le bilan sans répondre</button>' : ''}
+          ${teacherPreview ? '<button class="btn btn-secondary" id="show-challenge-answers">Afficher le corrigé du défi</button><button class="btn btn-secondary" id="preview-bilan">Voir le bilan sans répondre</button>' : ''}
           <button class="btn btn-secondary" id="challenge-back">Retour au parcours</button>
         </div>
       </section>
@@ -699,16 +802,31 @@
     range.addEventListener('input', update);
     update();
 
-    document.querySelector('#check-challenge').addEventListener('click', () => {
+    const checkChallenge = async () => {
       const portions = Number(range.value);
-      const factorOk = document.querySelector('#factor-choice').value === 'multiply';
+      const factor = portions / 10;
+      const factorOk = document.querySelector('#factor-choice').value === 'coefficient';
       const timeOk = ['11h10','11 h 10','11:10','11.10'].some(v => normaliseText(v) === normaliseText(document.querySelector('#start-time').value));
       const revenueExpected = portions * 2.5;
       const revenueOk = Math.abs(parseNumber(document.querySelector('#revenue').value) - revenueExpected) < 0.001;
       const count = [factorOk, timeOk, revenueOk].filter(Boolean).length;
+      const detailed = teacherPreview || await refreshCorrectionsState(true);
       const feedback = document.querySelector('#challenge-feedback');
       feedback.classList.remove('hidden');
-      feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong><br>${factorOk ? '✓' : '↻'} Coefficient : nombre de portions ÷ 10.<br>${timeOk ? '✓' : '↻'} Horaire : 11 h 45 − 35 min = 11 h 10.<br>${revenueOk ? '✓' : '↻'} Chiffre d’affaires : ${portions} × 2,50 € = ${formatMoney(revenueExpected)}.`;
+
+      if (detailed) {
+        feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong>
+          <div class="feedback-lines">
+            <span>${factorOk ? '✓' : '↻'} Coefficient : ${portions} ÷ 10 = <b>${formatNumber(factor)}</b>, puis chaque quantité est multipliée par ${formatNumber(factor)}.</span>
+            <span>${timeOk ? '✓' : '↻'} Horaire : 11 h 45 − 35 min = <b>11 h 10</b>.</span>
+            <span>${revenueOk ? '✓' : '↻'} Chiffre d’affaires : ${portions} × 2,50 € = <b>${formatMoney(revenueExpected)}</b>.</span>
+          </div>`;
+      } else {
+        feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong>
+          <p>Relis tes trois réponses et vérifie tes unités et tes calculs. Les solutions détaillées sont volontairement masquées pour le moment.</p>
+          <p class="feedback-lock-note">Le professeur pourra débloquer le corrigé pour toute la classe au moment choisi.</p>`;
+      }
+
       if (count === 3 && !teacherPreview) {
         state.challengeDone = true;
         saveState();
@@ -722,6 +840,14 @@
         time_ok: timeOk,
         revenue_ok: revenueOk
       });
+    };
+
+    document.querySelector('#check-challenge').addEventListener('click', checkChallenge);
+    document.querySelector('#show-challenge-answers')?.addEventListener('click', async () => {
+      document.querySelector('#factor-choice').value = 'coefficient';
+      document.querySelector('#start-time').value = '11 h 10';
+      document.querySelector('#revenue').value = formatNumber(Number(range.value) * 2.5);
+      await checkChallenge();
     });
     document.querySelector('#preview-bilan')?.addEventListener('click', () => go('bilan'));
     document.querySelector('#challenge-back').addEventListener('click', () => go('parcours'));
@@ -1862,6 +1988,35 @@
     return String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[c]));
   }
 
-  window.addEventListener('hashchange', render);
-  render();
+  async function initialize() {
+    if (teacherPreviewRequested) {
+      const teacherToken = sessionStorage.getItem('maths-lgc-teacher-token') || '';
+      if (teacherToken) {
+        try {
+          const response = await fetch('/api/teacher/summary', {
+            headers: { Authorization: 'Bearer ' + teacherToken },
+            cache: 'no-store'
+          });
+          teacherPreview = response.ok;
+        } catch {
+          teacherPreview = false;
+        }
+      }
+      if (!teacherPreview) {
+        app.innerHTML = `
+          <section class="card hero teacher-preview-denied">
+            <p class="eyebrow">Vue enseignant</p>
+            <h2>Accès enseignant requis.</h2>
+            <p class="lead">Cette prévisualisation contient les corrigés. Ouvre d’abord le tableau enseignant et connecte-toi avec le jeton prévu.</p>
+            <div class="actions"><a class="btn btn-primary" href="/teacher">Ouvrir le tableau enseignant</a><a class="btn btn-secondary" href="/">Retour au site élève</a></div>
+          </section>
+        `;
+        return;
+      }
+    }
+    window.addEventListener('hashchange', render);
+    render();
+  }
+
+  initialize();
 })();

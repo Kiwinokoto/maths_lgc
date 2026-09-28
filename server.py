@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("MATHS_DATA_DIR", ROOT / "data")).resolve()
 DB_PATH = DATA_DIR / "maths_lgc.sqlite3"
+CLASS_STATE_PATH = DATA_DIR / "class_state.json"
 HOST = os.environ.get("MATHS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("MATHS_PORT", "8080"))
 TEACHER_TOKEN = os.environ.get("MATHS_TEACHER_TOKEN", "")
@@ -68,6 +69,35 @@ def init_db() -> None:
             """
         )
         db.execute("CREATE INDEX IF NOT EXISTS idx_submissions_student ON submissions(student_id, id)")
+
+
+def read_class_state() -> dict:
+    default = {"corrections_unlocked": False, "updated_at": None}
+    try:
+        raw = json.loads(CLASS_STATE_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return default
+    if not isinstance(raw, dict):
+        return default
+    return {
+        "corrections_unlocked": bool(raw.get("corrections_unlocked", False)),
+        "updated_at": raw.get("updated_at"),
+    }
+
+
+def write_class_state(*, corrections_unlocked: bool) -> dict:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    state = {
+        "corrections_unlocked": bool(corrections_unlocked),
+        "updated_at": utc_now(),
+    }
+    temporary = CLASS_STATE_PATH.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(state, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    temporary.replace(CLASS_STATE_PATH)
+    return state
 
 
 def clean_name(value: object) -> str:
@@ -427,11 +457,18 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/healthz":
             return self._json(200, {"ok": True})
+        if path == "/api/class-state":
+            return self._json(200, read_class_state())
         if path == "/api/teacher/summary":
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
             students = latest_students()
-            return self._json(200, {"students": students, "count": len(students), "generated_at": utc_now()})
+            return self._json(200, {
+                "students": students,
+                "count": len(students),
+                "generated_at": utc_now(),
+                "class_state": read_class_state(),
+            })
         if path == "/api/teacher/history":
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
@@ -487,8 +524,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
-        if path != "/api/progress":
+        if path not in {"/api/progress", "/api/teacher/corrections"}:
             return self._json(404, {"error": "Route inconnue."})
+        if path == "/api/teacher/corrections" and not self._authorized():
+            return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -497,8 +536,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(413, {"error": "Requête trop volumineuse."})
         try:
             raw = json.loads(self.rfile.read(length))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            return self._json(400, {"error": str(exc)})
+
+        if path == "/api/teacher/corrections":
+            if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):
+                return self._json(400, {"error": "État des corrigés invalide."})
+            return self._json(200, write_class_state(corrections_unlocked=raw["unlocked"]))
+
+        try:
             payload = validate_payload(raw)
-        except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
+        except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         created_at = utc_now()
         with connect_db() as db:

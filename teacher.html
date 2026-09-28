@@ -25,7 +25,13 @@
     .teacher-table tr:last-child td { border-bottom:0; }
     .teacher-muted { color:var(--muted); font-size:.86rem; }
     .teacher-timing-note { margin:12px 0 20px; padding:13px 15px; border:1px solid #eadcc5; border-radius:13px; background:#fff7e9; color:#75542f; font-size:.84rem; line-height:1.5; }
+    .teacher-release-card { display:flex; justify-content:space-between; gap:18px; align-items:center; margin:0 0 20px; padding:16px 18px; border:1px solid #ddd3ef; border-radius:16px; background:linear-gradient(135deg,#f8f4ff,#fffaf2); }
+    .teacher-release-card p { margin:4px 0 0; color:var(--muted); font-size:.86rem; line-height:1.5; }
+    .teacher-release-actions { display:flex; gap:10px; align-items:center; flex:0 0 auto; }
+    .teacher-release-status.locked { color:#8a5367; background:#fdebf2; }
+    .teacher-release-status.unlocked { color:#155944; background:#e7fff4; }
     .timing-cell { min-width:165px; white-space:pre-line; }
+    @media (max-width:760px) { .teacher-release-card { align-items:stretch; flex-direction:column; } .teacher-release-actions { justify-content:space-between; } }
     .teacher-errors { display:flex; flex-wrap:wrap; gap:8px; }
     .teacher-status { min-height:1.4em; color:var(--muted); }
     @media (max-width:760px) { .teacher-stats,.teacher-inspect-grid { grid-template-columns:1fr; } }
@@ -36,7 +42,7 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark">∑</span><span>Maths LGC · Tableau enseignant</span></div>
       <div class="actions" style="margin-top:0">
-        <a class="btn btn-secondary" href="/?preview=teacher#parcours" target="_blank" rel="noopener">Inspecter la séance 1</a>
+        <a class="btn btn-secondary" href="/?preview=teacher#parcours">Inspecter la séance 1</a>
         <a class="btn btn-ghost" href="/">Vue élève</a>
       </div>
     </header>
@@ -75,25 +81,36 @@
       </div>
       <div class="teacher-timing-note"><strong>Temps indicatifs :</strong> ils donnent des indices de rythme, pas une mesure du niveau. Une explication collective, une pause, une aide du professeur ou un onglet laissé ouvert peuvent allonger fortement ces durées.</div>
 
+      <section class="teacher-release-card">
+        <div>
+          <strong>Corrigés détaillés côté élèves</strong>
+          <p>Par défaut, les solutions du diagnostic et du défi sont masquées. Débloque-les quand tu veux que toute la classe puisse les consulter. La vue prof reste toujours complète.</p>
+        </div>
+        <div class="teacher-release-actions">
+          <span id="correction-release-status" class="pill teacher-release-status locked">Verrouillés</span>
+          <button id="toggle-corrections" class="btn btn-secondary" type="button">Débloquer pour les élèves</button>
+        </div>
+      </section>
+
       <section class="card hero">
         <p class="eyebrow">Inspection du parcours</p>
         <h3>Tout voir sans remplir les exercices</h3>
-        <p class="teacher-muted">Chaque lien ouvre la vue prof dans un nouvel onglet. Les validations élève sont ignorées et aucun faux résultat n’est enregistré.</p>
+        <p class="teacher-muted">Chaque lien ouvre la vue prof dans cet onglet pour conserver ta session enseignant. Les validations élève sont ignorées et aucun faux résultat n’est enregistré.</p>
         <div class="teacher-inspect-grid">
-          <a class="teacher-inspect-link" href="/?preview=teacher#parcours" target="_blank" rel="noopener">Parcours<small>Vue d’ensemble et étapes.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#intro" target="_blank" rel="noopener">1 · Pourquoi les maths ?<small>Introduction et objectifs simples.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#diagnostic" target="_blank" rel="noopener">2 · Diagnostic<small>Les 10 situations, sans devoir répondre.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#correction" target="_blank" rel="noopener">3 · Correction<small>Toutes les stratégies et aides.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#defi" target="_blank" rel="noopener">4 · Défi PSR<small>Fiche technique et exercice interactif.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#bilan" target="_blank" rel="noopener">5 · Bilan<small>Structure du retour donné à l’élève.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#durees" target="_blank" rel="noopener">Module · Durées<small>Heures, minutes, calculs de durée et activité interactive.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#proportion" target="_blank" rel="noopener">Module · Recettes<small>Portions, coefficient et proportionnalité interactive.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#pourcentages" target="_blank" rel="noopener">Module · Pourcentages<small>Parts sur 100, équivalences et réductions.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#donnees" target="_blank" rel="noopener">Module · Données<small>Lecture, comparaison, moyenne et fréquence.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#equations" target="_blank" rel="noopener">Module · Équations<small>Nombre inconnu, égalité et opération inverse.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#fonctions" target="_blank" rel="noopener">Module · Graphiques<small>Deux quantités liées, lecture d’axes et relation simple.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#commerce" target="_blank" rel="noopener">Module · Prix & commerce<small>Commande, remise, coût, marge simple et taxe fournie.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#probabilites" target="_blank" rel="noopener">Module · Probabilités<small>Hasard, fréquence, événement contraire et simulation.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#parcours">Parcours<small>Vue d’ensemble et étapes.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#intro">1 · Pourquoi les maths ?<small>Introduction et objectifs simples.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#diagnostic">2 · Diagnostic<small>Les 10 situations, sans devoir répondre.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#correction">3 · Correction<small>Toutes les stratégies et aides.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#defi">4 · Défi PSR<small>Fiche technique et exercice interactif.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#bilan">5 · Bilan<small>Structure du retour donné à l’élève.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#durees">Module · Durées<small>Heures, minutes, calculs de durée et activité interactive.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#proportion">Module · Recettes<small>Portions, coefficient et proportionnalité interactive.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#pourcentages">Module · Pourcentages<small>Parts sur 100, équivalences et réductions.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#donnees">Module · Données<small>Lecture, comparaison, moyenne et fréquence.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#equations">Module · Équations<small>Nombre inconnu, égalité et opération inverse.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#fonctions">Module · Graphiques<small>Deux quantités liées, lecture d’axes et relation simple.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#commerce">Module · Prix & commerce<small>Commande, remise, coût, marge simple et taxe fournie.</small></a>
+          <a class="teacher-inspect-link" href="/?preview=teacher#probabilites">Module · Probabilités<small>Hasard, fréquence, événement contraire et simulation.</small></a>
         </div>
         <p class="teacher-muted" style="margin-bottom:0">Les huit grands modules du parcours sont maintenant construits et inspectables. Les prochaines passes portent surtout sur les retours terrain, la synthèse de groupe et l’approfondissement des exercices.</p>
       </section>
@@ -137,8 +154,12 @@
 
   const token = () => sessionStorage.getItem('maths-lgc-teacher-token') || '';
 
-  async function api(path) {
-    const response = await fetch(path, { headers: { Authorization: 'Bearer ' + token() }, cache: 'no-store' });
+  async function api(path, options = {}) {
+    const headers = {
+      Authorization: 'Bearer ' + token(),
+      ...(options.headers || {})
+    };
+    const response = await fetch(path, { ...options, headers, cache: 'no-store' });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       throw new Error(body.error || ('Erreur ' + response.status));
@@ -193,6 +214,14 @@
     const diagnosticTimes = students.map(s => (s.timing || {}).diagnostic_seconds).filter(Number.isFinite);
     document.querySelector('#diagnostic-median').textContent = formatDuration(median(diagnosticTimes));
     document.querySelector('#challenge-complete').textContent = students.filter(s => (s.challenge || {}).score === 3).length;
+    const classState = payload.class_state || {};
+    const correctionsUnlocked = Boolean(classState.corrections_unlocked);
+    const releaseStatus = document.querySelector('#correction-release-status');
+    const releaseButton = document.querySelector('#toggle-corrections');
+    releaseStatus.textContent = correctionsUnlocked ? 'Débloqués' : 'Verrouillés';
+    releaseStatus.className = 'pill teacher-release-status ' + (correctionsUnlocked ? 'unlocked' : 'locked');
+    releaseButton.textContent = correctionsUnlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
+    releaseButton.dataset.unlocked = correctionsUnlocked ? 'true' : 'false';
     document.querySelector('#generated-at').textContent = payload.generated_at
       ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleString('fr-FR')
       : '';
@@ -278,6 +307,30 @@
     load();
   });
   tokenInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.querySelector('#open-dashboard').click(); });
+  document.querySelector('#toggle-corrections').addEventListener('click', async () => {
+    const button = document.querySelector('#toggle-corrections');
+    const currentlyUnlocked = button.dataset.unlocked === 'true';
+    const nextUnlocked = !currentlyUnlocked;
+    if (nextUnlocked && !window.confirm('Débloquer maintenant les solutions détaillées du diagnostic et du défi pour tous les élèves ?')) return;
+    button.disabled = true;
+    dashboardStatus.textContent = nextUnlocked ? 'Déblocage des corrigés…' : 'Reverrouillage des corrigés…';
+    try {
+      await api('/api/teacher/corrections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unlocked: nextUnlocked })
+      });
+      await load();
+      dashboardStatus.textContent = nextUnlocked
+        ? 'Corrigés détaillés débloqués pour les élèves.'
+        : 'Corrigés détaillés reverrouillés.';
+    } catch (error) {
+      dashboardStatus.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   document.querySelector('#refresh').addEventListener('click', load);
   document.querySelector('#logout').addEventListener('click', () => {
     sessionStorage.removeItem('maths-lgc-teacher-token');

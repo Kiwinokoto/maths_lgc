@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <title>Maths LGC · Tableau enseignant</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
     .teacher-wrap { display:grid; gap:18px; }
+    .teacher-wrap > * { min-width:0; }
     .teacher-login { max-width:620px; margin:8vh auto 0; }
     .teacher-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
     .teacher-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:14px 0 18px; }
@@ -21,7 +23,7 @@
     .teacher-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .teacher-stat { padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.7); }
     .teacher-stat strong { display:block; font-size:2rem; margin-top:4px; }
-    .teacher-table-wrap { overflow:auto; border:1px solid var(--line); border-radius:16px; background:#fff; }
+    .teacher-table-wrap { min-width:0; overflow:auto; border:1px solid var(--line); border-radius:16px; background:#fff; }
     .teacher-table { width:100%; border-collapse:collapse; min-width:1120px; }
     .teacher-table th,.teacher-table td { padding:12px 14px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
     .teacher-table th { position:sticky; top:0; background:#fbfaf7; z-index:1; }
@@ -76,7 +78,7 @@
       <h1 style="font-size:clamp(2rem,7vw,4.2rem)">Suivi de la classe</h1>
       <p class="lead">Entre le jeton enseignant configuré sur le serveur. Il reste uniquement dans cet onglet.</p>
       <div class="answer-row">
-        <input id="token" class="teacher-input" type="password" autocomplete="current-password" placeholder="Jeton enseignant" />
+        <input id="token" class="teacher-input" type="password" autocomplete="current-password" placeholder="Jeton enseignant" aria-label="Jeton enseignant" />
         <button id="open-dashboard" class="btn btn-primary">Ouvrir</button>
       </div>
       <p id="login-status" class="teacher-status" role="status"></p>
@@ -156,11 +158,11 @@
             <div><strong id="session-context">—</strong><p class="teacher-muted">Les élèves qui utilisent ce QR sont automatiquement rattachés à ce groupe.</p></div>
             <label><span>Code de séance</span><input id="session-code" class="teacher-input" type="text" readonly /></label>
             <div class="session-link-row">
-              <input id="student-link" class="teacher-input" type="text" readonly />
+              <input id="student-link" class="teacher-input" type="text" readonly aria-label="Lien élève" />
               <button id="copy-student-link" class="btn btn-primary">Copier le lien élève</button>
             </div>
             <div class="session-link-row">
-              <input id="manage-link" class="teacher-input" type="text" readonly />
+              <input id="manage-link" class="teacher-input" type="text" readonly aria-label="Lien de gestion" />
               <button id="copy-manage-link" class="btn btn-secondary">Copier le lien de gestion</button>
             </div>
             <p class="teacher-muted"><strong>Important :</strong> le lien de gestion donne accès aux résultats de ce groupe. Garde-le côté enseignant.</p>

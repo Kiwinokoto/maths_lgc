@@ -71,6 +71,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Modules V1 construits : `#commerce` et `#probabilites`. Commerce couvre commande/remise/coût/marge simple et taxe fournie ; Probabilités utilise une simulation avec remise pour montrer fluctuation et stabilisation des fréquences.
 - Audit pédagogique explicite : diagnostic, défi et 8 modules revérifiés dans `docs/audit-exercices.md` (énoncés, clés, calculs, corrigés).
 - Corrigés diagnostic/défi : détaillés toujours visibles en vue prof, verrouillés côté élève par défaut ; déblocage global depuis `/teacher`, état persistant dans `data/class_state.json` sans migration SQLite.
+- Limite V1 : les clés de réponse du diagnostic restent dans le JavaScript client. Le verrou empêche la consultation normale/casuelle, mais n'est pas une sécurité d'examen face à un élève inspectant le code ; si le site sert un jour à une évaluation notée, déplacer la validation sensible côté serveur.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes

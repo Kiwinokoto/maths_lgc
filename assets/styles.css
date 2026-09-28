@@ -1,6 +1,6 @@
 :root {
-  --bg: #fff7f4;
-  --surface: #fffdfc;
+  --bg: #fbfaf7;
+  --surface: #fffefa;
   --surface-2: #f6f1ff;
   --surface-3: #fff9f4;
   --ink: #211d2c;
@@ -47,9 +47,9 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 6% 2%, rgba(255, 143, 120, .16), transparent 28rem),
-    radial-gradient(circle at 94% 8%, rgba(110, 99, 255, .14), transparent 31rem),
-    radial-gradient(circle at 52% 100%, rgba(255, 173, 91, .12), transparent 30rem),
+    radial-gradient(circle at 4% 3%, rgba(255, 190, 105, .12), transparent 29rem),
+    radial-gradient(circle at 95% 8%, rgba(110, 99, 255, .12), transparent 31rem),
+    radial-gradient(circle at 55% 100%, rgba(114, 223, 182, .07), transparent 28rem),
     var(--bg);
   background-attachment: fixed;
 }
@@ -74,9 +74,9 @@ body::after {
   width: 22rem;
   height: 22rem;
   pointer-events: none;
-  opacity: .09;
+  opacity: .055;
   background:
-    repeating-conic-gradient(from 215deg at 50% 50%, var(--rose) 0deg 1.4deg, transparent 1.4deg 7deg);
+    repeating-conic-gradient(from 215deg at 50% 50%, var(--accent) 0deg 1.3deg, transparent 1.3deg 7deg);
   mask-image: radial-gradient(circle, black 0 26%, transparent 68%);
 }
 
@@ -139,6 +139,25 @@ a:focus-visible {
   letter-spacing: -.025em;
 }
 
+.brand-home {
+  display: inline-grid;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  text-decoration: none;
+}
+
+.brand-home:hover .brand-mark {
+  transform: translateY(-1px) rotate(-2deg);
+  box-shadow: 0 13px 28px rgba(85, 73, 232, .28);
+}
+
+.brand-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .brand-mark {
   width: 38px;
   height: 38px;
@@ -152,6 +171,7 @@ a:focus-visible {
     linear-gradient(145deg, rgba(255,255,255,.22), transparent 45%),
     linear-gradient(135deg, var(--accent), var(--accent-strong));
   box-shadow: 0 10px 25px rgba(85, 73, 232, .24);
+  transition: transform .16s ease, box-shadow .16s ease;
 }
 
 .teacher-chip {
@@ -162,6 +182,58 @@ a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255,255,255,.72);
+}
+
+.teacher-preview-nav {
+  position: sticky;
+  top: 72px;
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -6px 0 16px;
+  padding: 9px 11px;
+  border: 1px solid rgba(217, 206, 224, .88);
+  border-radius: 15px;
+  background: rgba(255, 254, 250, .88);
+  box-shadow: 0 7px 22px rgba(66,52,104,.06);
+  backdrop-filter: blur(16px);
+}
+
+.teacher-preview-label {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-size: .76rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.teacher-preview-links {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.teacher-preview-links a {
+  flex: 0 0 auto;
+  padding: .48rem .68rem;
+  border-radius: 10px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.teacher-preview-links a:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.teacher-preview-links a.current {
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
 }
 
 .card {
@@ -549,6 +621,32 @@ p { line-height: 1.65; }
 .info-tile p {
   margin-bottom: 0;
   color: var(--muted);
+}
+
+.use-case-example {
+  grid-column: 2;
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 12px;
+  padding: .48rem .65rem;
+  border-radius: 10px;
+  color: #554b67;
+  background: rgba(255,255,255,.82);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.course-word {
+  grid-column: 2;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 720;
+}
+
+.simple-goal {
+  font-size: 1rem;
 }
 
 .use-case {
@@ -1103,6 +1201,17 @@ p { line-height: 1.65; }
 
   .teacher-chip { display: none; }
 
+  .teacher-preview-nav {
+    top: 62px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .teacher-preview-links {
+    width: 100%;
+  }
+
   body::after,
   .hero::after {
     display: none;
@@ -1216,6 +1325,11 @@ p { line-height: 1.65; }
 
   .use-case {
     grid-template-columns: 42px 1fr;
+  }
+
+  .use-case-example,
+  .course-word {
+    grid-column: 2;
   }
 
   .use-case-icon {

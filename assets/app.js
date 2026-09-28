@@ -3,6 +3,14 @@
 
   const STORAGE_KEY = 'maths-lgc-psr-v1';
   const app = document.querySelector('#app');
+  const TEACHERS = {
+    kevin: 'Monsieur Kevin',
+    waren: 'Monsieur Waren',
+    fadhila: 'Madame Fadhila'
+  };
+  const COURSE_SESSIONS = {
+    'seance-1': 'Séance 1'
+  };
 
   const teacherPreviewRequested = new URLSearchParams(location.search).get('preview') === 'teacher';
   let teacherPreview = false;
@@ -20,8 +28,14 @@
       return true;
     }
     if (correctionsStateLoaded && !force) return correctionsUnlocked;
+    if (!state.teacherId || !state.courseSession) {
+      correctionsUnlocked = false;
+      correctionsStateLoaded = true;
+      return false;
+    }
     try {
-      const response = await fetch('/api/class-state', { cache: 'no-store' });
+      const params = new URLSearchParams({ teacher: state.teacherId, session: state.courseSession });
+      const response = await fetch('/api/class-state?' + params.toString(), { cache: 'no-store' });
       if (!response.ok) throw new Error('class state unavailable');
       const payload = await response.json();
       correctionsUnlocked = Boolean(payload.corrections_unlocked);
@@ -118,13 +132,15 @@
         firstName: '',
         lastName: '',
         birthDate: '',
+        teacherId: '',
+        courseSession: 'seance-1',
         serverSync: 'pending',
         answers: {},
         selfEval: {},
         ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
       };
     } catch {
-      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', serverSync: 'pending', answers: {}, selfEval: {} };
+      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', teacherId: '', courseSession: 'seance-1', serverSync: 'pending', answers: {}, selfEval: {} };
     }
   }
 
@@ -138,7 +154,7 @@
   }
 
   async function syncProgress(stage, challenge = null) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.teacherId || !state.courseSession || !state.studentId) return;
     const result = state.diagnosticDone ? diagnosticResult() : null;
     const payload = {
       student_id: state.studentId,
@@ -146,6 +162,8 @@
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
+      teacher_id: state.teacherId,
+      course_session: state.courseSession,
       session_id: activitySessionId,
       stage,
       self_eval: state.selfEval,
@@ -173,13 +191,15 @@
   }
 
   async function syncActivity(event, route) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.teacherId || !state.courseSession || !state.studentId) return;
     const payload = {
       student_id: state.studentId,
       display_name: state.firstName,
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
+      teacher_id: state.teacherId,
+      course_session: state.courseSession,
       stage: 'activity',
       activity: {
         event,
@@ -201,7 +221,7 @@
   }
 
   function observeRoute(route) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.teacherId || !state.courseSession || !state.studentId) return;
     if (!activitySessionStarted) {
       activitySessionStarted = true;
       syncActivity('session_started', route);
@@ -312,7 +332,7 @@
   }
 
   function render() {
-    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate);
+    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate && state.teacherId && state.courseSession);
     const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered && hasIdentity ? 'parcours' : 'bienvenue'));
     if (!teacherPreview && !hasIdentity && route !== 'bienvenue') {
       location.hash = 'bienvenue';
@@ -368,10 +388,23 @@
                 <span>Date de naissance</span>
                 <input id="birth-date" type="date" autocomplete="bday" min="1940-01-01" max="${new Date().toISOString().slice(0, 10)}" value="${escapeHtml(state.birthDate || '')}" />
               </label>
+              <label>
+                <span>Professeur</span>
+                <select id="teacher-id" required>
+                  <option value="">Choisir le professeur…</option>
+                  ${Object.entries(TEACHERS).map(([id, label]) => `<option value="${id}" ${state.teacherId === id ? 'selected' : ''}>${label}</option>`).join('')}
+                </select>
+              </label>
+              <label>
+                <span>Séance</span>
+                <select id="course-session" required>
+                  ${Object.entries(COURSE_SESSIONS).map(([id, label]) => `<option value="${id}" ${(state.courseSession || 'seance-1') === id ? 'selected' : ''}>${label}</option>`).join('')}
+                </select>
+              </label>
             </div>
-            <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail n’est demandée.</small>
+            <small>Nom, prénom, date de naissance, professeur et séance restent dans le suivi enseignant ; aucune adresse mail ni adresse postale n’est demandée.</small>
           </div>
-          <p class="form-error hidden" id="name-error">Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.</p>
+          <p class="form-error hidden" id="name-error">Renseigne ton prénom, ton nom, ta date de naissance et choisis ton professeur avant de commencer.</p>
           <div class="actions">
             <button class="btn btn-primary" id="enter">Commencer</button>
           </div>
@@ -388,18 +421,22 @@
       const firstName = document.querySelector('#first-name').value.trim();
       const lastName = document.querySelector('#last-name').value.trim();
       const birthDate = document.querySelector('#birth-date').value;
+      const teacherId = document.querySelector('#teacher-id').value;
+      const courseSession = document.querySelector('#course-session').value;
       const error = document.querySelector('#name-error');
       const today = new Date().toISOString().slice(0, 10);
-      if (!firstName || !lastName || !birthDate || birthDate > today || birthDate < '1940-01-01') {
+      if (!firstName || !lastName || !birthDate || !TEACHERS[teacherId] || !COURSE_SESSIONS[courseSession] || birthDate > today || birthDate < '1940-01-01') {
         error.textContent = birthDate && (birthDate > today || birthDate < '1940-01-01')
           ? 'Vérifie la date de naissance.'
-          : 'Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.';
+          : 'Renseigne ton prénom, ton nom, ta date de naissance et choisis ton professeur avant de commencer.';
         error.classList.remove('hidden');
         return;
       }
       state.firstName = firstName.slice(0, 40);
       state.lastName = lastName.slice(0, 60);
       state.birthDate = birthDate;
+      state.teacherId = teacherId;
+      state.courseSession = courseSession;
       state.displayName = state.firstName;
       state.studentId = state.studentId || createStudentId();
       state.entered = true;

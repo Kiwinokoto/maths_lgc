@@ -11,6 +11,10 @@ L'élève manipule d'abord une fiche technique :
 
 Quand ce comportement est compris, introduire le mot **proportionnalité** et le terme **coefficient**.
 
+La progression est volontairement graduée avec le défi de séance :
+- le **défi PSR** présente d'abord une adaptation simple de 10 à 30 portions, donc un coefficient entier **× 3** ;
+- le module Recettes reprend ensuite le même geste avec des coefficients décimaux, par exemple **10 → 24 = × 2,4** puis **10 → 32 = × 3,2**.
+
 ## Situations PSR
 
 - adapter une recette ;
@@ -40,7 +44,7 @@ Le vocabulaire « coefficient de proportionnalité » vient après cette compré
 1. 400 g pour 5 portions → 15 portions ;
 2. 2 L pour 8 personnes → 20 personnes ;
 3. 750 g pour 6 portions → 18 portions ;
-4. trouver le coefficient pour passer de 10 à 25 portions.
+4. trouver le coefficient décimal pour passer de 10 à 32 portions (**× 3,2**).
 
 Le feedback est immédiat mais n'est pas envoyé au serveur dans cette V1.
 

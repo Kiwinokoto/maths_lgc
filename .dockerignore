@@ -1,0 +1,10 @@
+.git
+.github
+.env
+data
+*.sqlite3
+__pycache__
+*.pyc
+docs
+README.md
+AGENTS.md

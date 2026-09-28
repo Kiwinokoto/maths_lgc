@@ -439,27 +439,50 @@
   tokenInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.querySelector('#open-dashboard').click(); });
   document.querySelector('#toggle-corrections').addEventListener('click', async () => {
     const button = document.querySelector('#toggle-corrections');
+    const { teacher, session } = currentFilters();
+    if (!teacher || !session) {
+      dashboardStatus.textContent = 'Choisis d’abord un professeur et une séance.';
+      return;
+    }
     const currentlyUnlocked = button.dataset.unlocked === 'true';
     const nextUnlocked = !currentlyUnlocked;
-    if (nextUnlocked && !window.confirm('Débloquer maintenant les solutions détaillées du diagnostic et du défi pour tous les élèves ?')) return;
+    const groupLabel = (TEACHERS[teacher] || teacher) + ' · ' + (COURSE_SESSIONS[session] || session);
+    if (nextUnlocked && !window.confirm('Débloquer maintenant les solutions détaillées pour ' + groupLabel + ' ?')) return;
     button.disabled = true;
     dashboardStatus.textContent = nextUnlocked ? 'Déblocage des corrigés…' : 'Reverrouillage des corrigés…';
     try {
       await api('/api/teacher/corrections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unlocked: nextUnlocked })
+        body: JSON.stringify({
+          unlocked: nextUnlocked,
+          teacher_id: teacher,
+          course_session: session
+        })
       });
-      await load();
+      await refreshCorrectionState();
       dashboardStatus.textContent = nextUnlocked
-        ? 'Corrigés détaillés débloqués pour les élèves.'
-        : 'Corrigés détaillés reverrouillés.';
+        ? 'Corrigés détaillés débloqués pour ' + groupLabel + '.'
+        : 'Corrigés détaillés reverrouillés pour ' + groupLabel + '.';
     } catch (error) {
       dashboardStatus.textContent = error.message;
     } finally {
       button.disabled = false;
     }
   });
+
+  document.querySelector('#teacher-filter').addEventListener('change', event => {
+    sessionStorage.setItem('maths-lgc-teacher-filter', event.target.value);
+    if (data) renderView();
+  });
+  document.querySelector('#session-filter').addEventListener('change', event => {
+    sessionStorage.setItem('maths-lgc-session-filter', event.target.value);
+    if (data) renderView();
+  });
+  const savedTeacherFilter = sessionStorage.getItem('maths-lgc-teacher-filter') || '';
+  if (savedTeacherFilter in TEACHERS) document.querySelector('#teacher-filter').value = savedTeacherFilter;
+  const savedSessionFilter = sessionStorage.getItem('maths-lgc-session-filter') || 'seance-1';
+  if (savedSessionFilter in COURSE_SESSIONS) document.querySelector('#session-filter').value = savedSessionFilter;
 
   document.querySelector('#refresh').addEventListener('click', load);
   document.querySelector('#logout').addEventListener('click', () => {
@@ -468,7 +491,7 @@
   });
   document.querySelector('#export-json').addEventListener('click', async () => {
     try {
-      const response = await api('/api/teacher/history');
+      const response = await api('/api/teacher/history' + contextQuery());
       const history = await response.json();
       download('maths-lgc-historique.json', new Blob([JSON.stringify(history, null, 2)], { type:'application/json' }));
     } catch (error) {
@@ -477,7 +500,7 @@
   });
   document.querySelector('#export-csv').addEventListener('click', async () => {
     try {
-      const response = await api('/api/teacher/export.csv');
+      const response = await api('/api/teacher/export.csv' + contextQuery());
       download('maths-lgc-classe.csv', await response.blob());
     } catch (error) {
       dashboardStatus.textContent = error.message;

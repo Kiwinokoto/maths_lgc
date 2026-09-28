@@ -261,48 +261,17 @@
           <article class="info-tile"><h3>Résoudre un problème</h3><p>Repérer les informations utiles, calculer, vérifier et expliquer.</p></article>
         </div>
         <div class="callout"><strong>Objectif sur les deux années :</strong> devenir autonome face à une situation professionnelle, et pas seulement reproduire une méthode.</div>
-        <div class="callout">
-          <h3>Un même nombre, plusieurs écritures</h3>
-          <p>Une moitié, deux quarts et 50 % représentent exactement la même quantité.</p>
-          <div id="fraction-parts" style="display:grid;gap:6px;height:76px;margin:16px 0"></div>
-          <div class="actions" style="margin-top:0">
-            <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
-            <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
-            <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
-          </div>
-          <p id="fraction-label" style="font-weight:850;margin-bottom:0"></p>
-        </div>
         <div class="actions">
           <button class="btn btn-primary" id="intro-done">Voir mon parcours</button>
           <button class="btn btn-secondary" id="back-welcome">Retour</button>
         </div>
       </section>
     `, 1);
-    const showFraction = (numerator, denominator) => {
-      const parts = document.querySelector('#fraction-parts');
-      parts.style.gridTemplateColumns = `repeat(${denominator}, minmax(0, 1fr))`;
-      parts.replaceChildren();
-      for (let i = 0; i < denominator; i += 1) {
-        const part = document.createElement('span');
-        part.style.borderRadius = '12px';
-        part.style.border = '1px solid var(--line)';
-        part.style.background = i < numerator ? 'var(--accent)' : 'var(--surface)';
-        parts.append(part);
-      }
-      const percent = (numerator / denominator) * 100;
-      document.querySelector('#fraction-label').textContent = numerator / denominator === 0.5
-        ? '1/2 = 2/4 = 50 %'
-        : `${numerator}/${denominator} = ${formatNumber(percent)} %`;
-    };
-    document.querySelectorAll('[data-fraction]').forEach(button => button.addEventListener('click', () => {
-      const [n, d] = button.dataset.fraction.split('/').map(Number);
-      showFraction(n, d);
-    }));
-    showFraction(1, 2);
-
     document.querySelector('#intro-done').addEventListener('click', () => {
-      state.introDone = true;
-      saveState();
+      if (!teacherPreview) {
+        state.introDone = true;
+        saveState();
+      }
       go('parcours');
     });
     document.querySelector('#back-welcome').addEventListener('click', () => go('bienvenue'));

@@ -184,6 +184,7 @@
   const loginStatus = document.querySelector('#login-status');
   const dashboardStatus = document.querySelector('#dashboard-status');
   let data = null;
+  let correctionStateRequest = 0;
   const TEACHERS = {
     kevin: 'Monsieur Kevin',
     waren: 'Monsieur Waren',
@@ -298,6 +299,7 @@
   }
 
   async function refreshCorrectionState() {
+    const requestId = ++correctionStateRequest;
     const { teacher, session } = currentFilters();
     const releaseStatus = document.querySelector('#correction-release-status');
     const releaseButton = document.querySelector('#toggle-corrections');
@@ -314,17 +316,19 @@
       const response = await fetch('/api/class-state?' + new URLSearchParams({ teacher, session }).toString(), { cache:'no-store' });
       if (!response.ok) throw new Error('État des corrigés indisponible.');
       const classState = await response.json();
+      if (requestId !== correctionStateRequest) return;
       const unlocked = Boolean(classState.corrections_unlocked);
       releaseStatus.textContent = unlocked ? 'Débloqués' : 'Verrouillés';
       releaseStatus.className = 'pill teacher-release-status ' + (unlocked ? 'unlocked' : 'locked');
       releaseButton.textContent = unlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
       releaseButton.dataset.unlocked = unlocked ? 'true' : 'false';
     } catch (error) {
+      if (requestId !== correctionStateRequest) return;
       releaseStatus.textContent = 'État indisponible';
       releaseButton.textContent = 'Réessayer';
       dashboardStatus.textContent = error.message;
     } finally {
-      releaseButton.disabled = false;
+      if (requestId === correctionStateRequest) releaseButton.disabled = false;
     }
   }
 

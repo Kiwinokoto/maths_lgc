@@ -312,6 +312,9 @@
       probabilites: 'Probabilités · comprendre le hasard'
     };
     const pageTitle = pageTitles[route] || 'Maths LGC · CAP PSR';
+    const teacherDashboardHref = requestedClassSessionId
+      ? '/teacher?session=' + encodeURIComponent(requestedClassSessionId)
+      : '/teacher';
     const previewLinks = [
       ['parcours', 'Parcours'],
       ['intro', 'Pourquoi ?'],
@@ -341,7 +344,7 @@
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
           <span class="teacher-preview-label">Inspection prof</span>
           <div class="teacher-preview-links">
-            <a href="/teacher">Tableau prof</a>
+            <a href="${teacherDashboardHref}">Mon espace prof</a>
             ${previewLinks.map(([target, label]) => `<a class="${route === target ? 'current' : ''}" href="#${target}">${label}</a>`).join('')}
           </div>
         </nav>
@@ -2089,13 +2092,30 @@
           teacherPreview = false;
         }
       }
+      if (!teacherPreview && requestedClassSessionId) {
+        const managementToken = localStorage.getItem('maths-lgc-session-token:' + requestedClassSessionId) || '';
+        if (managementToken) {
+          try {
+            const response = await fetch('/api/teacher/session-summary?id=' + encodeURIComponent(requestedClassSessionId), {
+              headers: { 'X-Session-Token': managementToken },
+              cache: 'no-store'
+            });
+            teacherPreview = response.ok;
+          } catch {
+            teacherPreview = false;
+          }
+        }
+      }
       if (!teacherPreview) {
+        const dashboardHref = requestedClassSessionId
+          ? '/teacher?session=' + encodeURIComponent(requestedClassSessionId)
+          : '/teacher';
         app.innerHTML = `
           <section class="card hero teacher-preview-denied">
             <p class="eyebrow">Vue enseignant</p>
             <h2>Accès enseignant requis.</h2>
-            <p class="lead">Cette prévisualisation contient les corrigés. Ouvre d’abord le tableau enseignant et connecte-toi avec le jeton prévu.</p>
-            <div class="actions"><a class="btn btn-primary" href="/teacher">Ouvrir le tableau enseignant</a><a class="btn btn-secondary" href="/">Retour au site élève</a></div>
+            <p class="lead">Cette prévisualisation contient les corrigés. Ouvre ton espace professeur ou utilise le lien de gestion de la séance.</p>
+            <div class="actions"><a class="btn btn-primary" href="${dashboardHref}">Ouvrir mon espace professeur</a><a class="btn btn-secondary" href="/">Retour au site élève</a></div>
           </section>
         `;
         return;

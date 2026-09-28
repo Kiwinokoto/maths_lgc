@@ -4,7 +4,8 @@
   const STORAGE_KEY = 'maths-lgc-psr-v1';
   const app = document.querySelector('#app');
 
-  const teacherPreview = new URLSearchParams(location.search).get('preview') === 'teacher';
+  const teacherPreviewRequested = new URLSearchParams(location.search).get('preview') === 'teacher';
+  let teacherPreview = false;
   const state = loadState();
   const activitySessionId = createStudentId();
   const routesSeenThisSession = new Set();
@@ -300,6 +301,7 @@
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
           <span class="teacher-preview-label">Inspection prof</span>
           <div class="teacher-preview-links">
+            <a href="/teacher">Tableau prof</a>
             ${previewLinks.map(([target, label]) => `<a class="${route === target ? 'current' : ''}" href="#${target}">${label}</a>`).join('')}
           </div>
         </nav>
@@ -1990,6 +1992,35 @@
     return String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[c]));
   }
 
-  window.addEventListener('hashchange', render);
-  render();
+  async function initialize() {
+    if (teacherPreviewRequested) {
+      const teacherToken = sessionStorage.getItem('maths-lgc-teacher-token') || '';
+      if (teacherToken) {
+        try {
+          const response = await fetch('/api/teacher/summary', {
+            headers: { Authorization: 'Bearer ' + teacherToken },
+            cache: 'no-store'
+          });
+          teacherPreview = response.ok;
+        } catch {
+          teacherPreview = false;
+        }
+      }
+      if (!teacherPreview) {
+        app.innerHTML = `
+          <section class="card hero teacher-preview-denied">
+            <p class="eyebrow">Vue enseignant</p>
+            <h2>Accès enseignant requis.</h2>
+            <p class="lead">Cette prévisualisation contient les corrigés. Ouvre d’abord le tableau enseignant et connecte-toi avec le jeton prévu.</p>
+            <div class="actions"><a class="btn btn-primary" href="/teacher">Ouvrir le tableau enseignant</a><a class="btn btn-secondary" href="/">Retour au site élève</a></div>
+          </section>
+        `;
+        return;
+      }
+    }
+    window.addEventListener('hashchange', render);
+    render();
+  }
+
+  initialize();
 })();

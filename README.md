@@ -20,6 +20,7 @@ La V1 est mobile-first, sans compte élève et sans build frontend :
 - tableau enseignant protégé avec export CSV et historique JSON complet.
 - huit modules post-diagnostic : **Durées**, **Recettes & proportionnalité**, **Pourcentages**, **Données & statistiques**, **Équations**, **Graphiques & fonctions**, **Prix & commerce** et **Probabilités**, avec manipulations interactives et feedback local.
 - jalons temporels serveur indicatifs : début de session, premières ouvertures des étapes et validations ; visibles dans le tableau enseignant et les exports.
+- corrigés détaillés du diagnostic et du défi verrouillés côté élève par défaut, avec déblocage enseignant global depuis `/teacher`.
 
 La collecte est limitée au besoin pédagogique de suivi : nom, prénom, date de naissance et résultats. Aucun email, aucune adresse et aucun compte élève. La date de naissance sert uniquement à distinguer les homonymes dans le tableau enseignant.
 
@@ -88,3 +89,4 @@ La route `/teacher` affiche l'état courant de la classe. L'export CSV donne une
 - [`docs/module-graphiques-fonctions.md`](docs/module-graphiques-fonctions.md) : progression de deux quantités liées vers la notion de fonction.
 - [`docs/module-commerce.md`](docs/module-commerce.md) : prix, remise, coût, marge simple et facture.
 - [`docs/module-probabilites.md`](docs/module-probabilites.md) : hasard, fréquence et simulation.
+- [`docs/audit-exercices.md`](docs/audit-exercices.md) : audit des énoncés, clés et corrigés du diagnostic, du défi et des modules.

@@ -63,11 +63,13 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Passe UI V1 : palette modernisée, topbar sticky, progression renforcée, cartes/diagnostic/défi plus visuels, sans changement du parcours pédagogique.
 - Passe UI V2 : vert retiré de la couleur d'action ; violet/indigo principal, accents chauds manga discrets, vert menthe vif/tendre conservé seulement pour les réussites/étapes terminées.
 - Passe accessibilité séance 1 : fond moins rosé, en-tête contextuel avec ∑ vers le parcours, intro simplifiée avec exemples concrets et vocabulaire technique introduit progressivement.
+- Modules V1 construits : `#durees` et `#proportion`, accessibles aux élèves après la séance 1 et toujours accessibles en prévisualisation prof. Feedback local uniquement, non synchronisé au serveur.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes
-1. Finaliser et tester la séance 1 de positionnement en conditions réelles sur téléphone.
+1. Tester la séance 1 et les deux premiers modules sur téléphone en conditions réelles.
 2. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs et réponses « Je ne sais pas ».
 3. Ajuster la remédiation après la première classe réelle.
-4. Ajouter ensuite les modules Durées puis Recettes & proportionnalité.
-5. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.
+4. Construire ensuite Pourcentages puis Données & statistiques avec la même règle « voir/comprendre avant de nommer ».
+5. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
+6. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.

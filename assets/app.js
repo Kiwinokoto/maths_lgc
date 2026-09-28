@@ -244,7 +244,7 @@
               </label>
               <label>
                 <span>Date de naissance</span>
-                <input id="birth-date" type="date" autocomplete="bday" value="${escapeHtml(state.birthDate || '')}" />
+                <input id="birth-date" type="date" autocomplete="bday" min="1940-01-01" max="${new Date().toISOString().slice(0, 10)}" value="${escapeHtml(state.birthDate || '')}" />
               </label>
             </div>
             <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail n’est demandée.</small>

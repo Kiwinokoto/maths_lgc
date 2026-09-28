@@ -368,9 +368,12 @@ def latest_students() -> list[dict]:
     for row in rows:
         payload = json.loads(row["payload_json"])
         sid = row["student_id"]
+        teacher_id = payload.get("teacher_id") or ""
+        course_session = payload.get("course_session") or ""
+        cohort_student_key = f"{sid}|{teacher_id}|{course_session}"
         activity = payload.get("activity") or {}
         event_session_id = payload.get("session_id") or activity.get("session_id") or ""
-        timelines.setdefault(sid, []).append(
+        timelines.setdefault(cohort_student_key, []).append(
             {
                 "stage": row["stage"],
                 "created_at": row["created_at"],
@@ -379,14 +382,18 @@ def latest_students() -> list[dict]:
             }
         )
         if row["stage"] == "activity":
-            activity_counts[sid] = activity_counts.get(sid, 0) + 1
+            activity_counts[cohort_student_key] = activity_counts.get(cohort_student_key, 0) + 1
         else:
-            attempts[sid] = attempts.get(sid, 0) + 1
+            attempts[cohort_student_key] = attempts.get(cohort_student_key, 0) + 1
 
-        current = by_student.get(sid, {})
+        current = by_student.get(cohort_student_key, {})
         merged = {
             **current,
             "student_id": sid,
+            "teacher_id": teacher_id,
+            "teacher_label": payload.get("teacher_label") or TEACHERS.get(teacher_id, ""),
+            "course_session": course_session,
+            "course_session_label": payload.get("course_session_label") or COURSE_SESSIONS.get(course_session, ""),
             "display_name": row["display_name"],
             "first_name": payload.get("first_name") or current.get("first_name") or row["display_name"],
             "last_name": payload.get("last_name") or current.get("last_name") or "",
@@ -400,11 +407,11 @@ def latest_students() -> list[dict]:
             merged["challenge"] = payload["challenge"]
         if payload.get("self_eval") is not None:
             merged["self_eval"] = payload["self_eval"]
-        by_student[sid] = merged
+        by_student[cohort_student_key] = merged
 
     out = []
-    for sid, item in by_student.items():
-        item["submissions"] = attempts.get(sid, 0)
+    for cohort_student_key, item in by_student.items():
+        item["submissions"] = attempts.get(cohort_student_key, 0)
         diag = item.get("diagnostic") or {}
         weak = list(diag.get("weak_domains") or [])
         strong = list(diag.get("strong_domains") or [])
@@ -418,7 +425,7 @@ def latest_students() -> list[dict]:
         item["weaknesses"] = weak
 
         sessions: dict[str, dict] = {}
-        for event in timelines.get(sid, []):
+        for event in timelines.get(cohort_student_key, []):
             session_id = str(event.get("session_id") or "")
             if not session_id:
                 continue
@@ -492,7 +499,7 @@ def latest_students() -> list[dict]:
             "challenge_seconds": elapsed_seconds(challenge_opened_at, challenge_first_submitted_at),
             "bilan_opened_at": bilan_opened_at,
             "session_to_bilan_seconds": elapsed_seconds(bilan_session_started_at, bilan_opened_at),
-            "activity_events": activity_counts.get(sid, 0),
+            "activity_events": activity_counts.get(cohort_student_key, 0),
             "sessions_observed": len(sessions),
         }
         out.append(item)
@@ -500,11 +507,22 @@ def latest_students() -> list[dict]:
     return sorted(
         out,
         key=lambda x: (
+            str(x.get("teacher_label", "")).casefold(),
+            str(x.get("course_session", "")).casefold(),
             str(x.get("last_name", "")).casefold(),
             str(x.get("first_name", x.get("display_name", ""))).casefold(),
             str(x.get("birth_date", "")),
         ),
     )
+
+
+def filter_by_context(items: list[dict], teacher_id: str = "", course_session: str = "") -> list[dict]:
+    filtered = items
+    if teacher_id:
+        filtered = [item for item in filtered if item.get("teacher_id") == teacher_id]
+    if course_session:
+        filtered = [item for item in filtered if item.get("course_session") == course_session]
+    return filtered
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -538,15 +556,23 @@ class Handler(BaseHTTPRequestHandler):
         return bool(supplied) and secrets.compare_digest(supplied, TEACHER_TOKEN)
 
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+        teacher_filter = str((query.get("teacher") or [""])[0]).strip()
+        session_filter = str((query.get("session") or [""])[0]).strip()
+        if teacher_filter and teacher_filter not in TEACHERS:
+            return self._json(400, {"error": "Professeur invalide."})
+        if session_filter and session_filter not in COURSE_SESSIONS:
+            return self._json(400, {"error": "Séance invalide."})
         if path == "/healthz":
             return self._json(200, {"ok": True})
         if path == "/api/class-state":
-            return self._json(200, read_class_state())
+            return self._json(200, read_class_state(teacher_filter, session_filter))
         if path == "/api/teacher/summary":
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            students = latest_students()
+            students = filter_by_context(latest_students(), teacher_filter, session_filter)
             return self._json(200, {
                 "students": students,
                 "count": len(students),
@@ -556,16 +582,16 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/teacher/history":
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            history = submission_history()
+            history = filter_by_context(submission_history(), teacher_filter, session_filter)
             return self._json(200, {"submissions": history, "count": len(history), "generated_at": utc_now()})
         if path == "/api/teacher/export.csv":
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            rows = latest_students()
+            rows = filter_by_context(latest_students(), teacher_filter, session_filter)
             buffer = io.StringIO()
             writer = csv.writer(buffer)
             writer.writerow([
-                "nom", "prenom", "date_naissance", "id", "derniere_activite",
+                "nom", "prenom", "date_naissance", "professeur", "seance", "id", "derniere_activite",
                 "diagnostic", "je_ne_sais_pas", "defi", "forces", "a_travailler", "commencer_par",
                 "debut_session", "diagnostic_ouvert", "diagnostic_rendu", "temps_diagnostic_s",
                 "defi_ouvert", "premiere_reponse_defi", "temps_defi_s",
@@ -579,6 +605,8 @@ class Handler(BaseHTTPRequestHandler):
                     item.get("last_name", ""),
                     item.get("first_name", item.get("display_name", "")),
                     item.get("birth_date", ""),
+                    item.get("teacher_label", ""),
+                    item.get("course_session_label", ""),
                     item["student_id"], item["updated_at"],
                     diag.get("score", ""), item.get("unknown_count", 0), challenge.get("score", ""),
                     " | ".join(item.get("strengths", [])),
@@ -626,7 +654,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/teacher/corrections":
             if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):
                 return self._json(400, {"error": "État des corrigés invalide."})
-            return self._json(200, write_class_state(corrections_unlocked=raw["unlocked"]))
+            try:
+                teacher_id = clean_teacher_id(raw.get("teacher_id"))
+                course_session = clean_course_session(raw.get("course_session"))
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(
+                200,
+                write_class_state(
+                    teacher_id=teacher_id,
+                    course_session=course_session,
+                    corrections_unlocked=raw["unlocked"],
+                ),
+            )
 
         try:
             payload = validate_payload(raw)

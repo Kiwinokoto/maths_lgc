@@ -858,6 +858,15 @@ p { line-height: 1.65; }
   font-weight: 950;
 }
 
+.result-score small {
+  display: block;
+  margin-top: -22px;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .03em;
+}
+
 .domain-chips {
   display: flex;
   flex-wrap: wrap;

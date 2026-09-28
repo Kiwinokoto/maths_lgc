@@ -823,12 +823,8 @@
           </div>`;
       } else {
         feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong>
-          <div class="feedback-lines">
-            <span>${factorOk ? '✓' : '↻'} Question 1 · adapter la recette</span>
-            <span>${timeOk ? '✓' : '↻'} Question 2 · heure de début</span>
-            <span>${revenueOk ? '✓' : '↻'} Question 3 · chiffre d’affaires</span>
-          </div>
-          <p class="feedback-lock-note">Le corrigé détaillé est volontairement masqué. Le professeur pourra le débloquer pour toute la classe.</p>`;
+          <p>Relis tes trois réponses et vérifie tes unités et tes calculs. Les solutions détaillées sont volontairement masquées pour le moment.</p>
+          <p class="feedback-lock-note">Le professeur pourra débloquer le corrigé pour toute la classe au moment choisi.</p>`;
       }
 
       if (count === 3 && !teacherPreview) {

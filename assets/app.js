@@ -148,6 +148,33 @@
     return 'student_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
+  function birthDateToFrench(isoDate) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate || ''));
+    return match ? match[3] + '/' + match[2] + '/' + match[1] : '';
+  }
+
+  function formatBirthDateInput(value) {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return digits.slice(0, 2) + '/' + digits.slice(2);
+    return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+  }
+
+  function frenchBirthDateToIso(value) {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || '').trim());
+    if (!match) return '';
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const candidate = new Date(Date.UTC(year, month - 1, day));
+    if (
+      candidate.getUTCFullYear() !== year ||
+      candidate.getUTCMonth() !== month - 1 ||
+      candidate.getUTCDate() !== day
+    ) return '';
+    return String(year).padStart(4, '0') + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+  }
+
   async function syncProgress(stage, challenge = null) {
     if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     const result = state.diagnosticDone ? diagnosticResult() : null;
@@ -406,15 +433,16 @@
             <div class="identity-grid">
               <label>
                 <span>Prénom</span>
-                <input id="first-name" type="text" maxlength="40" autocomplete="given-name" value="${escapeHtml(state.firstName || state.displayName || '')}" placeholder="Ex. Lina" />
+                <input id="first-name" type="text" maxlength="40" autocomplete="given-name" value="${escapeHtml(state.firstName || state.displayName || '')}" placeholder="Ex. Yanis" />
               </label>
               <label>
                 <span>Nom</span>
-                <input id="last-name" type="text" maxlength="60" autocomplete="family-name" value="${escapeHtml(state.lastName || '')}" placeholder="Ex. Martin" />
+                <input id="last-name" type="text" maxlength="60" autocomplete="family-name" value="${escapeHtml(state.lastName || '')}" placeholder="Ex. Dupont" />
               </label>
               <label>
                 <span>Date de naissance</span>
-                <input id="birth-date" type="date" autocomplete="bday" min="1940-01-01" max="${new Date().toISOString().slice(0, 10)}" value="${escapeHtml(state.birthDate || '')}" />
+                <input id="birth-date" type="text" inputmode="numeric" autocomplete="bday" maxlength="10" value="${escapeHtml(birthDateToFrench(state.birthDate || ''))}" placeholder="JJ/MM/AAAA" aria-describedby="birth-date-help" />
+                <small id="birth-date-help">Tape simplement les chiffres, par exemple 04091981. Les / s’ajoutent automatiquement.</small>
               </label>
             </div>
             <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail ni adresse postale n’est demandée.</small>
@@ -431,17 +459,25 @@
         </div>
       </section>
     `, 0);
+    const birthInput = document.querySelector('#birth-date');
+    birthInput.addEventListener('input', () => {
+      birthInput.value = formatBirthDateInput(birthInput.value);
+    });
+
     document.querySelector('#enter').addEventListener('click', () => {
       if (teacherPreview) return go('intro');
       const firstName = document.querySelector('#first-name').value.trim();
       const lastName = document.querySelector('#last-name').value.trim();
-      const birthDate = document.querySelector('#birth-date').value;
+      const birthDateDisplay = birthInput.value.trim();
+      const birthDate = frenchBirthDateToIso(birthDateDisplay);
       const error = document.querySelector('#name-error');
       const today = new Date().toISOString().slice(0, 10);
       if (!firstName || !lastName || !birthDate || birthDate > today || birthDate < '1940-01-01') {
-        error.textContent = birthDate && (birthDate > today || birthDate < '1940-01-01')
-          ? 'Vérifie la date de naissance.'
-          : 'Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.';
+        error.textContent = birthDateDisplay && !birthDate
+          ? 'Vérifie la date : utilise le format JJ/MM/AAAA.'
+          : birthDate && (birthDate > today || birthDate < '1940-01-01')
+            ? 'Vérifie la date de naissance.'
+            : 'Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.';
         error.classList.remove('hidden');
         return;
       }

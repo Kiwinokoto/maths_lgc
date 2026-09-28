@@ -333,27 +333,43 @@
             <span class="use-case-icon" aria-hidden="true">⚖</span>
             <h3>Préparer</h3>
             <p>Peser. Compter les portions. Changer les quantités.</p>
-            <span class="use-case-example">Exemple : 10 portions → 25 portions</span>
+            <div class="micro-examples">
+              <span>10 portions → 25 portions</span>
+              <span>2,5 kg → 2 500 g</span>
+              <span>prévoir 30 min de cuisson</span>
+            </div>
             <span class="course-word">Mot du métier : « produire »</span>
           </article>
           <article class="info-tile use-case">
             <span class="use-case-icon" aria-hidden="true">🕒</span>
             <h3>Servir</h3>
             <p>Lire l’heure. Vérifier un prix. Rendre la monnaie.</p>
-            <span class="use-case-example">Exemple : 20 € − 13,70 €</span>
+            <div class="micro-examples">
+              <span>20 € − 13,70 €</span>
+              <span>service à 12 h 00</span>
+              <span>3 menus à 8,50 €</span>
+            </div>
           </article>
           <article class="info-tile use-case">
             <span class="use-case-icon" aria-hidden="true">▥</span>
             <h3>Lire des informations</h3>
             <p>Lire un tableau ou un graphique. Comparer des résultats.</p>
-            <span class="use-case-example">Exemple : quel jour a vendu le plus ?</span>
+            <div class="micro-examples">
+              <span>quel jour a vendu le plus ?</span>
+              <span>combien de produits restent ?</span>
+              <span>quel choix revient souvent ?</span>
+            </div>
             <span class="course-word">Plus tard : moyenne, fréquence…</span>
           </article>
           <article class="info-tile use-case">
             <span class="use-case-icon" aria-hidden="true">?</span>
             <h3>Trouver une solution</h3>
             <p>Comprendre ce qu’on cherche. Choisir un calcul. Vérifier la réponse.</p>
-            <span class="use-case-example">Exemple : est-ce que ma réponse est possible ?</span>
+            <div class="micro-examples">
+              <span>ai-je assez de portions ?</span>
+              <span>à quelle heure commencer ?</span>
+              <span>mon résultat est-il possible ?</span>
+            </div>
             <span class="course-word">On dira aussi : « résoudre un problème »</span>
           </article>
         </div>
@@ -374,6 +390,16 @@
     document.querySelector('#back-welcome').addEventListener('click', () => go('bienvenue'));
   }
 
+  function moduleCardMarkup(module) {
+    const unlocked = Boolean(module.available && (state.challengeDone || teacherPreview));
+    const status = module.available ? (unlocked ? 'Disponible' : 'Après la séance 1') : 'À venir';
+    const statusClass = module.available && unlocked ? 'ok' : module.available ? 'warm' : '';
+    const action = module.available
+      ? `<button class="btn btn-secondary module-open" data-go="${module.route}" ${unlocked ? '' : 'disabled'}>${unlocked ? 'Ouvrir' : 'Bientôt'}</button>`
+      : '';
+    return `<article class="info-tile module-card"><span class="pill ${statusClass}">${status}</span><h3>${module.title}</h3><p>${module.text}</p>${action}</article>`;
+  }
+
   function renderPath() {
     const correctionLocked = !state.diagnosticDone && !teacherPreview;
     const challengeLocked = !state.diagnosticDone && !teacherPreview;
@@ -391,7 +417,7 @@
         </div>
         <div class="actions"><button class="btn btn-ghost" id="show-program">Voir la suite du CAP</button></div>
         <div id="future-program" class="hidden">
-          <div class="lesson-grid">${modules.map(([title, text]) => `<article class="info-tile"><span class="pill">À venir</span><h3>${title}</h3><p>${text}</p></article>`).join('')}</div>
+          <div class="lesson-grid module-grid">${modules.map(moduleCardMarkup).join('')}</div>
         </div>
       </section>
     `, 1);

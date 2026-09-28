@@ -120,6 +120,10 @@ def validate_payload(raw: object) -> dict:
         first_name = display_name
         last_name = ""
         birth_date = ""
+    session_id = str(raw.get("session_id", "") or "")
+    if session_id and not STUDENT_ID_RE.fullmatch(session_id):
+        raise ValueError("Identifiant de session invalide.")
+
     stage = str(raw.get("stage", ""))
     if stage not in VALID_STAGES:
         raise ValueError("Étape invalide.")
@@ -200,6 +204,7 @@ def validate_payload(raw: object) -> dict:
         "first_name": first_name,
         "last_name": last_name,
         "birth_date": birth_date,
+        "session_id": session_id,
         "stage": stage,
         "diagnostic": diagnostic,
         "challenge": challenge,
@@ -224,6 +229,7 @@ def submission_history() -> list[dict]:
                 "first_name": payload.get("first_name") or row["display_name"],
                 "last_name": payload.get("last_name") or "",
                 "birth_date": payload.get("birth_date") or "",
+                "session_id": payload.get("session_id") or (payload.get("activity") or {}).get("session_id") or "",
                 "stage": row["stage"],
                 "created_at": row["created_at"],
                 "diagnostic": payload.get("diagnostic"),
@@ -248,11 +254,14 @@ def latest_students() -> list[dict]:
     for row in rows:
         payload = json.loads(row["payload_json"])
         sid = row["student_id"]
+        activity = payload.get("activity") or {}
+        event_session_id = payload.get("session_id") or activity.get("session_id") or ""
         timelines.setdefault(sid, []).append(
             {
                 "stage": row["stage"],
                 "created_at": row["created_at"],
-                "activity": payload.get("activity"),
+                "activity": activity,
+                "session_id": event_session_id,
             }
         )
         if row["stage"] == "activity":
@@ -294,28 +303,71 @@ def latest_students() -> list[dict]:
         item["strengths"] = strong
         item["weaknesses"] = weak
 
-        timeline = timelines.get(sid, [])
-        route_opened: dict[str, str] = {}
-        session_started_at = None
-        diagnostic_submitted_at = None
-        challenge_first_submitted_at = None
-        for event in timeline:
+        sessions: dict[str, dict] = {}
+        for event in timelines.get(sid, []):
+            session_id = str(event.get("session_id") or "")
+            if not session_id:
+                continue
+            session = sessions.setdefault(
+                session_id,
+                {
+                    "session_started_at": None,
+                    "routes": {},
+                    "diagnostic_submitted_at": None,
+                    "challenge_first_submitted_at": None,
+                },
+            )
             activity = event.get("activity") or {}
             if event["stage"] == "activity":
-                if activity.get("event") == "session_started" and session_started_at is None:
-                    session_started_at = event["created_at"]
+                if activity.get("event") == "session_started" and session["session_started_at"] is None:
+                    session["session_started_at"] = event["created_at"]
                 if activity.get("event") == "route_opened":
                     route = str(activity.get("route", ""))
-                    if route and route not in route_opened:
-                        route_opened[route] = event["created_at"]
-            elif event["stage"] == "diagnostic" and diagnostic_submitted_at is None:
-                diagnostic_submitted_at = event["created_at"]
-            elif event["stage"] == "challenge" and challenge_first_submitted_at is None:
-                challenge_first_submitted_at = event["created_at"]
+                    if route and route not in session["routes"]:
+                        session["routes"][route] = event["created_at"]
+            elif event["stage"] == "diagnostic" and session["diagnostic_submitted_at"] is None:
+                session["diagnostic_submitted_at"] = event["created_at"]
+            elif event["stage"] == "challenge" and session["challenge_first_submitted_at"] is None:
+                session["challenge_first_submitted_at"] = event["created_at"]
 
-        diagnostic_opened_at = route_opened.get("diagnostic")
-        challenge_opened_at = route_opened.get("defi")
-        bilan_opened_at = route_opened.get("bilan")
+        ordered_sessions = sorted(
+            sessions.values(),
+            key=lambda session: session.get("session_started_at") or "9999",
+        )
+        diagnostic_session = next(
+            (
+                session for session in ordered_sessions
+                if session["routes"].get("diagnostic") and session.get("diagnostic_submitted_at")
+            ),
+            None,
+        )
+        challenge_session = next(
+            (
+                session for session in ordered_sessions
+                if session["routes"].get("defi") and session.get("challenge_first_submitted_at")
+            ),
+            None,
+        )
+        bilan_session = next(
+            (
+                session for session in ordered_sessions
+                if session.get("session_started_at") and session["routes"].get("bilan")
+            ),
+            None,
+        )
+        first_session = next(
+            (session for session in ordered_sessions if session.get("session_started_at")),
+            None,
+        )
+
+        diagnostic_opened_at = diagnostic_session["routes"].get("diagnostic") if diagnostic_session else None
+        diagnostic_submitted_at = diagnostic_session.get("diagnostic_submitted_at") if diagnostic_session else None
+        challenge_opened_at = challenge_session["routes"].get("defi") if challenge_session else None
+        challenge_first_submitted_at = challenge_session.get("challenge_first_submitted_at") if challenge_session else None
+        session_started_at = first_session.get("session_started_at") if first_session else None
+        bilan_opened_at = bilan_session["routes"].get("bilan") if bilan_session else None
+        bilan_session_started_at = bilan_session.get("session_started_at") if bilan_session else None
+
         item["timing"] = {
             "session_started_at": session_started_at,
             "diagnostic_opened_at": diagnostic_opened_at,
@@ -325,8 +377,9 @@ def latest_students() -> list[dict]:
             "challenge_first_submitted_at": challenge_first_submitted_at,
             "challenge_seconds": elapsed_seconds(challenge_opened_at, challenge_first_submitted_at),
             "bilan_opened_at": bilan_opened_at,
-            "session_to_bilan_seconds": elapsed_seconds(session_started_at, bilan_opened_at),
+            "session_to_bilan_seconds": elapsed_seconds(bilan_session_started_at, bilan_opened_at),
             "activity_events": activity_counts.get(sid, 0),
+            "sessions_observed": len(sessions),
         }
         out.append(item)
 

@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'maths-lgc-psr-v1';
   const app = document.querySelector('#app');
 
+  const teacherPreview = new URLSearchParams(location.search).get('preview') === 'teacher';
   const state = loadState();
 
   const diagnostic = [
@@ -109,7 +110,7 @@
   }
 
   async function syncProgress(stage, challenge = null) {
-    if (!state.displayName || !state.studentId) return;
+    if (teacherPreview || !state.displayName || !state.studentId) return;
     const result = state.diagnosticDone ? diagnosticResult() : null;
     const payload = {
       student_id: state.studentId,
@@ -184,7 +185,7 @@
     app.innerHTML = `
       <header class="topbar">
         <div class="brand"><span class="brand-mark">∑</span><span>Maths LGC · CAP PSR</span></div>
-        <span class="teacher-chip">Support de rentrée · V1</span>
+        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : 'Support de rentrée · V1'}</span>
       </header>
       <div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>
       ${content}
@@ -192,7 +193,7 @@
   }
 
   function render() {
-    const route = location.hash.replace('#', '') || (state.entered ? 'parcours' : 'bienvenue');
+    const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered ? 'parcours' : 'bienvenue'));
     if (route === 'bienvenue') return renderPrehome();
     if (route === 'intro') return renderIntro();
     if (route === 'diagnostic') return renderDiagnostic();
@@ -233,6 +234,7 @@
       </section>
     `, 0);
     document.querySelector('#enter').addEventListener('click', () => {
+      if (teacherPreview) return go('intro');
       const name = document.querySelector('#display-name').value.trim();
       if (!name) {
         document.querySelector('#name-error').classList.remove('hidden');

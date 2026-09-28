@@ -19,8 +19,11 @@ La V1 est mobile-first, sans compte élève et sans build frontend :
 - synchronisation vers une petite base SQLite quand le serveur est disponible ;
 - tableau enseignant protégé avec export CSV et historique JSON complet.
 - deux premiers modules post-diagnostic : **Durées** et **Recettes & proportionnalité**, avec manipulations interactives et feedback local.
+- jalons temporels serveur indicatifs : début de session, premières ouvertures des étapes et validations ; visibles dans le tableau enseignant et les exports.
 
 La collecte est limitée au besoin pédagogique de suivi : nom, prénom, date de naissance et résultats. Aucun email, aucune adresse et aucun compte élève. La date de naissance sert uniquement à distinguer les homonymes dans le tableau enseignant.
+
+Les temps observés sont volontairement grossiers : ils peuvent inclure une explication collective, une pause ou un onglet laissé ouvert. Ils ne doivent jamais être interprétés seuls ni utilisés comme note.
 
 ## Lancer localement
 

@@ -1,0 +1,46 @@
+name: CI Maths LGC
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install -r requirements.txt
+
+      - name: Python syntax
+        run: python -m py_compile server.py tests/smoke_sessions.py
+
+      - name: Student JavaScript syntax
+        run: node --check assets/app.js
+
+      - name: Teacher JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("teacher.html").read_text(encoding="utf-8")
+          match = re.search(r"<script>([\s\S]*?)</script>", html)
+          if not match:
+              raise SystemExit("teacher script not found")
+          Path("/tmp/teacher.js").write_text(match.group(1), encoding="utf-8")
+          PY
+          node --check /tmp/teacher.js
+
+      - name: Session smoke test
+        run: python tests/smoke_sessions.py

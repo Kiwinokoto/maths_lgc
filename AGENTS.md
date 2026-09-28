@@ -6,6 +6,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 ## Principes
 - UI : sobre mais attractive pour des CAP 1re année ; palette principale violet/indigo, accents chauds pêche/ambre/rose, vert réservé aux états de réussite ; légère inspiration manga sans gamification infantilisante ni effets qui nuisent à la lecture.
 - Priorité pédagogique : situations PSR concrètes, progression guidée et remédiation.
+- Accessibilité linguistique : au début du parcours, phrases courtes, vocabulaire courant, exemples visuels/concrets ; introduire le vocabulaire mathématique et professionnel progressivement, en particulier pour les élèves avec parcours scolaire fragile ou français en cours d'acquisition.
 - Frontend mobile-first en HTML/CSS/JS, sans compte élève ni dépendance frontend.
 - Collecte V1 minimale nécessaire pour éviter les homonymes : prénom + nom + date de naissance + résultats pédagogiques, stockés dans SQLite côté serveur. Dans l'interface élève, utiliser uniquement le prénom après l'identification.
 - La progression reste aussi dans `localStorage` pour éviter de perdre le travail en cas de réseau instable.
@@ -57,10 +58,11 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Premier défi PSR interactif (proportionnalité, durée, coût/CA).
 - Synchronisation serveur des résultats quand le réseau est disponible.
 - Tableau enseignant avec forces, difficultés, priorité de travail et exports.
-- Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, navigation sans remplir les exercices.
+- Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, barre d'inspection directe vers Intro / Diagnostic / Correction / Défi / Bilan ; `/teacher` propose aussi ces liens après connexion.
 - Historique complet des tentatives exportable pour analyse après séance.
 - Passe UI V1 : palette modernisée, topbar sticky, progression renforcée, cartes/diagnostic/défi plus visuels, sans changement du parcours pédagogique.
 - Passe UI V2 : vert retiré de la couleur d'action ; violet/indigo principal, accents chauds manga discrets, vert menthe vif/tendre conservé seulement pour les réussites/étapes terminées.
+- Passe accessibilité séance 1 : fond moins rosé, en-tête contextuel avec ∑ vers le parcours, intro simplifiée avec exemples concrets et vocabulaire technique introduit progressivement.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes

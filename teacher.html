@@ -42,6 +42,17 @@
     .teacher-errors { display:flex; flex-wrap:wrap; gap:8px; }
     .teacher-status { min-height:1.4em; color:var(--muted); }
     @media (max-width:760px) { .teacher-stats,.teacher-inspect-grid { grid-template-columns:1fr; } }
+    .session-create-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0; }
+    .session-create-grid label { display:grid; gap:6px; font-weight:800; color:var(--muted); font-size:.84rem; }
+    .session-share { display:grid; grid-template-columns:minmax(220px,320px) 1fr; gap:20px; align-items:center; }
+    .session-qr { width:min(100%,300px); aspect-ratio:1; background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px; }
+    .session-link-box { display:grid; gap:10px; }
+    .session-link-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+    .session-link-row input { min-width:0; width:100%; }
+    .recent-sessions { display:grid; gap:10px; margin-top:14px; }
+    .recent-session { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.76); }
+    .recent-session small { display:block; color:var(--muted); margin-top:3px; }
+    @media (max-width:760px) { .session-create-grid,.session-share { grid-template-columns:1fr; } .session-link-row { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -65,87 +76,114 @@
       <p id="login-status" class="teacher-status" role="status"></p>
     </section>
 
-    <section id="dashboard" class="hidden">
+    <section id="teacher-home" class="hidden">
       <div class="teacher-toolbar">
         <div>
-          <p class="eyebrow">Vue classe</p>
-          <h2 style="margin-bottom:6px">Ce qu’ils ont fait</h2>
-          <p class="teacher-muted" id="generated-at"></p>
+          <p class="eyebrow">Accueil enseignant</p>
+          <h2 style="margin-bottom:6px">Créer une séance</h2>
+          <p class="teacher-muted">Chaque séance crée son propre groupe, son QR élève et son accès de suivi.</p>
         </div>
         <div class="actions" style="margin-top:0">
-          <button id="refresh" class="btn btn-secondary">Actualiser</button>
-          <button id="export-json" class="btn btn-secondary">Exporter JSON</button>
-          <button id="export-csv" class="btn btn-primary">Exporter CSV</button>
-          <button id="logout" class="btn btn-ghost">Fermer</button>
+          <a class="btn btn-secondary" href="/?preview=teacher#parcours">Inspecter le cours</a>
+          <button id="logout" class="btn btn-ghost">Fermer l’accès enseignant</button>
         </div>
-      </div>
-
-      <div class="teacher-filters" aria-label="Filtrer le groupe">
-        <label>
-          <span>Professeur</span>
-          <select id="teacher-filter" class="teacher-select">
-            <option value="">Tous les professeurs</option>
-            <option value="kevin">Monsieur Kevin</option>
-            <option value="waren">Monsieur Waren</option>
-            <option value="fadhila">Madame Fadhila</option>
-          </select>
-        </label>
-        <label>
-          <span>Séance</span>
-          <select id="session-filter" class="teacher-select">
-            <option value="seance-1" selected>Séance 1</option>
-          </select>
-        </label>
-        <p class="teacher-muted" id="filter-summary" style="margin:0 0 .65rem"></p>
       </div>
 
       <section class="card hero">
+        <p class="eyebrow">Nouvelle séance</p>
+        <h3>Prépare le QR de ton groupe</h3>
+        <div class="session-create-grid">
+          <label>
+            <span>Professeur</span>
+            <select id="create-teacher" class="teacher-select" required>
+              <option value="">Choisir…</option>
+              <option value="kevin">Monsieur Kevin</option>
+              <option value="waren">Monsieur Waren</option>
+              <option value="fadhila">Madame Fadhila</option>
+            </select>
+          </label>
+          <label>
+            <span>Séance</span>
+            <select id="create-course-session" class="teacher-select" required>
+              <option value="seance-1" selected>Séance 1</option>
+            </select>
+          </label>
+          <label>
+            <span>Groupe / classe</span>
+            <input id="create-group" class="teacher-input" type="text" maxlength="80" placeholder="Ex. PSR 1" />
+          </label>
+        </div>
+        <div class="actions"><button id="create-session" class="btn btn-primary">Créer la séance et le QR</button></div>
+        <p id="home-status" class="teacher-status" role="status"></p>
+      </section>
+
+      <section class="card hero">
+        <p class="eyebrow">Sur cet appareil</p>
+        <h3>Séances récemment créées</h3>
+        <p class="teacher-muted">Ces raccourcis sont enregistrés uniquement dans ce navigateur. Le lien de gestion affiché après création permet de reprendre une séance sur un autre appareil.</p>
+        <div id="recent-sessions" class="recent-sessions"></div>
+      </section>
+    </section>
+
+    <section id="session-dashboard" class="hidden">
+      <div class="teacher-toolbar">
+        <div>
+          <p class="eyebrow" id="session-eyebrow">Séance</p>
+          <h2 id="session-title" style="margin-bottom:6px">Suivi du groupe</h2>
+          <p class="teacher-muted" id="generated-at"></p>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button id="back-home" class="btn btn-ghost">Accueil enseignant</button>
+          <button id="refresh" class="btn btn-secondary">Actualiser</button>
+          <button id="export-json" class="btn btn-secondary">Exporter JSON</button>
+          <button id="export-csv" class="btn btn-primary">Exporter CSV</button>
+        </div>
+      </div>
+
+      <section class="card hero">
+        <p class="eyebrow">À partager aux élèves</p>
+        <div class="session-share">
+          <img id="session-qr" class="session-qr" alt="QR code de la séance" />
+          <div class="session-link-box">
+            <div><strong id="session-context">—</strong><p class="teacher-muted">Les élèves qui utilisent ce QR sont automatiquement rattachés à ce groupe.</p></div>
+            <label><span>Code de séance</span><input id="session-code" class="teacher-input" type="text" readonly /></label>
+            <div class="session-link-row">
+              <input id="student-link" class="teacher-input" type="text" readonly />
+              <button id="copy-student-link" class="btn btn-primary">Copier le lien élève</button>
+            </div>
+            <div class="session-link-row">
+              <input id="manage-link" class="teacher-input" type="text" readonly />
+              <button id="copy-manage-link" class="btn btn-secondary">Copier le lien de gestion</button>
+            </div>
+            <p class="teacher-muted"><strong>Important :</strong> le lien de gestion donne accès aux résultats de ce groupe. Garde-le côté enseignant.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card hero">
         <p class="eyebrow">Présences</p>
-        <h3>Élèves inscrits dans cette vue</h3>
-        <p class="teacher-muted">Cette liste permet de vérifier rapidement que chacun a bien rejoint la bonne séance et de voir où il en est.</p>
+        <h3>Élèves inscrits</h3>
+        <p class="teacher-muted">Vérifie ici que chaque élève a bien rejoint la séance avant de poursuivre.</p>
         <div id="student-roster" class="teacher-roster"></div>
       </section>
 
       <div class="teacher-stats">
         <div class="teacher-stat"><span>Élèves inscrits</span><strong id="student-count">0</strong></div>
         <div class="teacher-stat"><span>Moyenne diagnostic</span><strong id="diagnostic-average">—</strong></div>
-        <div class="teacher-stat"><span>Temps médian diagnostic</span><strong id="diagnostic-median">—</strong></div>
+        <div class="teacher-stat"><span>Diagnostics terminés</span><strong id="diagnostic-complete">0</strong></div>
         <div class="teacher-stat"><span>Défis terminés</span><strong id="challenge-complete">0</strong></div>
       </div>
-      <div class="teacher-timing-note"><strong>Temps indicatifs :</strong> ils donnent des indices de rythme, pas une mesure du niveau. Une explication collective, une pause, une aide du professeur ou un onglet laissé ouvert peuvent allonger fortement ces durées.</div>
+      <div class="teacher-timing-note"><strong>Temps indicatifs :</strong> ils donnent des indices de rythme, pas une mesure du niveau. Une explication collective, une pause ou une aide peuvent les allonger fortement.</div>
 
       <section class="teacher-release-card">
         <div>
-          <strong>Corrigés détaillés du groupe sélectionné</strong>
-          <p>Ils restent verrouillés par défaut. Choisis un professeur puis débloque-les quand le groupe est prêt. Le déblocage concerne uniquement ce professeur et cette séance.</p>
+          <strong>Corrigés détaillés de cette séance</strong>
+          <p>Ils restent verrouillés par défaut. La liste ci-dessus t’aide à décider quand les ouvrir, sans bloquer automatiquement la classe à cause d’un absent ou d’un retardataire.</p>
         </div>
         <div class="teacher-release-actions">
-          <span id="correction-release-status" class="pill teacher-release-status locked">Choisis un professeur</span>
-          <button id="toggle-corrections" class="btn btn-secondary" type="button" disabled>Choisir un groupe</button>
+          <span id="correction-release-status" class="pill teacher-release-status locked">Verrouillés</span>
+          <button id="toggle-corrections" class="btn btn-secondary" type="button">Débloquer pour les élèves</button>
         </div>
-      </section>
-
-      <section class="card hero">
-        <p class="eyebrow">Inspection du parcours</p>
-        <h3>Tout voir sans remplir les exercices</h3>
-        <p class="teacher-muted">Chaque lien ouvre la vue prof dans cet onglet pour conserver ta session enseignant. Les validations élève sont ignorées et aucun faux résultat n’est enregistré.</p>
-        <div class="teacher-inspect-grid">
-          <a class="teacher-inspect-link" href="/?preview=teacher#parcours">Parcours<small>Vue d’ensemble et étapes.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#intro">1 · Pourquoi les maths ?<small>Introduction et objectifs simples.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#diagnostic">2 · Diagnostic<small>Les 10 situations, sans devoir répondre.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#correction">3 · Correction<small>Toutes les stratégies et aides.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#defi">4 · Défi PSR<small>Fiche technique et exercice interactif.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#bilan">5 · Bilan<small>Structure du retour donné à l’élève.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#durees">Module · Durées<small>Heures, minutes, calculs de durée et activité interactive.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#proportion">Module · Recettes<small>Portions, coefficient et proportionnalité interactive.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#pourcentages">Module · Pourcentages<small>Parts sur 100, équivalences et réductions.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#donnees">Module · Données<small>Lecture, comparaison, moyenne et fréquence.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#equations">Module · Équations<small>Nombre inconnu, égalité et opération inverse.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#fonctions">Module · Graphiques<small>Deux quantités liées, lecture d’axes et relation simple.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#commerce">Module · Prix & commerce<small>Commande, remise, coût, marge simple et taxe fournie.</small></a>
-          <a class="teacher-inspect-link" href="/?preview=teacher#probabilites">Module · Probabilités<small>Hasard, fréquence, événement contraire et simulation.</small></a>
-        </div>
-        <p class="teacher-muted" style="margin-bottom:0">Les huit grands modules du parcours sont maintenant construits et inspectables. Les prochaines passes portent surtout sur les retours terrain, la synthèse de groupe et l’approfondissement des exercices.</p>
       </section>
 
       <section class="card hero">
@@ -178,28 +216,36 @@
 <script>
 (() => {
   'use strict';
-  const login = document.querySelector('#login');
-  const dashboard = document.querySelector('#dashboard');
-  const tokenInput = document.querySelector('#token');
-  const loginStatus = document.querySelector('#login-status');
-  const dashboardStatus = document.querySelector('#dashboard-status');
-  let data = null;
-  let correctionStateRequest = 0;
+
   const TEACHERS = {
     kevin: 'Monsieur Kevin',
     waren: 'Monsieur Waren',
     fadhila: 'Madame Fadhila'
   };
   const COURSE_SESSIONS = { 'seance-1': 'Séance 1' };
+  const RECENTS_KEY = 'maths-lgc-recent-sessions-v1';
 
-  const token = () => sessionStorage.getItem('maths-lgc-teacher-token') || '';
+  const login = document.querySelector('#login');
+  const teacherHome = document.querySelector('#teacher-home');
+  const sessionDashboard = document.querySelector('#session-dashboard');
+  const tokenInput = document.querySelector('#token');
+  const loginStatus = document.querySelector('#login-status');
+  const homeStatus = document.querySelector('#home-status');
+  const dashboardStatus = document.querySelector('#dashboard-status');
 
-  async function api(path, options = {}) {
-    const headers = {
-      Authorization: 'Bearer ' + token(),
-      ...(options.headers || {})
-    };
-    const response = await fetch(path, { ...options, headers, cache: 'no-store' });
+  let data = null;
+  let currentSessionId = '';
+
+  const masterToken = () => sessionStorage.getItem('maths-lgc-teacher-token') || '';
+  const sessionTokenKey = id => 'maths-lgc-session-token:' + id;
+  const sessionToken = id => localStorage.getItem(sessionTokenKey(id)) || '';
+
+  async function request(path, options = {}, headers = {}) {
+    const response = await fetch(path, {
+      ...options,
+      headers: { ...(options.headers || {}), ...headers },
+      cache: 'no-store'
+    });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       throw new Error(body.error || ('Erreur ' + response.status));
@@ -207,21 +253,87 @@
     return response;
   }
 
-  async function load() {
-    dashboardStatus.textContent = 'Actualisation…';
+  const masterApi = (path, options = {}) =>
+    request(path, options, { Authorization: 'Bearer ' + masterToken() });
+
+  const sessionApi = (path, id, options = {}) =>
+    request(path, options, { 'X-Session-Token': sessionToken(id) });
+
+  function readRecents() {
     try {
-      const response = await api('/api/teacher/summary');
-      data = await response.json();
-      render(data);
+      const value = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]');
+      return Array.isArray(value) ? value : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveRecent(session) {
+    const recent = readRecents().filter(item => item.class_session_id !== session.class_session_id);
+    recent.unshift({
+      class_session_id: session.class_session_id,
+      teacher_label: session.teacher_label,
+      course_session_label: session.course_session_label,
+      group_label: session.group_label,
+      created_at: session.created_at
+    });
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(recent.slice(0, 12)));
+  }
+
+  function renderRecents() {
+    const box = document.querySelector('#recent-sessions');
+    box.replaceChildren();
+    const recents = readRecents();
+    if (!recents.length) {
+      const empty = document.createElement('p');
+      empty.className = 'teacher-muted';
+      empty.textContent = 'Aucune séance créée sur cet appareil pour le moment.';
+      box.append(empty);
+      return;
+    }
+    recents.forEach(session => {
+      const row = document.createElement('div');
+      row.className = 'recent-session';
+      const text = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = session.teacher_label + ' · ' + session.group_label;
+      const meta = document.createElement('small');
+      meta.textContent = session.course_session_label + ' · ' + new Date(session.created_at).toLocaleString('fr-FR');
+      text.append(title, meta);
+      const button = document.createElement('button');
+      button.className = 'btn btn-secondary';
+      button.textContent = sessionToken(session.class_session_id) ? 'Ouvrir le suivi' : 'Lien de gestion requis';
+      button.disabled = !sessionToken(session.class_session_id);
+      button.addEventListener('click', () => openSession(session.class_session_id));
+      row.append(text, button);
+      box.append(row);
+    });
+  }
+
+  async function validateMasterAndShowHome() {
+    try {
+      await masterApi('/api/teacher/status');
       login.classList.add('hidden');
-      dashboard.classList.remove('hidden');
-      dashboardStatus.textContent = '';
+      sessionDashboard.classList.add('hidden');
+      teacherHome.classList.remove('hidden');
+      loginStatus.textContent = '';
+      renderRecents();
     } catch (error) {
       sessionStorage.removeItem('maths-lgc-teacher-token');
-      dashboard.classList.add('hidden');
+      teacherHome.classList.add('hidden');
+      sessionDashboard.classList.add('hidden');
       login.classList.remove('hidden');
       loginStatus.textContent = error.message;
     }
+  }
+
+  function managementUrl(id) {
+    const token = sessionToken(id);
+    return location.origin + '/teacher?session=' + encodeURIComponent(id) + '#token=' + encodeURIComponent(token);
+  }
+
+  function studentUrl(id) {
+    return location.origin + '/?session=' + encodeURIComponent(id);
   }
 
   function formatDuration(seconds) {
@@ -231,42 +343,9 @@
     const rest = total % 60;
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
-      return hours + ' h ' + String(mins).padStart(2, '0');
+      return hours + ' h ' + String(minutes % 60).padStart(2, '0');
     }
     return minutes ? minutes + ' min ' + (rest ? String(rest).padStart(2, '0') + ' s' : '') : rest + ' s';
-  }
-
-  function median(values) {
-    const sorted = values.filter(Number.isFinite).slice().sort((a,b) => a-b);
-    if (!sorted.length) return null;
-    const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-  }
-
-  function currentFilters() {
-    return {
-      teacher: document.querySelector('#teacher-filter').value,
-      session: document.querySelector('#session-filter').value
-    };
-  }
-
-  function contextQuery() {
-    const { teacher, session } = currentFilters();
-    const params = new URLSearchParams();
-    if (teacher) params.set('teacher', teacher);
-    if (session) params.set('session', session);
-    const query = params.toString();
-    return query ? '?' + query : '';
-  }
-
-  function filteredStudents() {
-    const students = (data && data.students) || [];
-    const { teacher, session } = currentFilters();
-    return students.filter(student =>
-      (!teacher || student.teacher_id === teacher) &&
-      (!session || student.course_session === session)
-    );
   }
 
   function progressLabel(student) {
@@ -281,7 +360,7 @@
     if (!students.length) {
       const empty = document.createElement('span');
       empty.className = 'teacher-roster-empty';
-      empty.textContent = 'Aucun élève inscrit pour cette vue pour le moment.';
+      empty.textContent = 'Aucun élève inscrit pour le moment.';
       roster.append(empty);
       return;
     }
@@ -298,75 +377,48 @@
     });
   }
 
-  async function refreshCorrectionState() {
-    const requestId = ++correctionStateRequest;
-    const { teacher, session } = currentFilters();
-    const releaseStatus = document.querySelector('#correction-release-status');
-    const releaseButton = document.querySelector('#toggle-corrections');
-    if (!teacher || !session) {
-      releaseStatus.textContent = 'Choisis un professeur';
-      releaseStatus.className = 'pill teacher-release-status locked';
-      releaseButton.textContent = 'Choisir un groupe';
-      releaseButton.dataset.unlocked = 'false';
-      releaseButton.disabled = true;
-      return;
-    }
-    releaseButton.disabled = true;
-    try {
-      const response = await fetch('/api/class-state?' + new URLSearchParams({ teacher, session }).toString(), { cache:'no-store' });
-      if (!response.ok) throw new Error('État des corrigés indisponible.');
-      const classState = await response.json();
-      if (requestId !== correctionStateRequest) return;
-      const unlocked = Boolean(classState.corrections_unlocked);
-      releaseStatus.textContent = unlocked ? 'Débloqués' : 'Verrouillés';
-      releaseStatus.className = 'pill teacher-release-status ' + (unlocked ? 'unlocked' : 'locked');
-      releaseButton.textContent = unlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
-      releaseButton.dataset.unlocked = unlocked ? 'true' : 'false';
-    } catch (error) {
-      if (requestId !== correctionStateRequest) return;
-      releaseStatus.textContent = 'État indisponible';
-      releaseButton.textContent = 'Réessayer';
-      dashboardStatus.textContent = error.message;
-    } finally {
-      if (requestId === correctionStateRequest) releaseButton.disabled = false;
-    }
-  }
-
-  function render(payload) {
+  function renderSession(payload) {
     data = payload;
-    renderView();
-  }
+    const session = payload.session;
+    const students = payload.students || [];
+    document.querySelector('#session-eyebrow').textContent = session.course_session_label;
+    document.querySelector('#session-title').textContent = session.teacher_label + ' · ' + session.group_label;
+    document.querySelector('#session-context').textContent = session.teacher_label + ' · ' + session.course_session_label + ' · ' + session.group_label;
+    document.querySelector('#session-code').value = session.class_session_id;
+    document.querySelector('#student-link').value = studentUrl(session.class_session_id);
+    document.querySelector('#manage-link').value = managementUrl(session.class_session_id);
+    document.querySelector('#session-qr').src = '/api/session-qr?id=' + encodeURIComponent(session.class_session_id);
+    document.querySelector('#generated-at').textContent = payload.generated_at
+      ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleString('fr-FR')
+      : '';
 
-  function renderView() {
-    const students = filteredStudents();
-    const { teacher, session } = currentFilters();
-    const teacherLabel = teacher ? TEACHERS[teacher] : 'Tous les professeurs';
-    const sessionLabel = COURSE_SESSIONS[session] || 'Toutes les séances';
-    document.querySelector('#filter-summary').textContent = teacherLabel + ' · ' + sessionLabel + ' · ' + students.length + ' élève(s)';
     document.querySelector('#student-count').textContent = students.length;
     const scores = students.map(s => s.diagnostic && s.diagnostic.score).filter(Number.isFinite);
     document.querySelector('#diagnostic-average').textContent = scores.length
       ? (scores.reduce((a,b) => a+b, 0) / scores.length).toFixed(1).replace('.', ',') + '/10'
       : '—';
-    const diagnosticTimes = students.map(s => (s.timing || {}).diagnostic_seconds).filter(Number.isFinite);
-    document.querySelector('#diagnostic-median').textContent = formatDuration(median(diagnosticTimes));
+    document.querySelector('#diagnostic-complete').textContent = students.filter(s => Boolean(s.diagnostic)).length;
     document.querySelector('#challenge-complete').textContent = students.filter(s => (s.challenge || {}).score === 3).length;
-    document.querySelector('#generated-at').textContent = data.generated_at
-      ? 'Actualisé : ' + new Date(data.generated_at).toLocaleString('fr-FR')
-      : '';
+
+    const releaseStatus = document.querySelector('#correction-release-status');
+    const releaseButton = document.querySelector('#toggle-corrections');
+    const unlocked = Boolean(session.corrections_unlocked);
+    releaseStatus.textContent = unlocked ? 'Débloqués' : 'Verrouillés';
+    releaseStatus.className = 'pill teacher-release-status ' + (unlocked ? 'unlocked' : 'locked');
+    releaseButton.textContent = unlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
+    releaseButton.dataset.unlocked = unlocked ? 'true' : 'false';
 
     renderRoster(students);
-    refreshCorrectionState();
 
     const errors = new Map();
-    students.forEach(s => (s.weaknesses || []).forEach(domain => errors.set(domain, (errors.get(domain) || 0) + 1)));
-    const common = [...errors.entries()].sort((a,b) => b[1]-a[1]);
+    students.forEach(student => (student.weaknesses || []).forEach(domain => errors.set(domain, (errors.get(domain) || 0) + 1)));
+    const common = [...errors.entries()].sort((a,b) => b[1] - a[1]);
     const errorBox = document.querySelector('#common-errors');
     errorBox.replaceChildren();
     if (!common.length) {
       const chip = document.createElement('span');
       chip.className = 'pill ok';
-      chip.textContent = 'Aucune difficulté commune détectée pour l’instant';
+      chip.textContent = students.length ? 'Aucune difficulté commune détectée pour l’instant' : 'En attente des premiers diagnostics';
       errorBox.append(chip);
     } else {
       common.forEach(([domain, count]) => {
@@ -406,8 +458,6 @@
           meta.className = 'teacher-muted';
           const bits = [];
           if (student.birth_date) bits.push('Né(e) le ' + new Date(student.birth_date + 'T12:00:00').toLocaleDateString('fr-FR'));
-          if (student.teacher_label) bits.push(student.teacher_label);
-          if (student.course_session_label) bits.push(student.course_session_label);
           if (student.unknown_count) bits.push(student.unknown_count + ' « je ne sais pas »');
           bits.push((student.submissions || 0) + ' enregistrement(s)');
           meta.textContent = bits.join(' · ');
@@ -419,15 +469,64 @@
     });
   }
 
-  function download(name, blob) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function openSession(id) {
+    const token = sessionToken(id);
+    if (!token) {
+      homeStatus.textContent = 'Le lien de gestion de cette séance est nécessaire sur cet appareil.';
+      return;
+    }
+    currentSessionId = id;
+    dashboardStatus.textContent = 'Actualisation…';
+    try {
+      const response = await sessionApi('/api/teacher/session-summary?id=' + encodeURIComponent(id), id);
+      const payload = await response.json();
+      saveRecent(payload.session);
+      teacherHome.classList.add('hidden');
+      login.classList.add('hidden');
+      sessionDashboard.classList.remove('hidden');
+      renderSession(payload);
+      dashboardStatus.textContent = '';
+      history.replaceState(null, '', '/teacher?session=' + encodeURIComponent(id));
+    } catch (error) {
+      dashboardStatus.textContent = error.message;
+      if (error.message.includes('refusé')) localStorage.removeItem(sessionTokenKey(id));
+    }
+  }
+
+  async function copyText(value, button) {
+    try {
+      await navigator.clipboard.writeText(value);
+      const original = button.textContent;
+      button.textContent = 'Copié';
+      setTimeout(() => { button.textContent = original; }, 1200);
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = value;
+      document.body.append(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+    }
+  }
+
+  async function downloadSession(path, filename, asJson = false) {
+    if (!currentSessionId) return;
+    try {
+      const response = await sessionApi(path + '?id=' + encodeURIComponent(currentSessionId), currentSessionId);
+      const blob = asJson
+        ? new Blob([JSON.stringify(await response.json(), null, 2)], { type:'application/json' })
+        : await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      dashboardStatus.textContent = error.message;
+    }
   }
 
   document.querySelector('#open-dashboard').addEventListener('click', () => {
@@ -437,82 +536,112 @@
       return;
     }
     sessionStorage.setItem('maths-lgc-teacher-token', value);
-    loginStatus.textContent = '';
-    load();
+    validateMasterAndShowHome();
   });
-  tokenInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.querySelector('#open-dashboard').click(); });
-  document.querySelector('#toggle-corrections').addEventListener('click', async () => {
-    const button = document.querySelector('#toggle-corrections');
-    const { teacher, session } = currentFilters();
-    if (!teacher || !session) {
-      dashboardStatus.textContent = 'Choisis d’abord un professeur et une séance.';
+  tokenInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') document.querySelector('#open-dashboard').click();
+  });
+
+  document.querySelector('#create-session').addEventListener('click', async () => {
+    const teacherId = document.querySelector('#create-teacher').value;
+    const courseSession = document.querySelector('#create-course-session').value;
+    const groupLabel = document.querySelector('#create-group').value.trim();
+    if (!TEACHERS[teacherId] || !COURSE_SESSIONS[courseSession] || !groupLabel) {
+      homeStatus.textContent = 'Choisis le professeur et renseigne le groupe.';
       return;
     }
-    const currentlyUnlocked = button.dataset.unlocked === 'true';
-    const nextUnlocked = !currentlyUnlocked;
-    const groupLabel = (TEACHERS[teacher] || teacher) + ' · ' + (COURSE_SESSIONS[session] || session);
-    if (nextUnlocked && !window.confirm('Débloquer maintenant les solutions détaillées pour ' + groupLabel + ' ?')) return;
+    const button = document.querySelector('#create-session');
     button.disabled = true;
-    dashboardStatus.textContent = nextUnlocked ? 'Déblocage des corrigés…' : 'Reverrouillage des corrigés…';
+    homeStatus.textContent = 'Création de la séance…';
     try {
-      await api('/api/teacher/corrections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          unlocked: nextUnlocked,
-          teacher_id: teacher,
-          course_session: session
-        })
+      const response = await masterApi('/api/teacher/sessions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ teacher_id:teacherId, course_session:courseSession, group_label:groupLabel })
       });
-      await refreshCorrectionState();
-      dashboardStatus.textContent = nextUnlocked
-        ? 'Corrigés détaillés débloqués pour ' + groupLabel + '.'
-        : 'Corrigés détaillés reverrouillés pour ' + groupLabel + '.';
+      const created = await response.json();
+      localStorage.setItem(sessionTokenKey(created.session.class_session_id), created.admin_token);
+      saveRecent(created.session);
+      document.querySelector('#create-group').value = '';
+      homeStatus.textContent = 'Séance créée.';
+      await openSession(created.session.class_session_id);
+    } catch (error) {
+      homeStatus.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector('#refresh').addEventListener('click', () => {
+    if (currentSessionId) openSession(currentSessionId);
+  });
+
+  document.querySelector('#toggle-corrections').addEventListener('click', async () => {
+    if (!currentSessionId) return;
+    const button = document.querySelector('#toggle-corrections');
+    const nextUnlocked = button.dataset.unlocked !== 'true';
+    if (nextUnlocked && !confirm('Débloquer maintenant les corrigés détaillés pour les élèves de cette séance ?')) return;
+    button.disabled = true;
+    try {
+      await sessionApi('/api/teacher/session-corrections', currentSessionId, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ class_session_id:currentSessionId, unlocked:nextUnlocked })
+      });
+      await openSession(currentSessionId);
+      dashboardStatus.textContent = nextUnlocked ? 'Corrigés débloqués pour cette séance.' : 'Corrigés reverrouillés pour cette séance.';
     } catch (error) {
       dashboardStatus.textContent = error.message;
     } finally {
-      const filters = currentFilters();
-      button.disabled = !(filters.teacher && filters.session);
+      button.disabled = false;
     }
   });
 
-  document.querySelector('#teacher-filter').addEventListener('change', event => {
-    sessionStorage.setItem('maths-lgc-teacher-filter', event.target.value);
-    if (data) renderView();
-  });
-  document.querySelector('#session-filter').addEventListener('change', event => {
-    sessionStorage.setItem('maths-lgc-session-filter', event.target.value);
-    if (data) renderView();
-  });
-  const savedTeacherFilter = sessionStorage.getItem('maths-lgc-teacher-filter') || '';
-  if (savedTeacherFilter in TEACHERS) document.querySelector('#teacher-filter').value = savedTeacherFilter;
-  const savedSessionFilter = sessionStorage.getItem('maths-lgc-session-filter') || 'seance-1';
-  if (savedSessionFilter in COURSE_SESSIONS) document.querySelector('#session-filter').value = savedSessionFilter;
+  document.querySelector('#copy-student-link').addEventListener('click', event => copyText(document.querySelector('#student-link').value, event.currentTarget));
+  document.querySelector('#copy-manage-link').addEventListener('click', event => copyText(document.querySelector('#manage-link').value, event.currentTarget));
+  document.querySelector('#export-json').addEventListener('click', () => downloadSession('/api/teacher/session-history', 'maths-lgc-historique-' + currentSessionId + '.json', true));
+  document.querySelector('#export-csv').addEventListener('click', () => downloadSession('/api/teacher/session-export.csv', 'maths-lgc-classe-' + currentSessionId + '.csv'));
 
-  document.querySelector('#refresh').addEventListener('click', load);
+  document.querySelector('#back-home').addEventListener('click', () => {
+    sessionDashboard.classList.add('hidden');
+    currentSessionId = '';
+    history.replaceState(null, '', '/teacher');
+    if (masterToken()) validateMasterAndShowHome();
+    else {
+      teacherHome.classList.add('hidden');
+      login.classList.remove('hidden');
+    }
+  });
+
   document.querySelector('#logout').addEventListener('click', () => {
     sessionStorage.removeItem('maths-lgc-teacher-token');
-    location.reload();
-  });
-  document.querySelector('#export-json').addEventListener('click', async () => {
-    try {
-      const response = await api('/api/teacher/history' + contextQuery());
-      const history = await response.json();
-      download('maths-lgc-historique.json', new Blob([JSON.stringify(history, null, 2)], { type:'application/json' }));
-    } catch (error) {
-      dashboardStatus.textContent = error.message;
-    }
-  });
-  document.querySelector('#export-csv').addEventListener('click', async () => {
-    try {
-      const response = await api('/api/teacher/export.csv' + contextQuery());
-      download('maths-lgc-classe.csv', await response.blob());
-    } catch (error) {
-      dashboardStatus.textContent = error.message;
-    }
+    teacherHome.classList.add('hidden');
+    sessionDashboard.classList.add('hidden');
+    login.classList.remove('hidden');
+    tokenInput.value = '';
   });
 
-  if (token()) load();
+  async function initialize() {
+    const params = new URLSearchParams(location.search);
+    const requestedSession = params.get('session') || '';
+    const fragment = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const fragmentToken = fragment.get('token') || '';
+    if (requestedSession && fragmentToken) {
+      localStorage.setItem(sessionTokenKey(requestedSession), fragmentToken);
+      history.replaceState(null, '', '/teacher?session=' + encodeURIComponent(requestedSession));
+    }
+    if (requestedSession && sessionToken(requestedSession)) {
+      await openSession(requestedSession);
+      return;
+    }
+    if (masterToken()) {
+      await validateMasterAndShowHome();
+      return;
+    }
+    login.classList.remove('hidden');
+  }
+
+  initialize();
 })();
 </script>
 </body>

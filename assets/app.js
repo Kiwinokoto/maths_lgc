@@ -278,19 +278,19 @@
   }
 
   function renderPath() {
-    const correctionLocked = !state.diagnosticDone;
-    const challengeLocked = !state.diagnosticDone;
+    const correctionLocked = !state.diagnosticDone && !teacherPreview;
+    const challengeLocked = !state.diagnosticDone && !teacherPreview;
     shell(`
       <section class="card hero">
         <p class="eyebrow">Ton parcours d’aujourd’hui</p>
         <h2>On avance dans l’ordre.</h2>
-        <p class="lead">Chaque étape débloque la suivante. Tu peux refaire le diagnostic ou le défi autant de fois que tu veux.</p>
+        <p class="lead">${teacherPreview ? 'Vue prof : toutes les étapes sont accessibles directement, sans remplir les exercices.' : 'Chaque étape débloque la suivante. Tu peux refaire le diagnostic ou le défi autant de fois que tu veux.'}</p>
         <div class="path">
           <article class="path-step done"><div class="step-num">✓</div><div><h3>Pourquoi des maths en PSR ?</h3><div class="step-meta">Objectifs de la formation</div></div><button class="btn btn-ghost" data-go="intro">Revoir</button></article>
           <article class="path-step ${state.diagnosticDone ? 'done' : 'available'}"><div class="step-num">2</div><div><h3>Mon point de départ</h3><div class="step-meta">« Les maths et moi » + 10 situations courtes · sans note</div></div><button class="btn btn-primary" data-go="diagnostic">${state.diagnosticDone ? 'Refaire' : 'Commencer'}</button></article>
           <article class="path-step ${correctionLocked ? 'locked' : 'available'}"><div class="step-num">3</div><div><h3>Correction guidée</h3><div class="step-meta">Comprendre les stratégies, pas seulement les réponses</div></div><button class="btn btn-secondary" data-go="correction" ${correctionLocked ? 'disabled' : ''}>Voir</button></article>
           <article class="path-step ${challengeLocked ? 'locked' : state.challengeDone ? 'done' : 'available'}"><div class="step-num">4</div><div><h3>Défi PSR</h3><div class="step-meta">Adapter une production, gérer une durée et un coût</div></div><button class="btn btn-primary" data-go="defi" ${challengeLocked ? 'disabled' : ''}>${state.challengeDone ? 'Refaire' : 'Relever le défi'}</button></article>
-          <article class="path-step ${state.challengeDone ? 'available' : 'locked'}"><div class="step-num">5</div><div><h3>Mon bilan</h3><div class="step-meta">Ce que je maîtrise · ce que je vais travailler</div></div><button class="btn btn-secondary" data-go="bilan" ${state.challengeDone ? '' : 'disabled'}>Voir</button></article>
+          <article class="path-step ${state.challengeDone || teacherPreview ? 'available' : 'locked'}"><div class="step-num">5</div><div><h3>Mon bilan</h3><div class="step-meta">Ce que je maîtrise · ce que je vais travailler</div></div><button class="btn btn-secondary" data-go="bilan" ${state.challengeDone || teacherPreview ? '' : 'disabled'}>Voir</button></article>
         </div>
         <div class="actions"><button class="btn btn-ghost" id="show-program">Voir la suite du CAP</button></div>
         <div id="future-program" class="hidden">
@@ -326,7 +326,7 @@
           </div>
           <p class="form-error hidden" id="diag-error">Réponds à toutes les questions avant de valider.</p>
           <div class="actions">
-            <button class="btn btn-primary" type="submit">Valider mon diagnostic</button>
+            ${teacherPreview ? '<button class="btn btn-primary" type="button" id="preview-correction">Voir la correction sans répondre</button>' : '<button class="btn btn-primary" type="submit">Valider mon diagnostic</button>'}
             <button class="btn btn-secondary" type="button" id="diag-back">Retour au parcours</button>
           </div>
         </form>
@@ -335,6 +335,7 @@
 
     document.querySelector('#diagnostic-form').addEventListener('submit', e => {
       e.preventDefault();
+      if (teacherPreview) return go('correction');
       const data = new FormData(e.currentTarget);
       const answers = {};
       let complete = true;
@@ -357,6 +358,7 @@
       syncProgress('diagnostic');
       go('correction');
     });
+    document.querySelector('#preview-correction')?.addEventListener('click', () => go('correction'));
     document.querySelector('#diag-back').addEventListener('click', () => go('parcours'));
   }
 
@@ -372,7 +374,7 @@
   }
 
   function renderCorrection() {
-    if (!state.diagnosticDone) return go('diagnostic');
+    if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
     const result = diagnosticResult();
     const summary = result.weakDomains.length
       ? `Tes prochains points de travail prioritaires : ${result.weakDomains.join(', ')}.`
@@ -399,7 +401,7 @@
   }
 
   function renderChallenge() {
-    if (!state.diagnosticDone) return go('diagnostic');
+    if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
     shell(`
       <section class="card hero">
         <p class="eyebrow">Étape 4 · Défi PSR</p>
@@ -450,6 +452,7 @@
         <div id="challenge-feedback" class="callout hidden"></div>
         <div class="actions">
           <button class="btn btn-primary" id="check-challenge">Vérifier le défi</button>
+          ${teacherPreview ? '<button class="btn btn-secondary" id="preview-bilan">Voir le bilan sans répondre</button>' : ''}
           <button class="btn btn-secondary" id="challenge-back">Retour au parcours</button>
         </div>
       </section>
@@ -470,7 +473,7 @@
       const feedback = document.querySelector('#challenge-feedback');
       feedback.classList.remove('hidden');
       feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong><br>${factorOk ? '✓' : '↻'} Coefficient : nombre de portions ÷ 10.<br>${timeOk ? '✓' : '↻'} Horaire : 11 h 45 − 35 min = 11 h 10.<br>${revenueOk ? '✓' : '↻'} Chiffre d’affaires : ${portions} × 2,50 € = ${formatMoney(revenueExpected)}.`;
-      if (count === 3) {
+      if (count === 3 && !teacherPreview) {
         state.challengeDone = true;
         saveState();
         feedback.innerHTML += '<div class="actions"><button class="btn btn-primary" id="to-summary">Voir mon bilan</button></div>';
@@ -484,6 +487,7 @@
         revenue_ok: revenueOk
       });
     });
+    document.querySelector('#preview-bilan')?.addEventListener('click', () => go('bilan'));
     document.querySelector('#challenge-back').addEventListener('click', () => go('parcours'));
   }
 
@@ -499,10 +503,13 @@
   }
 
   function renderBilan() {
-    if (!state.challengeDone) return go('defi');
+    if (!state.challengeDone && !teacherPreview) return go('defi');
     const result = diagnosticResult();
     const priorities = result.weakDomains.length ? result.weakDomains : ['Consolider et expliquer mes méthodes'];
     const firstPriority = priorities[0];
+    const scoreLabel = teacherPreview ? 'Score calculé après le diagnostic' : `${result.score}/10`;
+    const challengeLabel = teacherPreview ? 'État calculé après le défi' : 'Terminé';
+    const prioritiesLabel = teacherPreview ? 'Déduites automatiquement des erreurs observées.' : priorities.join(' · ');
     const encouragement = result.score >= 8
       ? `Très bon point de départ. Ton prochain objectif est de consolider ${firstPriority} et d’expliquer tes méthodes clairement.`
       : result.score >= 5
@@ -514,22 +521,22 @@
         <h2>Voilà ton point de départ.</h2>
         <p class="lead">Tu viens de faire ce qu’on attendra souvent en maths : comprendre une situation, choisir un calcul, vérifier le résultat et l’expliquer.</p>
         <div class="lesson-grid">
-          <article class="info-tile"><span class="pill ok">Diagnostic</span><h3>${result.score}/10</h3><p>Un repère pour savoir où commencer, pas une note.</p></article>
-          <article class="info-tile"><span class="pill ok">Défi PSR</span><h3>Terminé</h3><p>Tu as adapté une recette, manipulé une durée et calculé un montant.</p></article>
+          <article class="info-tile"><span class="pill ok">Diagnostic</span><h3>${scoreLabel}</h3><p>Un repère pour savoir où commencer, pas une note.</p></article>
+          <article class="info-tile"><span class="pill ok">Défi PSR</span><h3>${challengeLabel}</h3><p>Tu as adapté une recette, manipulé une durée et calculé un montant.</p></article>
         </div>
-        <div class="callout"><strong>Mes priorités :</strong> ${priorities.join(' · ')}</div>
-        <div class="callout"><strong>Mon conseil pour commencer :</strong> ${encouragement}</div>
+        <div class="callout"><strong>Mes priorités :</strong> ${prioritiesLabel}</div>
+        <div class="callout"><strong>Mon conseil pour commencer :</strong> ${teacherPreview ? 'Une appréciation personnalisée apparaîtra ici selon les résultats de l’élève.' : encouragement}</div>
         <p>La suite du parcours travaillera les durées, la proportionnalité, les pourcentages, les données, les équations, les graphiques, les prix et les probabilités.</p>
         <div class="actions">
           <button class="btn btn-primary" id="summary-path">Retour au parcours</button>
           <button class="btn btn-secondary" id="print-summary">Imprimer / enregistrer en PDF</button>
-          <button class="btn btn-danger" id="reset-all">Recommencer depuis zéro</button>
+          ${teacherPreview ? '' : '<button class="btn btn-danger" id="reset-all">Recommencer depuis zéro</button>'}
         </div>
       </section>
     `, 4);
     document.querySelector('#summary-path').addEventListener('click', () => go('parcours'));
     document.querySelector('#print-summary').addEventListener('click', () => window.print());
-    document.querySelector('#reset-all').addEventListener('click', () => {
+    document.querySelector('#reset-all')?.addEventListener('click', () => {
       if (!confirm('Effacer la progression enregistrée sur cet appareil ?')) return;
       localStorage.removeItem(STORAGE_KEY);
       location.hash = 'bienvenue';

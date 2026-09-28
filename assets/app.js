@@ -725,13 +725,15 @@
     document.querySelector('#correction-back').addEventListener('click', () => go('parcours'));
   }
 
-  function renderChallenge() {
+  async function renderChallenge() {
     if (!state.diagnosticDone && !teacherPreview) return go('diagnostic');
+    await refreshCorrectionsState(true);
     shell(`
       <section class="card hero">
         <p class="eyebrow">Étape 4 · Défi PSR</p>
         <h2>Préparer le service.</h2>
         <p class="lead">La fiche technique ci-dessous est prévue pour 10 portions de salade de fruits. Le nombre de clients change : adapte la production, puis réponds aux questions du service.</p>
+        ${teacherPreview ? '<div class="callout"><strong>Vue prof :</strong> tu peux afficher le corrigé du défi sans enregistrer de résultat élève.</div>' : ''}
         <div class="challenge-board">
           <div class="recipe-card">
             <h3>Fiche technique · 10 portions</h3>
@@ -762,9 +764,14 @@
         </div>
         <div class="question-list">
           <fieldset class="question">
-            <legend><span class="question-index">1</span><span>Pour le nombre de portions choisi ci-dessus, quel calcul permet de passer de la recette de base à la nouvelle recette ?</span></legend>
+            <legend><span class="question-index">1</span><span>Pour le nombre de portions choisi ci-dessus, comment trouver le coefficient qui permet d’adapter toutes les quantités de la recette ?</span></legend>
             <span class="question-domain">Proportionnalité</span>
-            <div class="answer-row"><select id="factor-choice"><option value="">Choisir…</option><option value="divide">10 ÷ nombre de portions</option><option value="multiply">nombre de portions ÷ 10</option><option value="add">nombre de portions + 10</option></select></div>
+            <div class="answer-row"><select id="factor-choice">
+              <option value="">Choisir…</option>
+              <option value="wrong-inverse">Faire 10 ÷ nombre de portions</option>
+              <option value="coefficient">Faire nombre de portions ÷ 10, puis multiplier chaque quantité par ce résultat</option>
+              <option value="wrong-add">Ajouter 10 au nombre de portions</option>
+            </select></div>
           </fieldset>
           <fieldset class="question">
             <legend><span class="question-index">2</span><span>Le service commence à 11 h 45. La préparation et la mise en place demandent 35 minutes. Au plus tard, à quelle heure faut-il commencer ?</span></legend>
@@ -772,7 +779,7 @@
             <div class="answer-row"><input id="start-time" type="text" placeholder="ex. 11 h 10" /></div>
           </fieldset>
           <fieldset class="question">
-            <legend><span class="question-index">3</span><span>Si chaque portion est vendue 2,50 €, quel chiffre d’affaires correspond au nombre de portions choisi ?</span></legend>
+            <legend><span class="question-index">3</span><span>Si chaque portion est vendue 2,50 € et que toutes les portions produites sont vendues, quel chiffre d’affaires obtient-on ?</span></legend>
             <span class="question-domain">Prix & calcul</span>
             <div class="answer-row"><input id="revenue" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div>
           </fieldset>
@@ -780,7 +787,7 @@
         <div id="challenge-feedback" class="callout hidden"></div>
         <div class="actions">
           <button class="btn btn-primary" id="check-challenge">Vérifier le défi</button>
-          ${teacherPreview ? '<button class="btn btn-secondary" id="preview-bilan">Voir le bilan sans répondre</button>' : ''}
+          ${teacherPreview ? '<button class="btn btn-secondary" id="show-challenge-answers">Afficher le corrigé du défi</button><button class="btn btn-secondary" id="preview-bilan">Voir le bilan sans répondre</button>' : ''}
           <button class="btn btn-secondary" id="challenge-back">Retour au parcours</button>
         </div>
       </section>
@@ -791,16 +798,35 @@
     range.addEventListener('input', update);
     update();
 
-    document.querySelector('#check-challenge').addEventListener('click', () => {
+    const checkChallenge = async () => {
       const portions = Number(range.value);
-      const factorOk = document.querySelector('#factor-choice').value === 'multiply';
+      const factor = portions / 10;
+      const factorOk = document.querySelector('#factor-choice').value === 'coefficient';
       const timeOk = ['11h10','11 h 10','11:10','11.10'].some(v => normaliseText(v) === normaliseText(document.querySelector('#start-time').value));
       const revenueExpected = portions * 2.5;
       const revenueOk = Math.abs(parseNumber(document.querySelector('#revenue').value) - revenueExpected) < 0.001;
       const count = [factorOk, timeOk, revenueOk].filter(Boolean).length;
+      const detailed = teacherPreview || await refreshCorrectionsState(true);
       const feedback = document.querySelector('#challenge-feedback');
       feedback.classList.remove('hidden');
-      feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong><br>${factorOk ? '✓' : '↻'} Coefficient : nombre de portions ÷ 10.<br>${timeOk ? '✓' : '↻'} Horaire : 11 h 45 − 35 min = 11 h 10.<br>${revenueOk ? '✓' : '↻'} Chiffre d’affaires : ${portions} × 2,50 € = ${formatMoney(revenueExpected)}.`;
+
+      if (detailed) {
+        feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong>
+          <div class="feedback-lines">
+            <span>${factorOk ? '✓' : '↻'} Coefficient : ${portions} ÷ 10 = <b>${formatNumber(factor)}</b>, puis chaque quantité est multipliée par ${formatNumber(factor)}.</span>
+            <span>${timeOk ? '✓' : '↻'} Horaire : 11 h 45 − 35 min = <b>11 h 10</b>.</span>
+            <span>${revenueOk ? '✓' : '↻'} Chiffre d’affaires : ${portions} × 2,50 € = <b>${formatMoney(revenueExpected)}</b>.</span>
+          </div>`;
+      } else {
+        feedback.innerHTML = `<strong>${count}/3 réponses justes.</strong>
+          <div class="feedback-lines">
+            <span>${factorOk ? '✓' : '↻'} Question 1 · adapter la recette</span>
+            <span>${timeOk ? '✓' : '↻'} Question 2 · heure de début</span>
+            <span>${revenueOk ? '✓' : '↻'} Question 3 · chiffre d’affaires</span>
+          </div>
+          <p class="feedback-lock-note">Le corrigé détaillé est volontairement masqué. Le professeur pourra le débloquer pour toute la classe.</p>`;
+      }
+
       if (count === 3 && !teacherPreview) {
         state.challengeDone = true;
         saveState();
@@ -814,6 +840,14 @@
         time_ok: timeOk,
         revenue_ok: revenueOk
       });
+    };
+
+    document.querySelector('#check-challenge').addEventListener('click', checkChallenge);
+    document.querySelector('#show-challenge-answers')?.addEventListener('click', async () => {
+      document.querySelector('#factor-choice').value = 'coefficient';
+      document.querySelector('#start-time').value = '11 h 10';
+      document.querySelector('#revenue').value = formatNumber(Number(range.value) * 2.5);
+      await checkChallenge();
     });
     document.querySelector('#preview-bilan')?.addEventListener('click', () => go('bilan'));
     document.querySelector('#challenge-back').addEventListener('click', () => go('parcours'));

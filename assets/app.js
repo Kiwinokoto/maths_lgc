@@ -1779,31 +1779,31 @@
         <p class="lead">Quand on choisit au hasard, on ne sait pas ce qui va sortir au prochain essai. On peut quand même mesurer la chance qu’un résultat arrive. En maths, cette chance s’appelle une <b>probabilité</b>.</p>
 
         <div class="module-context-grid">
-          <article class="module-context"><span aria-hidden="true">🎟️</span><strong>Tirage</strong><p>Parmi 10 tickets, 3 sont violets. Quelle chance de tirer un ticket violet ?</p></article>
+          <article class="module-context"><span aria-hidden="true">🟣</span><strong>Jeu du sac</strong><p>Dans un sac : 10 jetons, dont 3 violets. Tu pioches sans regarder. Quelle chance de tomber sur violet ?</p></article>
           <article class="module-context"><span aria-hidden="true">🔎</span><strong>Contrôle au hasard</strong><p>Choisir une barquette au hasard dans un lot pour effectuer un contrôle.</p></article>
           <article class="module-context"><span aria-hidden="true">🎲</span><strong>Simulation</strong><p>Faire le même tirage beaucoup de fois avec l’ordinateur pour observer les résultats.</p></article>
         </div>
 
-        <div class="callout module-rule"><strong>Repères :</strong> une probabilité indique une chance. <b>0 %</b> = impossible ; <b>100 %</b> = certain. Ici, 3 tickets violets sur 10 donnent <b>3/10 = 30 %</b>. En écriture décimale, 30 % = <b>0,3</b> : une probabilité peut aussi s’écrire entre 0 et 1.</div>
+        <div class="callout module-rule"><strong>D’abord, l’idée simple :</strong> sur 10 jetons, 3 font gagner. La chance de gagner est donc <b>3 sur 10 = 30 %</b>. En maths, cette chance s’appelle une <b>probabilité</b>. On peut aussi écrire 30 % = <b>0,3</b>. Une probabilité va de 0 (impossible) à 1 (certain).</div>
 
         <section class="learning-lab">
           <div class="lab-heading">
-            <div><span class="pill">Simule</span><h3>3 tickets violets sur 10</h3></div>
-            <p>Après chaque tirage, le ticket est remis dans le lot avant de recommencer. C’est un <b>tirage avec remise</b> : il y a donc toujours 3 tickets violets sur 10. La chance reste 30 %, mais la part de violets réellement obtenue peut changer, surtout au début.</p>
+            <div><span class="pill">Joue</span><h3>Le sac de 10 jetons</h3></div>
+            <p><strong>Règle du jeu :</strong> le sac contient 3 jetons violets et 7 gris. Tu pioches un jeton sans regarder. <b>Violet = gagné.</b> Puis tu remets le jeton dans le sac, tu mélanges et tu recommences. Remettre le jeton avant de rejouer s’appelle un <b>tirage avec remise</b>.</p>
           </div>
           <div class="probability-lab">
             <div class="probability-bag">
-              <div class="ticket-set" aria-label="Lot de dix tickets dont trois violets">
-                ${Array.from({length:10}, (_,i) => '<span class="ticket ' + (i < 3 ? 'success' : '') + '">' + (i < 3 ? 'V' : '·') + '</span>').join('')}
+              <div class="ticket-set" aria-label="Sac de dix jetons dont trois violets et sept gris">
+                ${Array.from({length:10}, (_,i) => '<span class="ticket ' + (i < 3 ? 'success' : '') + '" title="' + (i < 3 ? 'jeton violet' : 'jeton gris') + '">' + (i < 3 ? 'V' : 'G') + '</span>').join('')}
               </div>
-              <div class="probability-formula"><strong>3</strong><span>/</span><strong>10</strong><b>=</b><strong>30 %</strong></div>
+              <div class="probability-formula"><strong>3 violets</strong><span>/</span><strong>10 jetons</strong><b>=</b><strong>30 %</strong></div>
             </div>
             <div class="simulation-panel">
               <div class="simulation-stats">
-                <div class="mini-stat">Tirages<strong id="prob-draws">0</strong></div>
-                <div class="mini-stat">Violets<strong id="prob-successes">0</strong></div>
-                <div class="mini-stat">Part de violets · fréquence<strong id="prob-frequency">—</strong></div>
-                <div class="mini-stat">Chance de départ · probabilité<strong>30 %</strong></div>
+                <div class="mini-stat">Pioches<strong id="prob-draws">0</strong></div>
+                <div class="mini-stat">Violets tirés<strong id="prob-successes">0</strong></div>
+                <div class="mini-stat">Part obtenue · fréquence<strong id="prob-frequency">—</strong></div>
+                <div class="mini-stat">Chance d’un violet · probabilité<strong>30 %</strong></div>
               </div>
               <div class="probability-meter">
                 <span class="probability-theory" title="30 % théorique"></span>
@@ -1811,12 +1811,12 @@
               </div>
               <div class="simulation-history" id="prob-history" aria-label="Derniers résultats simulés"></div>
               <div class="actions compact-actions">
-                <button class="btn btn-secondary prob-run" data-count="1">1 tirage</button>
-                <button class="btn btn-secondary prob-run" data-count="20">20 tirages</button>
-                <button class="btn btn-primary prob-run" data-count="100">100 tirages</button>
+                <button class="btn btn-secondary prob-run" data-count="1">Piocher 1 fois</button>
+                <button class="btn btn-secondary prob-run" data-count="20">Jouer 20 fois</button>
+                <button class="btn btn-primary prob-run" data-count="100">Jouer 100 fois</button>
                 <button class="btn btn-ghost" id="prob-reset">Recommencer</button>
               </div>
-              <p id="prob-message" class="teacher-muted">Fais quelques tirages, puis compare avec 30 %.</p>
+              <p id="prob-message" class="teacher-muted">Commence par quelques pioches. Compte les violets obtenus, puis compare leur part avec la chance de départ : 30 %.</p>
             </div>
           </div>
         </section>
@@ -1824,18 +1824,18 @@
         <section class="method-card">
           <p class="eyebrow">Trois idées importantes</p>
           <div class="method-steps">
-            <div><span>1</span><p>Si tous les tickets ont la même chance d’être tirés, compte d’abord ceux qui t’intéressent, puis tous les tickets. En maths : <b>cas favorables / cas possibles</b>.</p></div>
-            <div><span>2</span><p>Après plusieurs tirages, calcule la part de violets obtenus. Cette part observée s’appelle la <b>fréquence</b>.</p></div>
-            <div><span>3</span><p>Sur peu d’essais, la fréquence peut être loin de la probabilité. Quand on répète beaucoup, elle a tendance à s’en rapprocher.</p></div>
+            <div><span>1</span><p><b>3 jetons font gagner</b> sur 10 jetons possibles. En maths, les 3 violets sont les <b>cas favorables</b> et les 10 jetons sont les <b>cas possibles</b>.</p></div>
+            <div><span>2</span><p>Après plusieurs pioches, regarde la part de violets réellement obtenus. Cette part observée s’appelle la <b>fréquence</b>.</p></div>
+            <div><span>3</span><p>La chance de départ, 30 %, s’appelle la <b>probabilité</b>. Sur peu de pioches, la fréquence peut être différente. En répétant beaucoup, elle a tendance à s’en rapprocher.</p></div>
           </div>
-          <div class="worked-example"><strong>2 tickets rouges sur 10</strong><span>2 tickets rouges = cas favorables</span><span>10 tickets en tout = cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
+          <div class="worked-example"><strong>2 jetons rouges sur 10</strong><span>2 rouges = cas favorables</span><span>10 jetons = cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
         </section>
 
         <section class="practice-block">
           <p class="eyebrow">À toi</p>
           <h3>4 situations courtes</h3>
           <div class="question-list">
-            <fieldset class="question"><legend><span class="question-index">1</span><span>Dans un lot de 10 tickets, 2 sont rouges. Quelle est la probabilité de tirer un rouge au hasard ?</span></legend><span class="question-domain">Cas favorables / possibles</span><div class="answer-row"><input id="prob-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">1</span><span>Dans un sac de 10 jetons, 2 sont rouges. Tu pioches sans regarder. Quelle est la probabilité de tirer un rouge ?</span></legend><span class="question-domain">Cas favorables / possibles</span><div class="answer-row"><input id="prob-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">2</span><span>Un événement impossible, c’est quelque chose qui ne peut pas arriver. Quelle probabilité lui correspond ?</span></legend><span class="question-domain">Impossible</span><div class="answer-row"><select id="prob-q2"><option value="">Choisir…</option><option value="0">0</option><option value="0.5">0,5</option><option value="1">1</option><option value="100">100</option></select></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">3</span><span>« Tirer un violet » a 30 % de chance d’arriver. Quelle est la chance de « ne pas tirer un violet » ? En maths, c’est l’événement contraire.</span></legend><span class="question-domain">Événement contraire</span><div class="answer-row"><input id="prob-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">4</span><span>La chance de tirer un violet reste 30 %. Après seulement 10 tirages, 4 violets sont sortis, soit 40 %. Est-ce possible ?</span></legend><span class="question-domain">Fréquence et probabilité</span><div class="answer-row"><select id="prob-q4"><option value="">Choisir…</option><option value="wrong">Non : la probabilité est devenue 40 %</option><option value="normal">Oui : sur peu de tirages, la part observée peut varier</option><option value="impossible">Non : obtenir 40 % est impossible</option></select></div></fieldset>
@@ -1863,12 +1863,12 @@
       document.querySelector('#prob-observed').style.width = `${frequency === null ? 0 : Math.min(100, frequency)}%`;
       document.querySelector('#prob-history').innerHTML = history.map(success => '<span class="' + (success ? 'success' : '') + '" title="' + (success ? 'violet' : 'autre') + '"></span>').join('');
       document.querySelector('#prob-message').textContent = draws === 0
-        ? 'Fais quelques tirages, puis compare avec 30 %.'
+        ? 'Commence par quelques pioches. La chance de tirer violet est de 30 %.'
         : draws < 20
-          ? 'Sur peu de tirages, la part de violets obtenue peut être assez loin de 30 %.'
+          ? 'Sur peu de pioches, la part de violets obtenue peut être assez loin de 30 %. C’est normal.'
           : draws < 100
-            ? 'En répétant, regarde si la part observée se rapproche de 30 %.'
-            : `Après ${draws} tirages, ${formatNumber(frequency)} % des tickets tirés sont violets. Cette part observée s’appelle la fréquence. Elle n’a pas besoin d’être exactement égale à 30 %.`;
+            ? 'En jouant encore, regarde si la part de violets obtenue se rapproche de 30 %.'
+            : `Après ${draws} pioches, ${formatNumber(frequency)} % des jetons tirés sont violets. Cette part observée s’appelle la fréquence. Elle n’a pas besoin d’être exactement égale à 30 %.`;
     };
 
     const runSimulation = count => {

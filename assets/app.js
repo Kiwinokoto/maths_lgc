@@ -255,10 +255,10 @@
         <h2>En PSR, les maths sont partout.</h2>
         <p class="lead">Peser, adapter une recette, lire un horaire, contrôler une quantité, rendre la monnaie, comparer des ventes : le but n’est pas d’apprendre des calculs “dans le vide”, mais de savoir choisir le bon outil au bon moment.</p>
         <div class="lesson-grid">
-          <article class="info-tile"><h3>Produire</h3><p>Quantités, unités, proportions, temps et contrôles.</p></article>
-          <article class="info-tile"><h3>Servir</h3><p>Horaires, monnaie, prix, estimations et organisation.</p></article>
-          <article class="info-tile"><h3>Comprendre des données</h3><p>Tableaux, moyennes, fréquences et graphiques.</p></article>
-          <article class="info-tile"><h3>Résoudre un problème</h3><p>Repérer les informations utiles, calculer, vérifier et expliquer.</p></article>
+          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">kg</span><h3>Produire</h3><p>Quantités, unités, proportions, temps et contrôles.</p></article>
+          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">⏱</span><h3>Servir</h3><p>Horaires, monnaie, prix, estimations et organisation.</p></article>
+          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">%</span><h3>Comprendre des données</h3><p>Tableaux, moyennes, fréquences et graphiques.</p></article>
+          <article class="info-tile use-case"><span class="use-case-icon" aria-hidden="true">→</span><h3>Résoudre un problème</h3><p>Repérer les informations utiles, calculer, vérifier et expliquer.</p></article>
         </div>
         <div class="callout"><strong>Objectif sur les deux années :</strong> devenir autonome face à une situation professionnelle, et pas seulement reproduire une méthode.</div>
         <div class="actions">
@@ -370,7 +370,7 @@
     } else {
       input = `<input type="text" inputmode="${q.type === 'text' ? 'text' : 'decimal'}" name="${q.id}" value="${escapeHtml(previous)}" placeholder="${q.placeholder || 'Ta réponse'}" aria-label="Réponse à la question ${i+1}" />`;
     }
-    return `<fieldset class="question"><legend>${i+1}. ${q.prompt}</legend><div class="answer-row">${input}${q.suffix ? `<span>${q.suffix}</span>` : ''}</div><small>${q.domain}</small></fieldset>`;
+    return `<fieldset class="question"><legend><span class="question-index">${i+1}</span><span>${q.prompt}</span></legend><span class="question-domain">${q.domain}</span><div class="answer-row">${input}${q.suffix ? `<span>${q.suffix}</span>` : ''}</div></fieldset>`;
   }
 
   function renderCorrection() {
@@ -477,15 +477,18 @@
         </div>
         <div class="question-list">
           <fieldset class="question">
-            <legend>1. Pour le nombre de portions choisi ci-dessus, quel calcul permet de passer de la recette de base à la nouvelle recette ?</legend>
+            <legend><span class="question-index">1</span><span>Pour le nombre de portions choisi ci-dessus, quel calcul permet de passer de la recette de base à la nouvelle recette ?</span></legend>
+            <span class="question-domain">Proportionnalité</span>
             <div class="answer-row"><select id="factor-choice"><option value="">Choisir…</option><option value="divide">10 ÷ nombre de portions</option><option value="multiply">nombre de portions ÷ 10</option><option value="add">nombre de portions + 10</option></select></div>
           </fieldset>
           <fieldset class="question">
-            <legend>2. Le service commence à 11 h 45. La préparation et la mise en place demandent 35 minutes. Au plus tard, à quelle heure faut-il commencer ?</legend>
+            <legend><span class="question-index">2</span><span>Le service commence à 11 h 45. La préparation et la mise en place demandent 35 minutes. Au plus tard, à quelle heure faut-il commencer ?</span></legend>
+            <span class="question-domain">Durées</span>
             <div class="answer-row"><input id="start-time" type="text" placeholder="ex. 11 h 10" /></div>
           </fieldset>
           <fieldset class="question">
-            <legend>3. Si chaque portion est vendue 2,50 €, quel chiffre d’affaires correspond au nombre de portions choisi ?</legend>
+            <legend><span class="question-index">3</span><span>Si chaque portion est vendue 2,50 €, quel chiffre d’affaires correspond au nombre de portions choisi ?</span></legend>
+            <span class="question-domain">Prix & calcul</span>
             <div class="answer-row"><input id="revenue" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div>
           </fieldset>
         </div>

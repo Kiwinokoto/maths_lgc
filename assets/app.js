@@ -1,16 +1,10 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'maths-lgc-psr-v1';
+  const BASE_STORAGE_KEY = 'maths-lgc-psr-v1';
+  const requestedClassSessionId = new URLSearchParams(location.search).get('session') || '';
+  const STORAGE_KEY = requestedClassSessionId ? BASE_STORAGE_KEY + ':' + requestedClassSessionId : BASE_STORAGE_KEY;
   const app = document.querySelector('#app');
-  const TEACHERS = {
-    kevin: 'Monsieur Kevin',
-    waren: 'Monsieur Waren',
-    fadhila: 'Madame Fadhila'
-  };
-  const COURSE_SESSIONS = {
-    'seance-1': 'Séance 1'
-  };
 
   const teacherPreviewRequested = new URLSearchParams(location.search).get('preview') === 'teacher';
   let teacherPreview = false;
@@ -20,6 +14,8 @@
   let activitySessionStarted = false;
   let correctionsUnlocked = false;
   let correctionsStateLoaded = false;
+  let classContext = null;
+  let classContextError = '';
 
   async function refreshCorrectionsState(force = false) {
     if (teacherPreview) {
@@ -28,16 +24,16 @@
       return true;
     }
     if (correctionsStateLoaded && !force) return correctionsUnlocked;
-    if (!state.teacherId || !state.courseSession) {
+    if (!state.classSessionId) {
       correctionsUnlocked = false;
       correctionsStateLoaded = true;
       return false;
     }
     try {
-      const params = new URLSearchParams({ teacher: state.teacherId, session: state.courseSession });
-      const response = await fetch('/api/class-state?' + params.toString(), { cache: 'no-store' });
+      const response = await fetch('/api/session?id=' + encodeURIComponent(state.classSessionId), { cache: 'no-store' });
       if (!response.ok) throw new Error('class state unavailable');
       const payload = await response.json();
+      classContext = payload;
       correctionsUnlocked = Boolean(payload.corrections_unlocked);
     } catch {
       correctionsUnlocked = false;
@@ -132,15 +128,14 @@
         firstName: '',
         lastName: '',
         birthDate: '',
-        teacherId: '',
-        courseSession: 'seance-1',
+        classSessionId: requestedClassSessionId,
         serverSync: 'pending',
         answers: {},
         selfEval: {},
         ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
       };
     } catch {
-      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', teacherId: '', courseSession: 'seance-1', serverSync: 'pending', answers: {}, selfEval: {} };
+      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', classSessionId: requestedClassSessionId, serverSync: 'pending', answers: {}, selfEval: {} };
     }
   }
 
@@ -154,7 +149,7 @@
   }
 
   async function syncProgress(stage, challenge = null) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.teacherId || !state.courseSession || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     const result = state.diagnosticDone ? diagnosticResult() : null;
     const payload = {
       student_id: state.studentId,
@@ -162,8 +157,7 @@
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
-      teacher_id: state.teacherId,
-      course_session: state.courseSession,
+      class_session_id: state.classSessionId,
       session_id: activitySessionId,
       stage,
       self_eval: state.selfEval,
@@ -191,15 +185,14 @@
   }
 
   async function syncActivity(event, route) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.teacherId || !state.courseSession || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     const payload = {
       student_id: state.studentId,
       display_name: state.firstName,
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
-      teacher_id: state.teacherId,
-      course_session: state.courseSession,
+      class_session_id: state.classSessionId,
       stage: 'activity',
       activity: {
         event,
@@ -221,7 +214,7 @@
   }
 
   function observeRoute(route) {
-    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.teacherId || !state.courseSession || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.classSessionId || !state.studentId) return;
     if (!activitySessionStarted) {
       activitySessionStarted = true;
       syncActivity('session_started', route);
@@ -332,7 +325,7 @@
   }
 
   function render() {
-    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate && state.teacherId && state.courseSession);
+    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate && state.classSessionId);
     const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered && hasIdentity ? 'parcours' : 'bienvenue'));
     if (!teacherPreview && !hasIdentity && route !== 'bienvenue') {
       location.hash = 'bienvenue';

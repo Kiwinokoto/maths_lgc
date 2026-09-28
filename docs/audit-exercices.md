@@ -97,4 +97,5 @@ Le taux de taxe est toujours fourni dans l'énoncé ; aucun taux légal n'est de
 - Côté élève, les solutions détaillées du **diagnostic** et du **défi** sont verrouillées par défaut.
 - L'enseignant peut les débloquer globalement depuis `/teacher`.
 - Le verrou est persistant dans `data/class_state.json`, sans migration SQLite.
+- Ce verrou protège contre la consultation normale des corrigés, pas contre l'inspection volontaire du JavaScript client. Pour une future évaluation notée, les clés sensibles devront être validées côté serveur.
 - Les modules d'apprentissage post-diagnostic conservent leur feedback immédiat : ils servent à apprendre et s'entraîner, pas à positionner la classe.

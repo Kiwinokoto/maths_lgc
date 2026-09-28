@@ -10,6 +10,13 @@
     .teacher-wrap { display:grid; gap:18px; }
     .teacher-login { max-width:620px; margin:8vh auto 0; }
     .teacher-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .teacher-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:14px 0 18px; }
+    .teacher-filters label { display:grid; gap:6px; min-width:220px; font-size:.82rem; font-weight:800; color:var(--muted); }
+    .teacher-select { min-height:44px; border:1px solid #cfc7ba; border-radius:12px; padding:.65rem .8rem; background:#fff; color:var(--ink); }
+    .teacher-roster { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .teacher-roster-item { display:flex; gap:8px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.82); font-size:.84rem; }
+    .teacher-roster-item strong { font-size:.86rem; }
+    .teacher-roster-empty { color:var(--muted); font-size:.9rem; }
     .teacher-input { min-height:46px; width:min(100%,420px); border:1px solid #cfc7ba; border-radius:12px; padding:.7rem .85rem; background:#fff; }
     .teacher-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .teacher-stat { padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.7); }
@@ -73,6 +80,32 @@
         </div>
       </div>
 
+      <div class="teacher-filters" aria-label="Filtrer le groupe">
+        <label>
+          <span>Professeur</span>
+          <select id="teacher-filter" class="teacher-select">
+            <option value="">Tous les professeurs</option>
+            <option value="kevin">Monsieur Kevin</option>
+            <option value="waren">Monsieur Waren</option>
+            <option value="fadhila">Madame Fadhila</option>
+          </select>
+        </label>
+        <label>
+          <span>Séance</span>
+          <select id="session-filter" class="teacher-select">
+            <option value="seance-1" selected>Séance 1</option>
+          </select>
+        </label>
+        <p class="teacher-muted" id="filter-summary" style="margin:0 0 .65rem"></p>
+      </div>
+
+      <section class="card hero">
+        <p class="eyebrow">Présences</p>
+        <h3>Élèves inscrits dans cette vue</h3>
+        <p class="teacher-muted">Cette liste permet de vérifier rapidement que chacun a bien rejoint la bonne séance et de voir où il en est.</p>
+        <div id="student-roster" class="teacher-roster"></div>
+      </section>
+
       <div class="teacher-stats">
         <div class="teacher-stat"><span>Élèves vus</span><strong id="student-count">0</strong></div>
         <div class="teacher-stat"><span>Moyenne diagnostic</span><strong id="diagnostic-average">—</strong></div>
@@ -83,12 +116,12 @@
 
       <section class="teacher-release-card">
         <div>
-          <strong>Corrigés détaillés côté élèves</strong>
-          <p>Par défaut, les solutions du diagnostic et du défi sont masquées. Débloque-les quand tu veux que toute la classe puisse les consulter. La vue prof reste toujours complète.</p>
+          <strong>Corrigés détaillés du groupe sélectionné</strong>
+          <p>Ils restent verrouillés par défaut. Choisis un professeur puis débloque-les quand le groupe est prêt. Le déblocage concerne uniquement ce professeur et cette séance.</p>
         </div>
         <div class="teacher-release-actions">
-          <span id="correction-release-status" class="pill teacher-release-status locked">Verrouillés</span>
-          <button id="toggle-corrections" class="btn btn-secondary" type="button">Débloquer pour les élèves</button>
+          <span id="correction-release-status" class="pill teacher-release-status locked">Choisis un professeur</span>
+          <button id="toggle-corrections" class="btn btn-secondary" type="button" disabled>Choisir un groupe</button>
         </div>
       </section>
 
@@ -151,6 +184,12 @@
   const loginStatus = document.querySelector('#login-status');
   const dashboardStatus = document.querySelector('#dashboard-status');
   let data = null;
+  const TEACHERS = {
+    kevin: 'Monsieur Kevin',
+    waren: 'Monsieur Waren',
+    fadhila: 'Madame Fadhila'
+  };
+  const COURSE_SESSIONS = { 'seance-1': 'Séance 1' };
 
   const token = () => sessionStorage.getItem('maths-lgc-teacher-token') || '';
 
@@ -204,8 +243,102 @@
     return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
+  function currentFilters() {
+    return {
+      teacher: document.querySelector('#teacher-filter').value,
+      session: document.querySelector('#session-filter').value
+    };
+  }
+
+  function contextQuery() {
+    const { teacher, session } = currentFilters();
+    const params = new URLSearchParams();
+    if (teacher) params.set('teacher', teacher);
+    if (session) params.set('session', session);
+    const query = params.toString();
+    return query ? '?' + query : '';
+  }
+
+  function filteredStudents() {
+    const students = (data && data.students) || [];
+    const { teacher, session } = currentFilters();
+    return students.filter(student =>
+      (!teacher || student.teacher_id === teacher) &&
+      (!session || student.course_session === session)
+    );
+  }
+
+  function progressLabel(student) {
+    if ((student.challenge || {}).score === 3) return 'Défi terminé';
+    if (student.diagnostic) return 'Diagnostic terminé';
+    return 'Inscrit';
+  }
+
+  function renderRoster(students) {
+    const roster = document.querySelector('#student-roster');
+    roster.replaceChildren();
+    if (!students.length) {
+      const empty = document.createElement('span');
+      empty.className = 'teacher-roster-empty';
+      empty.textContent = 'Aucun élève inscrit pour cette vue pour le moment.';
+      roster.append(empty);
+      return;
+    }
+    students.forEach(student => {
+      const item = document.createElement('div');
+      item.className = 'teacher-roster-item';
+      const name = document.createElement('strong');
+      name.textContent = [student.first_name || student.display_name, student.last_name].filter(Boolean).join(' ');
+      const status = document.createElement('span');
+      status.className = 'pill ' + ((student.challenge || {}).score === 3 ? 'ok' : student.diagnostic ? 'warm' : '');
+      status.textContent = progressLabel(student);
+      item.append(name, status);
+      roster.append(item);
+    });
+  }
+
+  async function refreshCorrectionState() {
+    const { teacher, session } = currentFilters();
+    const releaseStatus = document.querySelector('#correction-release-status');
+    const releaseButton = document.querySelector('#toggle-corrections');
+    if (!teacher || !session) {
+      releaseStatus.textContent = 'Choisis un professeur';
+      releaseStatus.className = 'pill teacher-release-status locked';
+      releaseButton.textContent = 'Choisir un groupe';
+      releaseButton.dataset.unlocked = 'false';
+      releaseButton.disabled = true;
+      return;
+    }
+    releaseButton.disabled = true;
+    try {
+      const response = await fetch('/api/class-state?' + new URLSearchParams({ teacher, session }).toString(), { cache:'no-store' });
+      if (!response.ok) throw new Error('État des corrigés indisponible.');
+      const classState = await response.json();
+      const unlocked = Boolean(classState.corrections_unlocked);
+      releaseStatus.textContent = unlocked ? 'Débloqués' : 'Verrouillés';
+      releaseStatus.className = 'pill teacher-release-status ' + (unlocked ? 'unlocked' : 'locked');
+      releaseButton.textContent = unlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
+      releaseButton.dataset.unlocked = unlocked ? 'true' : 'false';
+    } catch (error) {
+      releaseStatus.textContent = 'État indisponible';
+      releaseButton.textContent = 'Réessayer';
+      dashboardStatus.textContent = error.message;
+    } finally {
+      releaseButton.disabled = false;
+    }
+  }
+
   function render(payload) {
-    const students = payload.students || [];
+    data = payload;
+    renderView();
+  }
+
+  function renderView() {
+    const students = filteredStudents();
+    const { teacher, session } = currentFilters();
+    const teacherLabel = teacher ? TEACHERS[teacher] : 'Tous les professeurs';
+    const sessionLabel = COURSE_SESSIONS[session] || 'Toutes les séances';
+    document.querySelector('#filter-summary').textContent = teacherLabel + ' · ' + sessionLabel + ' · ' + students.length + ' élève(s)';
     document.querySelector('#student-count').textContent = students.length;
     const scores = students.map(s => s.diagnostic && s.diagnostic.score).filter(Number.isFinite);
     document.querySelector('#diagnostic-average').textContent = scores.length
@@ -214,17 +347,12 @@
     const diagnosticTimes = students.map(s => (s.timing || {}).diagnostic_seconds).filter(Number.isFinite);
     document.querySelector('#diagnostic-median').textContent = formatDuration(median(diagnosticTimes));
     document.querySelector('#challenge-complete').textContent = students.filter(s => (s.challenge || {}).score === 3).length;
-    const classState = payload.class_state || {};
-    const correctionsUnlocked = Boolean(classState.corrections_unlocked);
-    const releaseStatus = document.querySelector('#correction-release-status');
-    const releaseButton = document.querySelector('#toggle-corrections');
-    releaseStatus.textContent = correctionsUnlocked ? 'Débloqués' : 'Verrouillés';
-    releaseStatus.className = 'pill teacher-release-status ' + (correctionsUnlocked ? 'unlocked' : 'locked');
-    releaseButton.textContent = correctionsUnlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
-    releaseButton.dataset.unlocked = correctionsUnlocked ? 'true' : 'false';
-    document.querySelector('#generated-at').textContent = payload.generated_at
-      ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleString('fr-FR')
+    document.querySelector('#generated-at').textContent = data.generated_at
+      ? 'Actualisé : ' + new Date(data.generated_at).toLocaleString('fr-FR')
       : '';
+
+    renderRoster(students);
+    refreshCorrectionState();
 
     const errors = new Map();
     students.forEach(s => (s.weaknesses || []).forEach(domain => errors.set(domain, (errors.get(domain) || 0) + 1)));
@@ -274,6 +402,8 @@
           meta.className = 'teacher-muted';
           const bits = [];
           if (student.birth_date) bits.push('Né(e) le ' + new Date(student.birth_date + 'T12:00:00').toLocaleDateString('fr-FR'));
+          if (student.teacher_label) bits.push(student.teacher_label);
+          if (student.course_session_label) bits.push(student.course_session_label);
           if (student.unknown_count) bits.push(student.unknown_count + ' « je ne sais pas »');
           bits.push((student.submissions || 0) + ' enregistrement(s)');
           meta.textContent = bits.join(' · ');

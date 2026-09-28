@@ -4,6 +4,7 @@
 Support web interactif de mathématiques pour les CAP Production et service en restaurations (PSR) de La Grande Classe.
 
 ## Principes
+- UI : sobre mais attractive pour des CAP 1re année ; aspect app moderne, mobile-first, pas de gamification infantilisante ni d'effets qui nuisent à la lecture.
 - Priorité pédagogique : situations PSR concrètes, progression guidée et remédiation.
 - Frontend mobile-first en HTML/CSS/JS, sans compte élève ni dépendance frontend.
 - Collecte V1 minimale : prénom ou code court + résultats pédagogiques, stockés dans SQLite côté serveur.
@@ -58,6 +59,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Tableau enseignant avec forces, difficultés, priorité de travail et exports.
 - Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, navigation sans remplir les exercices.
 - Historique complet des tentatives exportable pour analyse après séance.
+- Passe UI V1 : palette modernisée, topbar sticky, progression renforcée, cartes/diagnostic/défi plus visuels, sans changement du parcours pédagogique.
 - Branche de déploiement en cours : `dev/deploy-lgc-vps`; ne pas merger avant présence des trois secrets.
 
 ## Prochaines étapes

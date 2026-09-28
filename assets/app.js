@@ -429,10 +429,10 @@
         <p class="eyebrow">Étape 3 · Correction guidée</p>
         <h2>On regarde les stratégies.</h2>
         ${teacherPreview
-          ? '<div class="callout"><strong>Vue prof :</strong> correction complète affichée sans simuler de score élève.</div>'
+          ? '<div class="callout"><strong>Vue prof :</strong> correction complète affichée sans simuler de résultat élève.</div>'
           : `<div class="result-summary">
-              <div class="result-score">${result.score}/10</div>
-              <div><h3>Ce score est un repère, pas une note.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
+              <div class="result-score">10<br><small>situations</small></div>
+              <div><h3>On repère ton point de départ.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
             </div>`}
         ${result.details.map((d, i) => `<article class="correction ${teacherPreview ? '' : d.correct ? 'ok' : 'retry'}">
           <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
@@ -595,7 +595,13 @@
     const result = diagnosticResult();
     const priorities = result.weakDomains.length ? result.weakDomains : ['Consolider et expliquer mes méthodes'];
     const firstPriority = priorities[0];
-    const scoreLabel = teacherPreview ? 'Score calculé après le diagnostic' : `${result.score}/10`;
+    const scoreLabel = teacherPreview
+      ? 'Résultat calculé après le diagnostic'
+      : result.score >= 8
+        ? 'Bases solides'
+        : result.score >= 5
+          ? 'Plusieurs bases en place'
+          : 'Priorités repérées';
     const challengeLabel = teacherPreview ? 'État calculé après le défi' : 'Terminé';
     const prioritiesLabel = teacherPreview ? 'Déduites automatiquement des erreurs observées.' : priorities.join(' · ');
     const encouragement = result.score >= 8
@@ -609,7 +615,7 @@
         <h2>Voilà ton point de départ.</h2>
         <p class="lead">Tu viens de faire ce qu’on attendra souvent en maths : comprendre une situation, choisir un calcul, vérifier le résultat et l’expliquer.</p>
         <div class="lesson-grid">
-          <article class="info-tile"><span class="pill ok">Diagnostic</span><h3>${scoreLabel}</h3><p>Un repère pour savoir où commencer, pas une note.</p></article>
+          <article class="info-tile"><span class="pill ok">Diagnostic</span><h3>${scoreLabel}</h3><p>Un repère pour savoir où commencer, sans note.</p></article>
           <article class="info-tile"><span class="pill ok">Défi PSR</span><h3>${challengeLabel}</h3><p>Tu as adapté une recette, manipulé une durée et calculé un montant.</p></article>
         </div>
         <div class="callout"><strong>Mes priorités :</strong> ${prioritiesLabel}</div>

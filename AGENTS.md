@@ -8,7 +8,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Priorité pédagogique : situations PSR concrètes, progression guidée et remédiation.
 - Accessibilité linguistique : au début du parcours, phrases courtes, vocabulaire courant, exemples visuels/concrets ; introduire le vocabulaire mathématique et professionnel progressivement, en particulier pour les élèves avec parcours scolaire fragile ou français en cours d'acquisition.
 - Frontend mobile-first en HTML/CSS/JS, sans compte élève ni dépendance frontend.
-- Collecte V1 minimale nécessaire au suivi : prénom + nom + date de naissance + professeur + séance + résultats pédagogiques, stockés dans SQLite côté serveur. Dans l'interface élève, utiliser uniquement le prénom après l'identification. Professeur et séance servent uniquement à séparer les groupes et les vues enseignant.
+- Collecte V1 minimale nécessaire au suivi : prénom + nom + date de naissance + résultats pédagogiques, stockés dans SQLite côté serveur. Le professeur crée d'abord une occurrence de séance avec professeur + séance + groupe ; le lien/QR élève rattache automatiquement les résultats à cette occurrence. Dans l'interface élève, utiliser uniquement le prénom après l'identification.
 - La progression reste aussi dans `localStorage` pour éviter de perdre le travail en cas de réseau instable.
 - Le tableau enseignant est en lecture seule côté navigateur et protégé par `MATHS_TEACHER_TOKEN`.
 - Ne jamais collecter d'email, adresse ou autre donnée inutile. La date de naissance n'est utilisée que pour distinguer les homonymes dans le suivi enseignant.
@@ -48,7 +48,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 
 ## État V1
 - Pré-page d'accueil avec vrai QR vers `https://maths.lagrandeclasse.fr/`.
-- Nom + prénom + date de naissance + professeur + séance demandés avant démarrage ; seul le prénom est utilisé dans le cours. Professeur obligatoire : Monsieur Kevin, Monsieur Waren ou Madame Fadhila. Séance 1 préremplie.
+- Côté élève, nom + prénom + date de naissance sont demandés après ouverture d'un lien/QR de séance valide ; aucun choix manuel du professeur ou du groupe. Professeurs disponibles à la création : Monsieur Kevin, Monsieur Waren ou Madame Fadhila. Séance 1 est préremplie côté enseignant.
 - Présentation des objectifs centrée sur les usages concrets en PSR.
 - Mini-visualisation fractions ↔ pourcentages placée dans la correction du diagnostic, au niveau de la notion correspondante.
 - Parcours linéaire de séance de rentrée.
@@ -66,11 +66,11 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Modules V1 construits : `#durees` et `#proportion`, accessibles aux élèves après la séance 1 et toujours accessibles en prévisualisation prof. Feedback local uniquement, non synchronisé au serveur. Progression proportionnalité : le défi de séance démarre sur un coefficient entier simple (10 → 30, × 3), puis le module Recettes réinvestit la même méthode avec des coefficients décimaux (notamment × 2,4 et × 3,2).
 - Timing V1 : jalons serveur légers (début de session, première ouverture de page, validations d'activités) réutilisant la table `submissions`, sans migration. Les temps calculés sont des indices de rythme uniquement, jamais une mesure de niveau.
 - Modules V1 construits : `#pourcentages` et `#donnees`, avec manipulations visuelles, méthodes simples et exercices courts ; feedback local comme pour Durées/Proportionnalité.
-- Tableau enseignant : filtre par professeur et séance, vue agrégée « tous les professeurs », liste des inscrits, puis détail élève par élève. Évolution future : ajouter un **avis sur le groupe** fondé sur les données observées.
+- Tableau enseignant : le jeton enseignant commun sert à créer une séance et à inspecter le contenu, mais ne donne plus accès à tous les résultats. Chaque séance créée reçoit un identifiant public (QR élève) et un secret de gestion distinct ; ce secret ouvre uniquement la liste des inscrits, le détail des résultats, les exports et les commandes de cette séance.
 - Modules V1 construits : `#equations` et `#fonctions`. Équations part du nombre inconnu et de l'opération inverse ; Graphiques & fonctions part de deux quantités liées avant d'introduire le vocabulaire de fonction.
 - Modules V1 construits : `#commerce` et `#probabilites`. Commerce couvre commande/remise/coût/marge simple et taxe fournie ; Probabilités part d’un jeu explicite de pioche dans un sac de 10 jetons (3 violets, 7 gris, violet = gagné, remise et mélange après chaque pioche) pour montrer fluctuation et stabilisation des fréquences. Le module suit explicitement la règle « langage courant d’abord, terme mathématique ensuite » : chance → probabilité, part observée → fréquence, « ne pas arriver » → événement contraire ; « avec remise » est expliqué avant d’être nommé.
 - Audit pédagogique explicite : diagnostic, défi et 8 modules revérifiés dans `docs/audit-exercices.md` (énoncés, clés, calculs, corrigés).
-- Corrigés diagnostic/défi : détaillés toujours visibles en vue prof, verrouillés côté élève par défaut ; déblocage manuel **par professeur + séance** depuis `/teacher`, état persistant dans `data/class_state.json` sans migration SQLite. Le tableau affiche une liste compacte des élèves inscrits et leur état (inscrit / diagnostic terminé / défi terminé).
+- Corrigés diagnostic/défi : détaillés toujours visibles en prévisualisation prof, verrouillés côté élève par défaut ; déblocage manuel **par occurrence de séance** depuis son lien de gestion. L'état des nouvelles séances est persistant dans `data/sessions.json` (ancien `class_state.json` conservé seulement pour compatibilité), sans migration SQLite. Le tableau affiche la liste des inscrits et leur état (inscrit / diagnostic terminé / défi terminé).
 - Limite V1 : les clés de réponse du diagnostic restent dans le JavaScript client. Le verrou empêche la consultation normale/casuelle, mais n'est pas une sécurité d'examen face à un élève inspectant le code ; si le site sert un jour à une évaluation notée, déplacer la validation sensible côté serveur.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
@@ -82,6 +82,6 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 5. Ajuster la remédiation et l'ordre des modules à partir des résultats réels.
 6. Enrichir progressivement les exercices de chaque module plutôt que créer de nouveaux chapitres sans besoin identifié.
 7. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
-8. Si plusieurs groupes utilisent le même professeur et la même séance, ajouter un identifiant de groupe explicite (classe/promo) au lieu d'essayer de l'inférer.
+8. Si l'usage s'étend, ajouter éventuellement une vraie identité de compte enseignant ; en V1, l'isolation des résultats repose sur le secret de gestion unique de chaque séance.
 9. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
 10. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.

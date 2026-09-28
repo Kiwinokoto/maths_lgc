@@ -32,14 +32,16 @@ def utc_now() -> str:
 
 
 def connect_db() -> sqlite3.Connection:
-    db = sqlite3.connect(DB_PATH)
+    db = sqlite3.connect(DB_PATH, timeout=5)
     db.row_factory = sqlite3.Row
+    db.execute("PRAGMA busy_timeout=5000")
     return db
 
 
 def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with connect_db() as db:
+        db.execute("PRAGMA journal_mode=WAL")
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS submissions (

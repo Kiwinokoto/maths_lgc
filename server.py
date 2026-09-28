@@ -26,7 +26,7 @@ MAX_BODY = 64 * 1024
 STUDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 VALID_STAGES = {"diagnostic", "challenge", "bilan", "activity"}
 ACTIVITY_EVENTS = {"session_started", "route_opened", "activity_checked"}
-ACTIVITY_ROUTES = {"parcours", "intro", "diagnostic", "correction", "defi", "bilan", "durees", "proportion", "pourcentages", "donnees", "equations", "fonctions"}
+ACTIVITY_ROUTES = {"parcours", "intro", "diagnostic", "correction", "defi", "bilan", "durees", "proportion", "pourcentages", "donnees", "equations", "fonctions", "commerce", "probabilites"}
 
 
 def utc_now() -> str:

@@ -754,15 +754,15 @@
           </div>
           <div class="range-wrap">
             <label for="portions"><strong>Nombre de portions à produire</strong></label>
-            <div class="big-number"><span id="portion-count">24</span></div>
-            <input id="portions" type="range" min="5" max="40" step="1" value="24" />
+            <div class="big-number"><span id="portion-count">30</span></div>
+            <input id="portions" type="range" min="5" max="40" step="1" value="30" />
             <div class="mini-stats">
-              <div class="mini-stat">Pommes<strong id="apples">1 920 g</strong></div>
-              <div class="mini-stat">Oranges<strong id="oranges">1 440 g</strong></div>
-              <div class="mini-stat">Bananes<strong id="bananas">960 g</strong></div>
-              <div class="mini-stat">Jus<strong id="juice">600 mL</strong></div>
-              <div class="mini-stat">Coût estimé<strong id="cost">20,40 €</strong></div>
-              <div class="mini-stat">Coefficient<strong id="factor">× 2,4</strong></div>
+              <div class="mini-stat">Pommes<strong id="apples">2 400 g</strong></div>
+              <div class="mini-stat">Oranges<strong id="oranges">1 800 g</strong></div>
+              <div class="mini-stat">Bananes<strong id="bananas">1 200 g</strong></div>
+              <div class="mini-stat">Jus<strong id="juice">750 mL</strong></div>
+              <div class="mini-stat">Coût estimé<strong id="cost">25,50 €</strong></div>
+              <div class="mini-stat">Coefficient<strong id="factor">× 3</strong></div>
             </div>
           </div>
         </div>
@@ -1022,18 +1022,18 @@
             </div>
             <div class="range-wrap proportion-range">
               <label for="proportion-portions"><strong>Je prépare pour</strong></label>
-              <div class="big-number"><span id="proportion-count">20</span> <small>portions</small></div>
-              <input id="proportion-portions" type="range" min="5" max="30" step="1" value="20" />
+              <div class="big-number"><span id="proportion-count">24</span> <small>portions</small></div>
+              <input id="proportion-portions" type="range" min="5" max="35" step="1" value="24" />
               <div class="portion-comparison">
                 <div><span>Base</span><strong>10</strong></div>
-                <div class="portion-arrow">× <strong id="proportion-factor">2</strong></div>
-                <div><span>Nouveau</span><strong id="proportion-new">20</strong></div>
+                <div class="portion-arrow">× <strong id="proportion-factor">2,4</strong></div>
+                <div><span>Nouveau</span><strong id="proportion-new">24</strong></div>
               </div>
               <div class="mini-stats">
-                <div class="mini-stat">Riz<strong id="proportion-rice">1 600 g</strong></div>
-                <div class="mini-stat">Légumes<strong id="proportion-veg">1 000 g</strong></div>
-                <div class="mini-stat">Sauce<strong id="proportion-sauce">500 mL</strong></div>
-                <div class="mini-stat">Même coefficient<strong id="proportion-factor-card">× 2</strong></div>
+                <div class="mini-stat">Riz<strong id="proportion-rice">1 920 g</strong></div>
+                <div class="mini-stat">Légumes<strong id="proportion-veg">1 200 g</strong></div>
+                <div class="mini-stat">Sauce<strong id="proportion-sauce">600 mL</strong></div>
+                <div class="mini-stat">Même coefficient<strong id="proportion-factor-card">× 2,4</strong></div>
               </div>
             </div>
           </div>
@@ -1056,7 +1056,7 @@
             <fieldset class="question"><legend><span class="question-index">1</span><span>400 g de riz suffisent pour 5 portions. Combien faut-il pour 15 portions ?</span></legend><span class="question-domain">Même multiplicateur</span><div class="answer-row"><input id="prop-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>g</span></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">2</span><span>2 L de soupe suffisent pour 8 personnes. Combien faut-il pour 20 personnes ?</span></legend><span class="question-domain">Coefficient 2,5</span><div class="answer-row"><input id="prop-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>L</span></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">3</span><span>750 g de fruits sont prévus pour 6 portions. Combien faut-il pour 18 portions ?</span></legend><span class="question-domain">Multiplier par 3</span><div class="answer-row"><input id="prop-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>g</span></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">4</span><span>On passe de 10 portions à 25 portions. Par quel nombre faut-il multiplier les quantités ?</span></legend><span class="question-domain">Coefficient</span><div class="answer-row"><select id="prop-q4"><option value="">Choisir…</option><option value="1.5">× 1,5</option><option value="2">× 2</option><option value="2.5">× 2,5</option><option value="15">× 15</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>On passe de 10 portions à 32 portions. Par quel nombre faut-il multiplier les quantités ?</span></legend><span class="question-domain">Coefficient décimal</span><div class="answer-row"><select id="prop-q4"><option value="">Choisir…</option><option value="1.5">× 1,5</option><option value="2.5">× 2,5</option><option value="3.2">× 3,2</option><option value="32">× 32</option></select></div></fieldset>
           </div>
           <div id="proportion-feedback" class="callout hidden" aria-live="polite"></div>
           <div class="actions">
@@ -1089,7 +1089,7 @@
         Math.abs(parseNumber(document.querySelector('#prop-q1').value) - 1200) < 0.001,
         Math.abs(parseNumber(document.querySelector('#prop-q2').value) - 5) < 0.001,
         Math.abs(parseNumber(document.querySelector('#prop-q3').value) - 2250) < 0.001,
-        document.querySelector('#prop-q4').value === '2.5'
+        document.querySelector('#prop-q4').value === '3.2'
       ];
       const feedback = document.querySelector('#proportion-feedback');
       const count = checks.filter(Boolean).length;
@@ -1099,7 +1099,7 @@
           <span>${checks[0] ? '✓' : '↻'} 15 ÷ 5 = 3, donc 400 × 3 = <b>1 200 g</b></span>
           <span>${checks[1] ? '✓' : '↻'} 20 ÷ 8 = 2,5, donc 2 × 2,5 = <b>5 L</b></span>
           <span>${checks[2] ? '✓' : '↻'} 18 ÷ 6 = 3, donc 750 × 3 = <b>2 250 g</b></span>
-          <span>${checks[3] ? '✓' : '↻'} 25 ÷ 10 = <b>2,5</b></span>
+          <span>${checks[3] ? '✓' : '↻'} 32 ÷ 10 = <b>3,2</b></span>
         </div>`;
     };
 
@@ -1111,7 +1111,7 @@
       document.querySelector('#prop-q1').value = '1200';
       document.querySelector('#prop-q2').value = '5';
       document.querySelector('#prop-q3').value = '2250';
-      document.querySelector('#prop-q4').value = '2.5';
+      document.querySelector('#prop-q4').value = '3.2';
       showProportionFeedback();
     });
     document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));

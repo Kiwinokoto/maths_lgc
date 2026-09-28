@@ -69,15 +69,18 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Évolution future du tableau enseignant : commencer par un **avis sur le groupe**, puis détailler élève par élève. Si plusieurs enseignants/séances utilisent durablement le site, ajouter un contexte explicite groupe / séance / enseignant plutôt que l'inférer.
 - Modules V1 construits : `#equations` et `#fonctions`. Équations part du nombre inconnu et de l'opération inverse ; Graphiques & fonctions part de deux quantités liées avant d'introduire le vocabulaire de fonction.
 - Modules V1 construits : `#commerce` et `#probabilites`. Commerce couvre commande/remise/coût/marge simple et taxe fournie ; Probabilités utilise une simulation avec remise pour montrer fluctuation et stabilisation des fréquences.
+- Audit pédagogique explicite : diagnostic, défi et 8 modules revérifiés dans `docs/audit-exercices.md` (énoncés, clés, calculs, corrigés).
+- Corrigés diagnostic/défi : détaillés toujours visibles en vue prof, verrouillés côté élève par défaut ; déblocage global depuis `/teacher`, état persistant dans `data/class_state.json` sans migration SQLite.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes
 1. Tester la séance 1 et les huit modules disponibles sur téléphone en conditions réelles.
-2. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs, réponses « Je ne sais pas » et écarts de rythme sans interpréter les durées isolément.
-3. Après la première classe réelle, ajouter une synthèse « avis sur le groupe » au-dessus du détail élève, fondée sur les résultats observés.
-4. Ajuster la remédiation et l'ordre des modules à partir des résultats réels.
-5. Enrichir progressivement les exercices de chaque module plutôt que créer de nouveaux chapitres sans besoin identifié.
-6. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
-7. Si le site devient multi-enseignants / multi-séances, modéliser explicitement groupe, séance et enseignant avant de multiplier les usages.
-8. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
-9. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.
+2. Avant la classe, vérifier depuis `/teacher` que les corrigés élèves sont bien **verrouillés** ; ne les débloquer qu'au moment choisi.
+3. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs, réponses « Je ne sais pas » et écarts de rythme sans interpréter les durées isolément.
+4. Après la première classe réelle, ajouter une synthèse « avis sur le groupe » au-dessus du détail élève, fondée sur les résultats observés.
+5. Ajuster la remédiation et l'ordre des modules à partir des résultats réels.
+6. Enrichir progressivement les exercices de chaque module plutôt que créer de nouveaux chapitres sans besoin identifié.
+7. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
+8. Si le site devient multi-enseignants / multi-séances, remplacer le verrou global par un déblocage par groupe/séance et modéliser explicitement groupe, séance et enseignant.
+9. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
+10. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.

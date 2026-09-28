@@ -7,19 +7,19 @@ Support interactif de mathématiques pour les CAP Production et service en resta
 La V1 est mobile-first, sans compte élève et sans build frontend :
 
 - pré-page d'accueil avec QR vers `https://maths.lagrandeclasse.fr/` ;
-- prénom ou code court pour rattacher les résultats au bon élève ;
+- nom, prénom et date de naissance pour distinguer les homonymes ; seul le prénom est utilisé dans le parcours élève ;
 - présentation des usages des maths en PSR ;
 - visualisation fractions ↔ pourcentages ;
 - parcours linéaire ;
 - auto-positionnement « les maths et moi » ;
-- diagnostic de 10 situations sans note ;
+- diagnostic de 10 situations sans note affichée à l'élève, avec possibilité de répondre « Je ne sais pas » ;
 - correction guidée ;
 - défi PSR interactif autour d'une fiche technique ;
 - bilan et priorités enregistrés localement dans le navigateur ;
 - synchronisation vers une petite base SQLite quand le serveur est disponible ;
 - tableau enseignant protégé avec export CSV et historique JSON complet.
 
-La collecte est volontairement minimale : pas de nom de famille, pas d'email, pas de compte élève.
+La collecte est limitée au besoin pédagogique de suivi : nom, prénom, date de naissance et résultats. Aucun email, aucune adresse et aucun compte élève. La date de naissance sert uniquement à distinguer les homonymes dans le tableau enseignant.
 
 ## Lancer localement
 

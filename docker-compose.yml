@@ -1,0 +1,30 @@
+services:
+  maths_lgc:
+    build:
+      context: .
+    image: maths-lgc:${MATHS_IMAGE_TAG:-local}
+    container_name: maths_lgc
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MATHS_HOST: 0.0.0.0
+      MATHS_PORT: 8080
+      MATHS_DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_network
+      - traefik.http.routers.maths-lgc.rule=Host(`maths.lagrandeclasse.fr`)
+      - traefik.http.routers.maths-lgc.entrypoints=websecure
+      - traefik.http.routers.maths-lgc.tls=true
+      - traefik.http.routers.maths-lgc.tls.certresolver=letsencrypt
+      - traefik.http.services.maths-lgc.loadbalancer.server.port=8080
+    networks:
+      - traefik_network
+
+networks:
+  traefik_network:
+    external: true
+    name: traefik_network

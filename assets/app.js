@@ -71,14 +71,14 @@
   ];
 
   const modules = [
-    ['Durées', 'Lire, convertir et calculer avec des horaires.'],
-    ['Recettes & proportionnalité', 'Adapter une fiche technique et raisonner par coefficient.'],
-    ['Pourcentages', 'Réductions, évolutions, parts et repères.'],
-    ['Données & statistiques', 'Lire un tableau, une moyenne, une fréquence et un graphique.'],
-    ['Équations', 'Trouver une quantité inconnue dans une situation simple.'],
-    ['Graphiques & fonctions', 'Relier une grandeur à une autre et lire une évolution.'],
-    ['Prix & commerce', 'Coûts, prix, facture, réduction et marge simple.'],
-    ['Probabilités', 'Comprendre le hasard, les événements et les simulations.']
+    { title: 'Durées', text: 'Lire une heure, calculer une durée et prévoir quand commencer.', route: 'durees', available: true },
+    { title: 'Recettes & proportionnalité', text: 'Adapter une fiche technique quand le nombre de portions change.', route: 'proportion', available: true },
+    { title: 'Pourcentages', text: 'Réductions, évolutions, parts et repères.', available: false },
+    { title: 'Données & statistiques', text: 'Lire un tableau, une moyenne, une fréquence et un graphique.', available: false },
+    { title: 'Équations', text: 'Trouver une quantité inconnue dans une situation simple.', available: false },
+    { title: 'Graphiques & fonctions', text: 'Relier une grandeur à une autre et lire une évolution.', available: false },
+    { title: 'Prix & commerce', text: 'Coûts, prix, facture, réduction et marge simple.', available: false },
+    { title: 'Probabilités', text: 'Comprendre le hasard, les événements et les simulations.', available: false }
   ];
 
   function loadState() {
@@ -195,7 +195,9 @@
       diagnostic: 'Mon point de départ',
       correction: 'Correction guidée',
       defi: 'Défi PSR',
-      bilan: 'Mon bilan'
+      bilan: 'Mon bilan',
+      durees: 'Durées · heures et minutes',
+      proportion: 'Recettes · changer les quantités'
     };
     const pageTitle = pageTitles[route] || 'Maths LGC · CAP PSR';
     const previewLinks = [
@@ -204,7 +206,9 @@
       ['diagnostic', 'Diagnostic'],
       ['correction', 'Correction'],
       ['defi', 'Défi'],
-      ['bilan', 'Bilan']
+      ['bilan', 'Bilan'],
+      ['durees', 'Durées'],
+      ['proportion', 'Recettes']
     ];
 
     app.innerHTML = `
@@ -241,6 +245,8 @@
     if (route === 'correction') return renderCorrection();
     if (route === 'defi') return renderChallenge();
     if (route === 'bilan') return renderBilan();
+    if (route === 'durees') return renderDurationModule();
+    if (route === 'proportion') return renderProportionModule();
     return renderPath();
   }
 

@@ -58,7 +58,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Premier défi PSR interactif (proportionnalité, durée, coût/CA).
 - Synchronisation serveur des résultats quand le réseau est disponible.
 - Tableau enseignant avec forces, difficultés, priorité de travail et exports.
-- Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, barre d'inspection directe vers Intro / Diagnostic / Correction / Défi / Bilan ; `/teacher` propose aussi ces liens après connexion.
+- Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, mais accès désormais authentifié par la session ouverte dans `/teacher` ; les liens d'inspection s'ouvrent dans le même onglet pour conserver cette session.
 - Historique complet des tentatives exportable pour analyse après séance.
 - Passe UI V1 : palette modernisée, topbar sticky, progression renforcée, cartes/diagnostic/défi plus visuels, sans changement du parcours pédagogique.
 - Passe UI V2 : vert retiré de la couleur d'action ; violet/indigo principal, accents chauds manga discrets, vert menthe vif/tendre conservé seulement pour les réussites/étapes terminées.

@@ -42,7 +42,7 @@
     .teacher-errors { display:flex; flex-wrap:wrap; gap:8px; }
     .teacher-status { min-height:1.4em; color:var(--muted); }
     @media (max-width:760px) { .teacher-stats,.teacher-inspect-grid { grid-template-columns:1fr; } }
-    .session-create-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0; }
+    .session-create-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
     .session-create-grid label { display:grid; gap:6px; font-weight:800; color:var(--muted); font-size:.84rem; }
     .session-share { display:grid; grid-template-columns:minmax(220px,320px) 1fr; gap:20px; align-items:center; }
     .session-qr { width:min(100%,300px); aspect-ratio:1; background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px; }
@@ -109,10 +109,12 @@
             </select>
           </label>
           <label>
-            <span>Séance</span>
-            <select id="create-course-session" class="teacher-select" required>
-              <option value="seance-1" selected>Séance 1</option>
-            </select>
+            <span>Numéro de séance</span>
+            <input id="create-session-number" class="teacher-input" type="number" inputmode="numeric" min="1" max="999" step="1" value="1" required />
+          </label>
+          <label>
+            <span>Titre de séance <small>(facultatif)</small></span>
+            <input id="create-session-title" class="teacher-input" type="text" maxlength="120" placeholder="Ex. Proportionnalité" />
           </label>
           <label>
             <span>Groupe / classe</span>
@@ -249,7 +251,6 @@
     waren: 'Monsieur Waren',
     fadhila: 'Madame Fadhila'
   };
-  const COURSE_SESSIONS = { 'seance-1': 'Séance 1' };
   const RECENTS_KEY = 'maths-lgc-recent-sessions-v1';
 
   const login = document.querySelector('#login');
@@ -572,10 +573,11 @@
 
   document.querySelector('#create-session').addEventListener('click', async () => {
     const teacherId = document.querySelector('#create-teacher').value;
-    const courseSession = document.querySelector('#create-course-session').value;
+    const sessionNumber = Number(document.querySelector('#create-session-number').value);
+    const sessionTitle = document.querySelector('#create-session-title').value.trim();
     const groupLabel = document.querySelector('#create-group').value.trim();
-    if (!TEACHERS[teacherId] || !COURSE_SESSIONS[courseSession] || !groupLabel) {
-      homeStatus.textContent = 'Choisis le professeur et renseigne le groupe.';
+    if (!TEACHERS[teacherId] || !Number.isInteger(sessionNumber) || sessionNumber < 1 || sessionNumber > 999 || !groupLabel) {
+      homeStatus.textContent = 'Choisis le professeur, un numéro de séance valide et renseigne le groupe.';
       return;
     }
     const button = document.querySelector('#create-session');
@@ -585,11 +587,12 @@
       const response = await masterApi('/api/teacher/sessions', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ teacher_id:teacherId, course_session:courseSession, group_label:groupLabel })
+        body:JSON.stringify({ teacher_id:teacherId, session_number:sessionNumber, session_title:sessionTitle, group_label:groupLabel })
       });
       const created = await response.json();
       localStorage.setItem(sessionTokenKey(created.session.class_session_id), created.admin_token);
       saveRecent(created.session);
+      document.querySelector('#create-session-title').value = '';
       document.querySelector('#create-group').value = '';
       homeStatus.textContent = 'Séance créée.';
       await openSession(created.session.class_session_id);

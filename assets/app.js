@@ -990,7 +990,7 @@
 
         <div class="module-context-grid">
           <article class="module-context"><span aria-hidden="true">🥗</span><strong>Répartition</strong><p>Sur 100 menus, 30 sont végétariens : cela représente 30 %.</p></article>
-          <article class="module-context"><span aria-hidden="true">🏷️</span><strong>Réduction</strong><p>Une formule à 10 € avec 20 % de réduction ne coûte pas 8 % : on retire 2 €.</p></article>
+          <article class="module-context"><span aria-hidden="true">🏷️</span><strong>Réduction</strong><p>Sur une formule à 10 €, 20 % représentent 2 €. Le nouveau prix est donc 8 €.</p></article>
           <article class="module-context"><span aria-hidden="true">📦</span><strong>Stock</strong><p>Si 25 % de 40 produits sont utilisés, cela fait 10 produits.</p></article>
         </div>
 

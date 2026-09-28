@@ -23,18 +23,18 @@ Objectif : vérifier explicitement la cohérence entre **énoncé, réponse atte
 
 Base : 10 portions ; pommes 800 g ; oranges 600 g ; bananes 400 g ; jus 250 mL ; coût matière 8,50 €.
 
-À 24 portions :
-- coefficient = 24 ÷ 10 = **2,4** ;
-- pommes = 800 × 2,4 = **1 920 g** ;
-- oranges = 600 × 2,4 = **1 440 g** ;
-- bananes = 400 × 2,4 = **960 g** ;
-- jus = 250 × 2,4 = **600 mL** ;
-- coût estimé = 8,50 × 2,4 = **20,40 €**.
+À 30 portions :
+- coefficient = 30 ÷ 10 = **3** ;
+- pommes = 800 × 3 = **2 400 g** ;
+- oranges = 600 × 3 = **1 800 g** ;
+- bananes = 400 × 3 = **1 200 g** ;
+- jus = 250 × 3 = **750 mL** ;
+- coût estimé = 8,50 × 3 = **25,50 €**.
 
 Questions :
 1. méthode : **nombre de portions ÷ 10**, puis multiplier chaque quantité par le coefficient obtenu ;
 2. 11 h 45 − 35 min = **11 h 10** ;
-3. si toutes les portions sont vendues à 2,50 €, chiffre d'affaires = **nombre de portions × 2,50 €** ; à 24 portions : **60 €**.
+3. si toutes les portions sont vendues à 2,50 €, chiffre d'affaires = **nombre de portions × 2,50 €** ; à 30 portions : **75 €**.
 
 Le libellé de la question 1 a été clarifié après audit pour éviter l'ambiguïté repérée en revue.
 
@@ -50,7 +50,7 @@ Le libellé de la question 1 a été clarifié après audit pour éviter l'ambig
 - 400 g / 5 portions → 15 portions = **1 200 g** ;
 - 2 L / 8 personnes → 20 personnes = **5 L** ;
 - 750 g / 6 portions → 18 portions = **2 250 g** ;
-- 10 → 25 portions : coefficient **2,5**.
+- 10 → 32 portions : coefficient **3,2**.
 
 ### Pourcentages
 - 25 % de 40 = **10** ;

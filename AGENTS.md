@@ -48,7 +48,7 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 
 ## État V1
 - Pré-page d'accueil avec vrai QR vers `https://maths.lagrandeclasse.fr/`.
-- Côté élève, nom + prénom + date de naissance sont demandés après ouverture d'un lien/QR de séance valide ; aucun choix manuel du professeur ou du groupe. Professeurs disponibles à la création : Monsieur Kevin, Monsieur Waren ou Madame Fadhila. Séance 1 est préremplie côté enseignant. La date est saisie au format français `JJ/MM/AAAA` via un champ numérique masqué (slashs automatiques), puis convertie en ISO côté client avant envoi. Exemples de saisie : prénom `Yanis`, nom `Dupont`.
+- Côté élève, nom + prénom + date de naissance sont demandés après ouverture d'un lien/QR de séance valide ; aucun choix manuel du professeur ou du groupe. Professeurs disponibles à la création : Monsieur Kevin, Monsieur Waren ou Madame Fadhila. Le numéro de séance est un champ numérique prérempli à 1 ; un titre facultatif peut préciser le contenu (ex. « Proportionnalité »). La date est saisie au format français `JJ/MM/AAAA` via un champ numérique masqué (slashs automatiques), puis convertie en ISO côté client avant envoi. Exemples de saisie : prénom `Yanis`, nom `Dupont`.
 - Présentation des objectifs centrée sur les usages concrets en PSR.
 - Mini-visualisation fractions ↔ pourcentages placée dans la correction du diagnostic, au niveau de la notion correspondante.
 - Parcours linéaire de séance de rentrée.

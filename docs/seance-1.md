@@ -33,6 +33,19 @@ Pour la première prise en main, privilégier des consignes courtes et des mots 
 - lecture d'une situation proportionnelle ;
 - ordre de grandeur.
 
+## Inscription et gestion du groupe
+
+Avant de commencer, chaque élève renseigne nom, prénom et date de naissance, choisit obligatoirement son professeur (**Monsieur Kevin**, **Monsieur Waren** ou **Madame Fadhila**) et conserve **Séance 1** préremplie.
+
+Dans `/teacher`, le professeur peut filtrer sur son nom et la séance. La liste « Élèves inscrits » doit permettre de vérifier rapidement que toute la classe a rejoint le bon groupe avant de poursuivre.
+
+Pour les corrigés, le choix V1 est volontairement **manuel plutôt qu'automatique** :
+- le corrigé reste verrouillé par défaut ;
+- le tableau montre combien d'élèves sont inscrits et où ils en sont ;
+- le professeur débloque le corrigé pour son groupe quand il juge le moment adapté.
+
+Ne pas débloquer automatiquement « quand tout le monde a fini » : une absence, un retard, une mauvaise inscription ou un élève qui change d'appareil pourrait bloquer toute la classe. Le contrôle manuel garde la souplesse nécessaire tout en donnant au professeur les informations pour décider.
+
 ## Défi PSR
 
 La fiche de salade de fruits est volontairement simple. Le défi démarre sur **30 portions à partir d'une base de 10**, donc avec un coefficient rond **× 3** : l'objectif est d'identifier la méthode sans ajouter immédiatement une difficulté décimale. Le curseur reste manipulable pour explorer d'autres quantités. Le module Recettes & proportionnalité reprend ensuite le même raisonnement avec des coefficients décimaux (par exemple **× 2,4** puis **× 3,2**). Les questions du défi ajoutent aussi un calcul d'horaire et un chiffre d'affaires simple.

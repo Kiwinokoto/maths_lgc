@@ -1508,6 +1508,296 @@
     document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
   }
 
+
+  function renderCommerceModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Prix & commerce</p>
+        <h2>Comprendre ce qu’on paie et ce qu’on gagne.</h2>
+        <p class="lead">En restauration, on rencontre des prix, des coûts, des remises et des factures. On va apprendre à distinguer ces nombres avant de les calculer.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">🧾</span><strong>Commande</strong><p>Calculer le montant de plusieurs menus et vérifier une facture.</p></article>
+          <article class="module-context"><span aria-hidden="true">🏷️</span><strong>Remise</strong><p>Calculer ce qu’on enlève, puis le nouveau prix à payer.</p></article>
+          <article class="module-context"><span aria-hidden="true">💶</span><strong>Marge simple</strong><p>Comparer un prix de vente et un coût pour voir ce qu’il reste avant les autres charges.</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>Trois mots à distinguer :</strong> le <b>coût</b> correspond à ce que le produit coûte ; le <b>prix de vente</b> est ce que paie le client ; dans nos exercices simples, la <b>marge</b> est la différence entre les deux.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Une commande de menus à 8,50 €</h3></div>
+            <p>Change le nombre de menus et la remise. La petite facture se recalcule immédiatement.</p>
+          </div>
+          <div class="commerce-lab">
+            <div class="invoice-card">
+              <div class="invoice-heading"><strong>Commande</strong><span id="commerce-qty-label">8 menus</span></div>
+              <div class="invoice-line"><span>Sous-total</span><strong id="commerce-subtotal">68,00 €</strong></div>
+              <div class="invoice-line discount"><span>Remise <b id="commerce-discount-label">10 %</b></span><strong id="commerce-discount">− 6,80 €</strong></div>
+              <div class="invoice-line total"><span>À payer</span><strong id="commerce-net">61,20 €</strong></div>
+              <div class="invoice-line muted"><span>Coût estimé des menus</span><strong id="commerce-cost">41,60 €</strong></div>
+              <div class="invoice-line margin"><span>Marge simple après remise</span><strong id="commerce-margin">19,60 €</strong></div>
+            </div>
+            <div class="commerce-controls">
+              <div class="range-wrap">
+                <label for="commerce-qty"><strong>Nombre de menus</strong></label>
+                <div class="big-number"><span id="commerce-qty-value">8</span><small>menus</small></div>
+                <input id="commerce-qty" type="range" min="1" max="20" step="1" value="8" />
+              </div>
+              <div class="range-wrap">
+                <label for="commerce-discount-rate"><strong>Remise</strong></label>
+                <div class="big-number"><span id="commerce-discount-value">10</span><small>%</small></div>
+                <input id="commerce-discount-rate" type="range" min="0" max="30" step="5" value="10" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Une méthode simple</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Calcule d’abord le prix avant remise : quantité × prix unitaire.</p></div>
+            <div><span>2</span><p>Calcule la remise, puis enlève-la au prix de départ.</p></div>
+            <div><span>3</span><p>Pour une marge simple : prix de vente − coût.</p></div>
+          </div>
+          <div class="worked-example"><strong>40 € avec 10 % de remise</strong><span>10 % de 40 € = 4 €</span><span>40 € − 4 €</span><strong>→ 36 €</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>6 menus coûtent 8,50 € chacun. Quel est le montant total ?</span></legend><span class="question-domain">Prix × quantité</span><div class="answer-row"><input id="commerce-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Un total de 40 € bénéficie d’une remise de 10 %. Combien reste-t-il à payer ?</span></legend><span class="question-domain">Remise</span><div class="answer-row"><input id="commerce-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>Un produit coûte 7,50 € et est vendu 12 €. Quelle est la marge simple de cet exercice ?</span></legend><span class="question-domain">Prix − coût</span><div class="answer-row"><input id="commerce-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>Dans cet exercice, une taxe de 10 % s’applique à 50 €. Quel est le montant de la taxe ?</span></legend><span class="question-domain">Taxe fournie</span><div class="answer-row"><select id="commerce-q4"><option value="">Choisir…</option><option value="5">5 €</option><option value="10">10 €</option><option value="45">45 €</option><option value="55">55 €</option></select></div></fieldset>
+          </div>
+          <p class="footer-note">Le taux de taxe est donné ici uniquement pour faire le calcul : il n’est pas à mémoriser.</p>
+          <div id="commerce-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-commerce">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-commerce-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="probabilites">Module suivant · Probabilités</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const qty = document.querySelector('#commerce-qty');
+    const discountRate = document.querySelector('#commerce-discount-rate');
+    const updateCommerceLab = () => {
+      const quantity = Number(qty.value);
+      const rate = Number(discountRate.value);
+      const unitPrice = 8.5;
+      const unitCost = 5.2;
+      const subtotal = quantity * unitPrice;
+      const discount = subtotal * rate / 100;
+      const net = subtotal - discount;
+      const cost = quantity * unitCost;
+      const margin = net - cost;
+      document.querySelector('#commerce-qty-label').textContent = `${quantity} menu${quantity > 1 ? 's' : ''}`;
+      document.querySelector('#commerce-qty-value').textContent = quantity;
+      document.querySelector('#commerce-discount-label').textContent = `${rate} %`;
+      document.querySelector('#commerce-discount-value').textContent = rate;
+      document.querySelector('#commerce-subtotal').textContent = formatMoney(subtotal);
+      document.querySelector('#commerce-discount').textContent = `− ${formatMoney(discount)}`;
+      document.querySelector('#commerce-net').textContent = formatMoney(net);
+      document.querySelector('#commerce-cost').textContent = formatMoney(cost);
+      document.querySelector('#commerce-margin').textContent = formatMoney(margin);
+    };
+    qty.addEventListener('input', updateCommerceLab);
+    discountRate.addEventListener('input', updateCommerceLab);
+    updateCommerceLab();
+
+    const showCommerceFeedback = () => {
+      const checks = [
+        Math.abs(parseNumber(document.querySelector('#commerce-q1').value) - 51) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#commerce-q2').value) - 36) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#commerce-q3').value) - 4.5) < 0.001,
+        document.querySelector('#commerce-q4').value === '5'
+      ];
+      const feedback = document.querySelector('#commerce-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 6 × 8,50 € = <b>51 €</b></span>
+          <span>${checks[1] ? '✓' : '↻'} 10 % de 40 € = 4 €, donc 40 € − 4 € = <b>36 €</b></span>
+          <span>${checks[2] ? '✓' : '↻'} 12 € − 7,50 € = <b>4,50 €</b></span>
+          <span>${checks[3] ? '✓' : '↻'} 10 % de 50 € = <b>5 €</b></span>
+        </div>`;
+    };
+
+    document.querySelector('#check-commerce').addEventListener('click', () => {
+      showCommerceFeedback();
+      syncActivity('activity_checked', 'commerce');
+    });
+    document.querySelector('#show-commerce-answers')?.addEventListener('click', () => {
+      document.querySelector('#commerce-q1').value = '51';
+      document.querySelector('#commerce-q2').value = '36';
+      document.querySelector('#commerce-q3').value = '4.5';
+      document.querySelector('#commerce-q4').value = '5';
+      showCommerceFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
+  function renderProbabilityModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Probabilités</p>
+        <h2>Le hasard varie, mais il n’est pas sans repères.</h2>
+        <p class="lead">Si on choisit au hasard, on ne peut pas prévoir le prochain résultat avec certitude. En revanche, on peut mesurer les chances d’un événement et observer ce qui se passe quand on recommence beaucoup de fois.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">🎟️</span><strong>Tirage</strong><p>Parmi 10 tickets, 3 sont violets. Quelle chance de tirer un ticket violet ?</p></article>
+          <article class="module-context"><span aria-hidden="true">🔎</span><strong>Contrôle au hasard</strong><p>Choisir une barquette au hasard dans un lot pour effectuer un contrôle.</p></article>
+          <article class="module-context"><span aria-hidden="true">🎲</span><strong>Simulation</strong><p>Répéter virtuellement une expérience des dizaines ou centaines de fois.</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>Repères :</strong> une probabilité est comprise entre <b>0 et 1</b>, donc entre 0 % et 100 %. 0 = impossible ; 1 = certain. Ici, 3 tickets violets sur 10 donnent une probabilité de <b>3/10 = 0,3 = 30 %</b>.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Simule</span><h3>3 tickets violets sur 10</h3></div>
+            <p>Chaque tirage remet le ticket dans le lot. La probabilité reste 30 %, mais la fréquence observée peut bouger, surtout au début.</p>
+          </div>
+          <div class="probability-lab">
+            <div class="probability-bag">
+              <div class="ticket-set" aria-label="Lot de dix tickets dont trois violets">
+                ${Array.from({length:10}, (_,i) => '<span class="ticket ' + (i < 3 ? 'success' : '') + '">' + (i < 3 ? 'V' : '·') + '</span>').join('')}
+              </div>
+              <div class="probability-formula"><strong>3</strong><span>/</span><strong>10</strong><b>=</b><strong>30 %</strong></div>
+            </div>
+            <div class="simulation-panel">
+              <div class="simulation-stats">
+                <div class="mini-stat">Tirages<strong id="prob-draws">0</strong></div>
+                <div class="mini-stat">Violets<strong id="prob-successes">0</strong></div>
+                <div class="mini-stat">Fréquence observée<strong id="prob-frequency">—</strong></div>
+                <div class="mini-stat">Probabilité théorique<strong>30 %</strong></div>
+              </div>
+              <div class="probability-meter">
+                <span class="probability-theory" title="30 % théorique"></span>
+                <span class="probability-observed" id="prob-observed"></span>
+              </div>
+              <div class="simulation-history" id="prob-history" aria-label="Derniers résultats simulés"></div>
+              <div class="actions compact-actions">
+                <button class="btn btn-secondary prob-run" data-count="1">1 tirage</button>
+                <button class="btn btn-secondary prob-run" data-count="20">20 tirages</button>
+                <button class="btn btn-primary prob-run" data-count="100">100 tirages</button>
+                <button class="btn btn-ghost" id="prob-reset">Recommencer</button>
+              </div>
+              <p id="prob-message" class="teacher-muted">Fais quelques tirages, puis compare avec 30 %.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Deux idées importantes</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Pour des issues équiprobables : compte les cas favorables et les cas possibles.</p></div>
+            <div><span>2</span><p>La fréquence observée peut être différente de la probabilité sur peu d’essais.</p></div>
+            <div><span>3</span><p>Quand on répète beaucoup, la fréquence a tendance à se rapprocher de la probabilité.</p></div>
+          </div>
+          <div class="worked-example"><strong>2 tickets rouges sur 10</strong><span>2 cas favorables</span><span>10 cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>Dans un lot de 10 tickets, 2 sont rouges. Quelle est la probabilité de tirer un rouge au hasard ?</span></legend><span class="question-domain">Cas favorables / possibles</span><div class="answer-row"><input id="prob-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Quelle est la probabilité d’un événement impossible ?</span></legend><span class="question-domain">Impossible</span><div class="answer-row"><select id="prob-q2"><option value="">Choisir…</option><option value="0">0</option><option value="0.5">0,5</option><option value="1">1</option><option value="100">100</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>Un événement a une probabilité de 30 %. Quelle est la probabilité de l’événement contraire (« ne pas arriver ») ?</span></legend><span class="question-domain">Événement contraire</span><div class="answer-row"><input id="prob-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>La probabilité vaut 30 %. Après seulement 10 essais, on observe 40 %. Que peut-on conclure ?</span></legend><span class="question-domain">Fréquence et probabilité</span><div class="answer-row"><select id="prob-q4"><option value="">Choisir…</option><option value="wrong">La probabilité est devenue 40 %</option><option value="normal">C’est possible : la fréquence varie sur peu d’essais</option><option value="impossible">Le résultat est impossible</option></select></div></fieldset>
+          </div>
+          <div id="prob-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-prob">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-prob-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="commerce">Revoir Prix & commerce</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    let draws = 0;
+    let successes = 0;
+    let history = [];
+
+    const updateSimulation = () => {
+      const frequency = draws ? successes / draws * 100 : null;
+      document.querySelector('#prob-draws').textContent = draws;
+      document.querySelector('#prob-successes').textContent = successes;
+      document.querySelector('#prob-frequency').textContent = frequency === null ? '—' : `${formatNumber(frequency)} %`;
+      document.querySelector('#prob-observed').style.width = `${frequency === null ? 0 : Math.min(100, frequency)}%`;
+      document.querySelector('#prob-history').innerHTML = history.map(success => '<span class="' + (success ? 'success' : '') + '" title="' + (success ? 'violet' : 'autre') + '"></span>').join('');
+      document.querySelector('#prob-message').textContent = draws === 0
+        ? 'Fais quelques tirages, puis compare avec 30 %.'
+        : draws < 20
+          ? 'Sur peu de tirages, la fréquence peut être assez loin de 30 %.'
+          : draws < 100
+            ? 'En répétant, regarde si la fréquence se rapproche de 30 %.'
+            : `Après ${draws} tirages, la fréquence observée est de ${formatNumber(frequency)} %. Elle n’a pas besoin d’être exactement égale à 30 %.`;
+    };
+
+    const runSimulation = count => {
+      for (let i = 0; i < count; i += 1) {
+        const success = Math.random() < 0.3;
+        draws += 1;
+        if (success) successes += 1;
+        history.push(success);
+      }
+      history = history.slice(-40);
+      updateSimulation();
+    };
+
+    document.querySelectorAll('.prob-run').forEach(button => button.addEventListener('click', () => runSimulation(Number(button.dataset.count))));
+    document.querySelector('#prob-reset').addEventListener('click', () => {
+      draws = 0;
+      successes = 0;
+      history = [];
+      updateSimulation();
+    });
+    updateSimulation();
+
+    const showProbabilityFeedback = () => {
+      const checks = [
+        Math.abs(parseNumber(document.querySelector('#prob-q1').value) - 20) < 0.001,
+        document.querySelector('#prob-q2').value === '0',
+        Math.abs(parseNumber(document.querySelector('#prob-q3').value) - 70) < 0.001,
+        document.querySelector('#prob-q4').value === 'normal'
+      ];
+      const feedback = document.querySelector('#prob-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 2 sur 10 = 2/10 = <b>20 %</b></span>
+          <span>${checks[1] ? '✓' : '↻'} Un événement impossible a une probabilité de <b>0</b></span>
+          <span>${checks[2] ? '✓' : '↻'} Événement contraire : 100 % − 30 % = <b>70 %</b></span>
+          <span>${checks[3] ? '✓' : '↻'} Sur 10 essais, <b>40 % est tout à fait possible</b> même si la probabilité reste 30 %</span>
+        </div>`;
+    };
+
+    document.querySelector('#check-prob').addEventListener('click', () => {
+      showProbabilityFeedback();
+      syncActivity('activity_checked', 'probabilites');
+    });
+    document.querySelector('#show-prob-answers')?.addEventListener('click', () => {
+      document.querySelector('#prob-q1').value = '20';
+      document.querySelector('#prob-q2').value = '0';
+      document.querySelector('#prob-q3').value = '70';
+      document.querySelector('#prob-q4').value = 'normal';
+      showProbabilityFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
   function renderBilan() {
     if (!state.challengeDone && !teacherPreview) return go('defi');
     const result = diagnosticResult();

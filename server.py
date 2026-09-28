@@ -14,7 +14,8 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from threading import Lock
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("MATHS_DATA_DIR", ROOT / "data")).resolve()
@@ -28,6 +29,13 @@ STUDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 VALID_STAGES = {"diagnostic", "challenge", "bilan", "activity"}
 ACTIVITY_EVENTS = {"session_started", "route_opened", "activity_checked"}
 ACTIVITY_ROUTES = {"parcours", "intro", "diagnostic", "correction", "defi", "bilan", "durees", "proportion", "pourcentages", "donnees", "equations", "fonctions", "commerce", "probabilites"}
+TEACHERS = {
+    "kevin": "Monsieur Kevin",
+    "waren": "Monsieur Waren",
+    "fadhila": "Madame Fadhila",
+}
+COURSE_SESSIONS = {"seance-1": "Séance 1"}
+CLASS_STATE_LOCK = Lock()
 
 
 def utc_now() -> str:
@@ -71,33 +79,77 @@ def init_db() -> None:
         db.execute("CREATE INDEX IF NOT EXISTS idx_submissions_student ON submissions(student_id, id)")
 
 
-def read_class_state() -> dict:
-    default = {"corrections_unlocked": False, "updated_at": None}
+def _read_class_state_file() -> dict:
     try:
         raw = json.loads(CLASS_STATE_PATH.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return default
-    if not isinstance(raw, dict):
-        return default
-    return {
-        "corrections_unlocked": bool(raw.get("corrections_unlocked", False)),
-        "updated_at": raw.get("updated_at"),
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _cohort_key(teacher_id: str, course_session: str) -> str:
+    return f"{teacher_id}|{course_session}"
+
+
+def read_class_state(teacher_id: str = "", course_session: str = "") -> dict:
+    default = {
+        "teacher_id": teacher_id,
+        "teacher_label": TEACHERS.get(teacher_id, ""),
+        "course_session": course_session,
+        "course_session_label": COURSE_SESSIONS.get(course_session, ""),
+        "corrections_unlocked": False,
+        "updated_at": None,
     }
+    with CLASS_STATE_LOCK:
+        raw = _read_class_state_file()
+    if teacher_id and course_session:
+        cohorts = raw.get("cohorts")
+        if not isinstance(cohorts, dict):
+            return default
+        state = cohorts.get(_cohort_key(teacher_id, course_session))
+        if not isinstance(state, dict):
+            return default
+        return {
+            **default,
+            "corrections_unlocked": bool(state.get("corrections_unlocked", False)),
+            "updated_at": state.get("updated_at"),
+        }
+    # Compatibilité avec l'ancien verrou global, uniquement pour les anciens clients.
+    if "corrections_unlocked" in raw:
+        return {
+            **default,
+            "corrections_unlocked": bool(raw.get("corrections_unlocked", False)),
+            "updated_at": raw.get("updated_at"),
+        }
+    return default
 
 
-def write_class_state(*, corrections_unlocked: bool) -> dict:
+def write_class_state(*, teacher_id: str, course_session: str, corrections_unlocked: bool) -> dict:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     state = {
         "corrections_unlocked": bool(corrections_unlocked),
         "updated_at": utc_now(),
     }
-    temporary = CLASS_STATE_PATH.with_suffix(".tmp")
-    temporary.write_text(
-        json.dumps(state, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
-    )
-    temporary.replace(CLASS_STATE_PATH)
-    return state
+    with CLASS_STATE_LOCK:
+        raw = _read_class_state_file()
+        cohorts = raw.get("cohorts")
+        if not isinstance(cohorts, dict):
+            cohorts = {}
+        cohorts[_cohort_key(teacher_id, course_session)] = state
+        payload = {"version": 2, "cohorts": cohorts}
+        temporary = CLASS_STATE_PATH.with_suffix(".tmp")
+        temporary.write_text(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        temporary.replace(CLASS_STATE_PATH)
+    return {
+        "teacher_id": teacher_id,
+        "teacher_label": TEACHERS[teacher_id],
+        "course_session": course_session,
+        "course_session_label": COURSE_SESSIONS[course_session],
+        **state,
+    }
 
 
 def clean_name(value: object) -> str:
@@ -130,6 +182,20 @@ def clean_birth_date(value: object) -> str:
     return parsed.isoformat()
 
 
+def clean_teacher_id(value: object) -> str:
+    teacher_id = str(value or "").strip()
+    if teacher_id not in TEACHERS:
+        raise ValueError("Professeur invalide.")
+    return teacher_id
+
+
+def clean_course_session(value: object) -> str:
+    course_session = str(value or "").strip()
+    if course_session not in COURSE_SESSIONS:
+        raise ValueError("Séance invalide.")
+    return course_session
+
+
 def validate_payload(raw: object) -> dict:
     if not isinstance(raw, dict):
         raise ValueError("Corps JSON invalide.")
@@ -150,6 +216,16 @@ def validate_payload(raw: object) -> dict:
         first_name = display_name
         last_name = ""
         birth_date = ""
+    teacher_id_raw = raw.get("teacher_id")
+    course_session_raw = raw.get("course_session")
+    if teacher_id_raw is not None or course_session_raw is not None:
+        teacher_id = clean_teacher_id(teacher_id_raw)
+        course_session = clean_course_session(course_session_raw)
+    else:
+        # Compatibilité avec les données créées avant l'ajout du contexte de classe.
+        teacher_id = ""
+        course_session = ""
+
     session_id = str(raw.get("session_id", "") or "")
     if session_id and not STUDENT_ID_RE.fullmatch(session_id):
         raise ValueError("Identifiant de session invalide.")
@@ -234,6 +310,10 @@ def validate_payload(raw: object) -> dict:
         "first_name": first_name,
         "last_name": last_name,
         "birth_date": birth_date,
+        "teacher_id": teacher_id,
+        "teacher_label": TEACHERS.get(teacher_id, ""),
+        "course_session": course_session,
+        "course_session_label": COURSE_SESSIONS.get(course_session, ""),
         "session_id": session_id,
         "stage": stage,
         "diagnostic": diagnostic,
@@ -259,6 +339,10 @@ def submission_history() -> list[dict]:
                 "first_name": payload.get("first_name") or row["display_name"],
                 "last_name": payload.get("last_name") or "",
                 "birth_date": payload.get("birth_date") or "",
+                "teacher_id": payload.get("teacher_id") or "",
+                "teacher_label": payload.get("teacher_label") or TEACHERS.get(payload.get("teacher_id") or "", ""),
+                "course_session": payload.get("course_session") or "",
+                "course_session_label": payload.get("course_session_label") or COURSE_SESSIONS.get(payload.get("course_session") or "", ""),
                 "session_id": payload.get("session_id") or (payload.get("activity") or {}).get("session_id") or "",
                 "stage": row["stage"],
                 "created_at": row["created_at"],

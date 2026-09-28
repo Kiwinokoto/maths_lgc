@@ -78,8 +78,8 @@
     { title: 'Recettes & proportionnalité', text: 'Adapter une fiche technique quand le nombre de portions change.', route: 'proportion', available: true },
     { title: 'Pourcentages', text: 'Comprendre « sur 100 », calculer une part et une réduction.', route: 'pourcentages', available: true },
     { title: 'Données & statistiques', text: 'Lire un tableau ou un graphique, comparer et calculer une moyenne.', route: 'donnees', available: true },
-    { title: 'Équations', text: 'Trouver une quantité inconnue dans une situation simple.', available: false },
-    { title: 'Graphiques & fonctions', text: 'Relier une grandeur à une autre et lire une évolution.', available: false },
+    { title: 'Équations', text: 'Trouver un nombre inconnu et vérifier qu’il convient.', route: 'equations', available: true },
+    { title: 'Graphiques & fonctions', text: 'Voir comment une quantité change quand une autre change.', route: 'fonctions', available: true },
     { title: 'Prix & commerce', text: 'Coûts, prix, facture, réduction et marge simple.', available: false },
     { title: 'Probabilités', text: 'Comprendre le hasard, les événements et les simulations.', available: false }
   ];
@@ -243,7 +243,9 @@
       durees: 'Durées · heures et minutes',
       proportion: 'Recettes · changer les quantités',
       pourcentages: 'Pourcentages · comprendre « sur 100 »',
-      donnees: 'Données · lire et comparer'
+      donnees: 'Données · lire et comparer',
+      equations: 'Équations · trouver le nombre caché',
+      fonctions: 'Graphiques · deux quantités liées'
     };
     const pageTitle = pageTitles[route] || 'Maths LGC · CAP PSR';
     const previewLinks = [
@@ -256,7 +258,9 @@
       ['durees', 'Durées'],
       ['proportion', 'Recettes'],
       ['pourcentages', 'Pourcentages'],
-      ['donnees', 'Données']
+      ['donnees', 'Données'],
+      ['equations', 'Équations'],
+      ['fonctions', 'Graphiques']
     ];
 
     app.innerHTML = `
@@ -265,7 +269,7 @@
           <a class="brand-home" href="#parcours" aria-label="Retour au parcours" title="Retour au parcours"><span class="brand-mark">∑</span></a>
           <span class="brand-title">${pageTitle}</span>
         </div>
-        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (['durees','proportion','pourcentages','donnees'].includes(route) ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
+        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (['durees','proportion','pourcentages','donnees','equations','fonctions'].includes(route) ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
       </header>
       ${teacherPreview ? `
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
@@ -275,7 +279,7 @@
           </div>
         </nav>
       ` : ''}
-      ${['durees','proportion','pourcentages','donnees'].includes(route) ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
+      ${['durees','proportion','pourcentages','donnees','equations','fonctions'].includes(route) ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
       ${content}
     `;
   }
@@ -298,6 +302,8 @@
     if (route === 'proportion') return renderProportionModule();
     if (route === 'pourcentages') return renderPercentageModule();
     if (route === 'donnees') return renderDataModule();
+    if (route === 'equations') return renderEquationModule();
+    if (route === 'fonctions') return renderFunctionModule();
     return renderPath();
   }
 
@@ -1169,7 +1175,7 @@
           <div class="actions">
             <button class="btn btn-primary" id="check-data">Vérifier</button>
             ${teacherPreview ? '<button class="btn btn-secondary" id="show-data-answers">Voir les réponses</button>' : ''}
-            <button class="btn btn-secondary" data-go="pourcentages">Revoir les pourcentages</button>
+            <button class="btn btn-secondary" data-go="equations">Module suivant · Équations</button>
             <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
           </div>
         </section>
@@ -1227,6 +1233,271 @@
       document.querySelector('#data-q3').value = '30';
       document.querySelector('#data-q4').value = '22';
       showDataFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
+
+  function renderEquationModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Équations</p>
+        <h2>Trouver le nombre caché.</h2>
+        <p class="lead">Parfois, on connaît le résultat mais pas la quantité de départ. On peut appeler ce nombre <b>x</b>. La lettre n’est pas un nouveau calcul : elle remplace simplement le nombre qu’on cherche.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">📦</span><strong>Barquettes</strong><p>3 lots identiques donnent 24 barquettes. Combien y en a-t-il dans un lot ?</p></article>
+          <article class="module-context"><span aria-hidden="true">💶</span><strong>Prix</strong><p>Après avoir ajouté 5 €, on obtient 17 €. Quel était le prix de départ ?</p></article>
+          <article class="module-context"><span aria-hidden="true">🥤</span><strong>Quantité</strong><p>4 bouteilles identiques coûtent 36 €. Quel est le prix d’une bouteille ?</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>L’idée avant le mot :</strong> on cherche le nombre qui rend l’égalité vraie. En maths, une égalité avec un nombre inconnu s’appelle une <b>équation</b>.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Fais équilibrer l’égalité</h3></div>
+            <p>On cherche x dans 3 × x = 24. Bouge le curseur jusqu’à ce que les deux côtés donnent la même chose.</p>
+          </div>
+          <div class="equation-lab">
+            <div class="equation-balance" id="equation-balance">
+              <div class="equation-side">
+                <span>3 × x</span>
+                <strong id="equation-left">12</strong>
+              </div>
+              <div class="balance-sign" id="equation-sign">≠</div>
+              <div class="equation-side target">
+                <span>Résultat</span>
+                <strong>24</strong>
+              </div>
+            </div>
+            <div class="range-wrap equation-range">
+              <label for="equation-x"><strong>Valeur de x</strong></label>
+              <div class="big-number"><span id="equation-x-value">4</span></div>
+              <input id="equation-x" type="range" min="1" max="12" step="1" value="4" />
+              <div class="equation-live" id="equation-live">3 × 4 = 12</div>
+              <div class="equation-status" id="equation-status">Ce n’est pas encore égal à 24.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Une méthode simple</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Repère le nombre que tu cherches.</p></div>
+            <div><span>2</span><p>Regarde l’opération faite avec ce nombre.</p></div>
+            <div><span>3</span><p>Fais l’opération inverse pour revenir au nombre caché.</p></div>
+          </div>
+          <div class="worked-example"><strong>3 × x = 24</strong><span>on fait l’inverse de × 3</span><span>24 ÷ 3</span><strong>→ x = 8</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>3 × x = 24. Quelle est la valeur de x ?</span></legend><span class="question-domain">Division inverse</span><div class="answer-row"><input id="equation-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>x + 7 = 19. Quel nombre manque ?</span></legend><span class="question-domain">Soustraction inverse</span><div class="answer-row"><input id="equation-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>4 menus identiques coûtent 36 €. Quel est le prix d’un menu ?</span></legend><span class="question-domain">Situation vers équation</span><div class="answer-row"><input id="equation-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>x − 4 = 11. Quelle est la valeur de x ?</span></legend><span class="question-domain">Addition inverse</span><div class="answer-row"><select id="equation-q4"><option value="">Choisir…</option><option value="7">7</option><option value="15">15</option><option value="44">44</option><option value="4">4</option></select></div></fieldset>
+          </div>
+          <div id="equation-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-equation">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-equation-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="fonctions">Module suivant · Graphiques</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const slider = document.querySelector('#equation-x');
+    const updateEquationLab = () => {
+      const x = Number(slider.value);
+      const left = 3 * x;
+      const solved = left === 24;
+      document.querySelector('#equation-x-value').textContent = x;
+      document.querySelector('#equation-left').textContent = left;
+      document.querySelector('#equation-sign').textContent = solved ? '=' : '≠';
+      document.querySelector('#equation-live').textContent = `3 × ${x} = ${left}`;
+      document.querySelector('#equation-status').textContent = solved
+        ? 'Équilibre trouvé : x = 8.'
+        : left < 24 ? 'Le côté gauche est encore trop petit.' : 'Le côté gauche est maintenant trop grand.';
+      document.querySelector('#equation-balance').classList.toggle('balanced', solved);
+    };
+    slider.addEventListener('input', updateEquationLab);
+    updateEquationLab();
+
+    const showEquationFeedback = () => {
+      const checks = [
+        Math.abs(parseNumber(document.querySelector('#equation-q1').value) - 8) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#equation-q2').value) - 12) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#equation-q3').value) - 9) < 0.001,
+        document.querySelector('#equation-q4').value === '15'
+      ];
+      const feedback = document.querySelector('#equation-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 3 × x = 24 → 24 ÷ 3 = <b>8</b></span>
+          <span>${checks[1] ? '✓' : '↻'} x + 7 = 19 → 19 − 7 = <b>12</b></span>
+          <span>${checks[2] ? '✓' : '↻'} 36 € ÷ 4 menus = <b>9 €</b> par menu</span>
+          <span>${checks[3] ? '✓' : '↻'} x − 4 = 11 → 11 + 4 = <b>15</b></span>
+        </div>`;
+    };
+
+    document.querySelector('#check-equation').addEventListener('click', () => {
+      showEquationFeedback();
+      syncActivity('activity_checked', 'equations');
+    });
+    document.querySelector('#show-equation-answers')?.addEventListener('click', () => {
+      document.querySelector('#equation-q1').value = '8';
+      document.querySelector('#equation-q2').value = '12';
+      document.querySelector('#equation-q3').value = '9';
+      document.querySelector('#equation-q4').value = '15';
+      showEquationFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
+  function renderFunctionModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Graphiques & fonctions</p>
+        <h2>Quand une quantité change, l’autre change aussi.</h2>
+        <p class="lead">Si chaque menu est vendu au même prix, plus on vend de menus, plus le montant total augmente. Un graphique permet de voir ce lien d’un coup d’œil.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">🍽️</span><strong>Menus vendus</strong><p>Nombre de menus ↔ montant encaissé.</p></article>
+          <article class="module-context"><span aria-hidden="true">🥣</span><strong>Production</strong><p>Nombre de portions ↔ quantité d’ingrédients.</p></article>
+          <article class="module-context"><span aria-hidden="true">⏱️</span><strong>Cadence</strong><p>Temps de production ↔ nombre de barquettes produites.</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>L’idée avant le mot :</strong> une quantité dépend d’une autre. En maths, cette relation peut s’appeler une <b>fonction</b>. Le graphique montre comment les deux quantités évoluent ensemble.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Menus vendus à 8 € l’unité</h3></div>
+            <p>Bouge le curseur. Le point se déplace sur la droite et le montant total change.</p>
+          </div>
+          <div class="function-lab">
+            <div class="function-chart-card">
+              <svg id="function-chart" class="function-chart" viewBox="0 0 440 280" role="img" aria-label="Graphique reliant le nombre de menus au montant encaissé">
+                <defs>
+                  <pattern id="grid-small" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(102,86,242,.10)" stroke-width="1"/>
+                  </pattern>
+                </defs>
+                <rect x="50" y="20" width="360" height="220" rx="10" fill="url(#grid-small)"/>
+                <line x1="50" y1="240" x2="410" y2="240" class="chart-axis"/>
+                <line x1="50" y1="240" x2="50" y2="20" class="chart-axis"/>
+                <line x1="50" y1="240" x2="410" y2="20" class="function-line"/>
+                <circle id="function-point" cx="194" cy="152" r="8" class="function-point"/>
+                <text x="220" y="270" text-anchor="middle" class="chart-label">menus vendus</text>
+                <text x="15" y="130" text-anchor="middle" transform="rotate(-90 15 130)" class="chart-label">montant (€)</text>
+                <text x="45" y="256" text-anchor="end" class="chart-tick">0</text>
+                <text x="230" y="256" text-anchor="middle" class="chart-tick">10</text>
+                <text x="410" y="256" text-anchor="middle" class="chart-tick">20</text>
+                <text x="42" y="135" text-anchor="end" class="chart-tick">80</text>
+                <text x="42" y="25" text-anchor="end" class="chart-tick">160</text>
+              </svg>
+            </div>
+            <div class="range-wrap function-range">
+              <label for="function-menus"><strong>Menus vendus</strong></label>
+              <div class="big-number"><span id="function-menu-count">8</span><small>menus</small></div>
+              <input id="function-menus" type="range" min="0" max="20" step="1" value="8" />
+              <div class="function-relation">
+                <span id="function-x">8 menus</span>
+                <b>× 8 €</b>
+                <strong id="function-y">64 €</strong>
+              </div>
+              <div class="mini-stats">
+                <div class="mini-stat">x = menus<strong id="function-x-card">8</strong></div>
+                <div class="mini-stat">y = montant<strong id="function-y-card">64 €</strong></div>
+                <div class="mini-stat">Relation<strong>y = 8 × x</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Lire un graphique</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Regarde ce que représente l’axe horizontal.</p></div>
+            <div><span>2</span><p>Regarde ce que représente l’axe vertical et les unités.</p></div>
+            <div><span>3</span><p>Pars d’une valeur sur un axe et lis la valeur correspondante sur l’autre.</p></div>
+          </div>
+          <div class="worked-example"><strong>10 menus</strong><span>8 € chacun</span><span>10 × 8 €</span><strong>→ 80 €</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>Un menu coûte 8 €. Quel montant pour 6 menus ?</span></legend><span class="question-domain">Calculer une image</span><div class="answer-row"><input id="function-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Avec la relation y = 8 × x, quel montant correspond à 10 menus ?</span></legend><span class="question-domain">Lire une relation</span><div class="answer-row"><input id="function-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>On a encaissé 96 € avec des menus à 8 €. Combien de menus ont été vendus ?</span></legend><span class="question-domain">Retrouver l’entrée</span><div class="answer-row"><input id="function-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>menus</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>Quand le nombre de menus est multiplié par 2, que devient le montant si le prix unitaire ne change pas ?</span></legend><span class="question-domain">Comprendre la relation</span><div class="answer-row"><select id="function-q4"><option value="">Choisir…</option><option value="same">Il reste pareil</option><option value="double">Il est multiplié par 2</option><option value="half">Il est divisé par 2</option><option value="plus8">On ajoute seulement 8 €</option></select></div></fieldset>
+          </div>
+          <div id="function-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-function">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-function-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="equations">Revoir les équations</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const slider = document.querySelector('#function-menus');
+    const updateFunctionLab = () => {
+      const menus = Number(slider.value);
+      const revenue = menus * 8;
+      const x = 50 + menus / 20 * 360;
+      const y = 240 - revenue / 160 * 220;
+      document.querySelector('#function-menu-count').textContent = menus;
+      document.querySelector('#function-x').textContent = `${menus} menu${menus > 1 ? 's' : ''}`;
+      document.querySelector('#function-y').textContent = formatMoney(revenue);
+      document.querySelector('#function-x-card').textContent = menus;
+      document.querySelector('#function-y-card').textContent = formatMoney(revenue);
+      document.querySelector('#function-point').setAttribute('cx', x);
+      document.querySelector('#function-point').setAttribute('cy', y);
+    };
+    slider.addEventListener('input', updateFunctionLab);
+    updateFunctionLab();
+
+    const showFunctionFeedback = () => {
+      const checks = [
+        Math.abs(parseNumber(document.querySelector('#function-q1').value) - 48) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#function-q2').value) - 80) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#function-q3').value) - 12) < 0.001,
+        document.querySelector('#function-q4').value === 'double'
+      ];
+      const feedback = document.querySelector('#function-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 6 × 8 € = <b>48 €</b></span>
+          <span>${checks[1] ? '✓' : '↻'} y = 8 × 10 = <b>80 €</b></span>
+          <span>${checks[2] ? '✓' : '↻'} 96 € ÷ 8 € = <b>12 menus</b></span>
+          <span>${checks[3] ? '✓' : '↻'} À prix fixe, si les menus doublent, le montant <b>double aussi</b></span>
+        </div>`;
+    };
+
+    document.querySelector('#check-function').addEventListener('click', () => {
+      showFunctionFeedback();
+      syncActivity('activity_checked', 'fonctions');
+    });
+    document.querySelector('#show-function-answers')?.addEventListener('click', () => {
+      document.querySelector('#function-q1').value = '48';
+      document.querySelector('#function-q2').value = '80';
+      document.querySelector('#function-q3').value = '12';
+      document.querySelector('#function-q4').value = 'double';
+      showFunctionFeedback();
     });
     document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
   }

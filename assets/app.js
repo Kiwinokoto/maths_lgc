@@ -90,13 +90,16 @@
         challengeDone: false,
         studentId: createStudentId(),
         displayName: '',
+        firstName: '',
+        lastName: '',
+        birthDate: '',
         serverSync: 'pending',
         answers: {},
         selfEval: {},
         ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
       };
     } catch {
-      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', serverSync: 'pending', answers: {}, selfEval: {} };
+      return { entered: false, introDone: false, diagnosticDone: false, challengeDone: false, studentId: createStudentId(), displayName: '', firstName: '', lastName: '', birthDate: '', serverSync: 'pending', answers: {}, selfEval: {} };
     }
   }
 
@@ -110,11 +113,14 @@
   }
 
   async function syncProgress(stage, challenge = null) {
-    if (teacherPreview || !state.displayName || !state.studentId) return;
+    if (teacherPreview || !state.firstName || !state.lastName || !state.birthDate || !state.studentId) return;
     const result = state.diagnosticDone ? diagnosticResult() : null;
     const payload = {
       student_id: state.studentId,
-      display_name: state.displayName,
+      display_name: state.firstName,
+      first_name: state.firstName,
+      last_name: state.lastName,
+      birth_date: state.birthDate,
       stage,
       self_eval: state.selfEval,
       diagnostic: result ? {
@@ -193,7 +199,12 @@
   }
 
   function render() {
-    const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered ? 'parcours' : 'bienvenue'));
+    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate);
+    const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered && hasIdentity ? 'parcours' : 'bienvenue'));
+    if (!teacherPreview && !hasIdentity && route !== 'bienvenue') {
+      location.hash = 'bienvenue';
+      return;
+    }
     if (route === 'bienvenue') return renderPrehome();
     if (route === 'intro') return renderIntro();
     if (route === 'diagnostic') return renderDiagnostic();
@@ -214,14 +225,31 @@
           <p class="eyebrow">Bienvenue en CAP PSR</p>
           <h1>Les maths qui servent vraiment.</h1>
           <p class="lead">Aujourd’hui, pas de note et pas de piège. On va repérer ce que tu sais déjà faire, voir à quoi servent les maths en PSR, puis relever un premier défi de restauration.</p>
-          <label class="info-tile" style="display:block;max-width:34rem">
-            <strong>Ton prénom ou le code donné par le professeur</strong>
-            <div class="answer-row" style="margin-top:10px">
-              <input id="display-name" type="text" maxlength="40" autocomplete="given-name" value="${escapeHtml(state.displayName || '')}" placeholder="Ex. Lina ou PSR-07" />
+          <div class="identity-card">
+            <div class="identity-heading">
+              <div>
+                <strong>Avant de commencer</strong>
+                <p>Ces informations servent uniquement à te distinguer dans le suivi de classe. Dans le cours, on utilisera seulement ton prénom.</p>
+              </div>
+              <span class="identity-badge">Suivi individuel</span>
             </div>
-            <small>Pas besoin de nom de famille.</small>
-          </label>
-          <p class="form-error hidden" id="name-error">Indique un prénom ou un code avant de commencer.</p>
+            <div class="identity-grid">
+              <label>
+                <span>Prénom</span>
+                <input id="first-name" type="text" maxlength="40" autocomplete="given-name" value="${escapeHtml(state.firstName || state.displayName || '')}" placeholder="Ex. Lina" />
+              </label>
+              <label>
+                <span>Nom</span>
+                <input id="last-name" type="text" maxlength="60" autocomplete="family-name" value="${escapeHtml(state.lastName || '')}" placeholder="Ex. Martin" />
+              </label>
+              <label>
+                <span>Date de naissance</span>
+                <input id="birth-date" type="date" autocomplete="bday" min="1940-01-01" max="${new Date().toISOString().slice(0, 10)}" value="${escapeHtml(state.birthDate || '')}" />
+              </label>
+            </div>
+            <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail n’est demandée.</small>
+          </div>
+          <p class="form-error hidden" id="name-error">Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.</p>
           <div class="actions">
             <button class="btn btn-primary" id="enter">Commencer</button>
           </div>
@@ -235,12 +263,22 @@
     `, 0);
     document.querySelector('#enter').addEventListener('click', () => {
       if (teacherPreview) return go('intro');
-      const name = document.querySelector('#display-name').value.trim();
-      if (!name) {
-        document.querySelector('#name-error').classList.remove('hidden');
+      const firstName = document.querySelector('#first-name').value.trim();
+      const lastName = document.querySelector('#last-name').value.trim();
+      const birthDate = document.querySelector('#birth-date').value;
+      const error = document.querySelector('#name-error');
+      const today = new Date().toISOString().slice(0, 10);
+      if (!firstName || !lastName || !birthDate || birthDate > today || birthDate < '1940-01-01') {
+        error.textContent = birthDate && (birthDate > today || birthDate < '1940-01-01')
+          ? 'Vérifie la date de naissance.'
+          : 'Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.';
+        error.classList.remove('hidden');
         return;
       }
-      state.displayName = name.slice(0, 40);
+      state.firstName = firstName.slice(0, 40);
+      state.lastName = lastName.slice(0, 60);
+      state.birthDate = birthDate;
+      state.displayName = state.firstName;
       state.studentId = state.studentId || createStudentId();
       state.entered = true;
       saveState();
@@ -311,7 +349,7 @@
       <section class="card hero">
         <p class="eyebrow">Étape 2 · Diagnostic</p>
         <h2>Montre ce que tu sais déjà faire.</h2>
-        <p class="lead">Ce n’est pas une note. Si tu ne sais pas, donne la réponse qui te paraît la plus logique. On corrigera ensemble ensuite.</p>
+        <p class="lead">Ce n’est pas une note. Réponds avec ce que tu sais aujourd’hui ; si une notion t’est inconnue, tu peux simplement choisir « Je ne sais pas ». On corrigera ensemble ensuite.</p>
         <form id="diagnostic-form">
           <div class="callout">
             <h3>Les maths et moi</h3>
@@ -324,7 +362,7 @@
           <div class="question-list">
             ${diagnostic.map((q, i) => questionMarkup(q, i)).join('')}
           </div>
-          <p class="form-error hidden" id="diag-error">Réponds à toutes les questions avant de valider.</p>
+          <p class="form-error hidden" id="diag-error">Réponds à chaque situation ou utilise « Je ne sais pas » avant de valider.</p>
           <div class="actions">
             ${teacherPreview ? '<button class="btn btn-primary" type="button" id="preview-correction">Voir la correction sans répondre</button>' : '<button class="btn btn-primary" type="submit">Valider mon diagnostic</button>'}
             <button class="btn btn-secondary" type="button" id="diag-back">Retour au parcours</button>
@@ -358,6 +396,13 @@
       syncProgress('diagnostic');
       go('correction');
     });
+    document.querySelectorAll('[data-unknown]').forEach(button => button.addEventListener('click', () => {
+      const field = document.querySelector(`[name="${button.dataset.unknown}"]`);
+      if (!field) return;
+      field.value = 'Je ne sais pas';
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      button.classList.add('selected');
+    }));
     document.querySelector('#preview-correction')?.addEventListener('click', () => go('correction'));
     document.querySelector('#diag-back').addEventListener('click', () => go('parcours'));
   }
@@ -366,11 +411,11 @@
     const previous = state.answers[q.id] ?? '';
     let input;
     if (q.type === 'select') {
-      input = `<select name="${q.id}" aria-label="Réponse à la question ${i+1}"><option value="">Choisir…</option>${q.options.map(o => `<option ${previous === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+      input = `<select name="${q.id}" aria-label="Réponse à la question ${i+1}"><option value="">Choisir…</option>${q.options.map(o => `<option ${previous === o ? 'selected' : ''}>${o}</option>`).join('')}<option ${previous === 'Je ne sais pas' ? 'selected' : ''}>Je ne sais pas</option></select>`;
     } else {
       input = `<input type="text" inputmode="${q.type === 'text' ? 'text' : 'decimal'}" name="${q.id}" value="${escapeHtml(previous)}" placeholder="${q.placeholder || 'Ta réponse'}" aria-label="Réponse à la question ${i+1}" />`;
     }
-    return `<fieldset class="question"><legend><span class="question-index">${i+1}</span><span>${q.prompt}</span></legend><span class="question-domain">${q.domain}</span><div class="answer-row">${input}${q.suffix ? `<span>${q.suffix}</span>` : ''}</div></fieldset>`;
+    return `<fieldset class="question"><legend><span class="question-index">${i+1}</span><span>${q.prompt}</span></legend><span class="question-domain">${q.domain}</span><div class="answer-row">${input}${q.suffix ? `<span>${q.suffix}</span>` : ''}<button class="unknown-answer" type="button" data-unknown="${q.id}">Je ne sais pas</button></div></fieldset>`;
   }
 
   function renderCorrection() {
@@ -384,10 +429,10 @@
         <p class="eyebrow">Étape 3 · Correction guidée</p>
         <h2>On regarde les stratégies.</h2>
         ${teacherPreview
-          ? '<div class="callout"><strong>Vue prof :</strong> correction complète affichée sans simuler de score élève.</div>'
+          ? '<div class="callout"><strong>Vue prof :</strong> correction complète affichée sans simuler de résultat élève.</div>'
           : `<div class="result-summary">
-              <div class="result-score">${result.score}/10</div>
-              <div><h3>Ce score est un repère, pas une note.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
+              <div class="result-score"><span>10</span><small>situations</small></div>
+              <div><h3>On repère ton point de départ.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
             </div>`}
         ${result.details.map((d, i) => `<article class="correction ${teacherPreview ? '' : d.correct ? 'ok' : 'retry'}">
           <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
@@ -550,7 +595,13 @@
     const result = diagnosticResult();
     const priorities = result.weakDomains.length ? result.weakDomains : ['Consolider et expliquer mes méthodes'];
     const firstPriority = priorities[0];
-    const scoreLabel = teacherPreview ? 'Score calculé après le diagnostic' : `${result.score}/10`;
+    const scoreLabel = teacherPreview
+      ? 'Résultat calculé après le diagnostic'
+      : result.score >= 8
+        ? 'Bases solides'
+        : result.score >= 5
+          ? 'Plusieurs bases en place'
+          : 'Priorités repérées';
     const challengeLabel = teacherPreview ? 'État calculé après le défi' : 'Terminé';
     const prioritiesLabel = teacherPreview ? 'Déduites automatiquement des erreurs observées.' : priorities.join(' · ');
     const encouragement = result.score >= 8
@@ -564,7 +615,7 @@
         <h2>Voilà ton point de départ.</h2>
         <p class="lead">Tu viens de faire ce qu’on attendra souvent en maths : comprendre une situation, choisir un calcul, vérifier le résultat et l’expliquer.</p>
         <div class="lesson-grid">
-          <article class="info-tile"><span class="pill ok">Diagnostic</span><h3>${scoreLabel}</h3><p>Un repère pour savoir où commencer, pas une note.</p></article>
+          <article class="info-tile"><span class="pill ok">Diagnostic</span><h3>${scoreLabel}</h3><p>Un repère pour savoir où commencer, sans note.</p></article>
           <article class="info-tile"><span class="pill ok">Défi PSR</span><h3>${challengeLabel}</h3><p>Tu as adapté une recette, manipulé une durée et calculé un montant.</p></article>
         </div>
         <div class="callout"><strong>Mes priorités :</strong> ${prioritiesLabel}</div>

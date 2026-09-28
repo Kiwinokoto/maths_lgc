@@ -166,8 +166,9 @@
     tbody.replaceChildren();
     students.forEach(student => {
       const row = document.createElement('tr');
+      const fullName = [student.last_name, student.first_name || student.display_name].filter(Boolean).join(' ');
       const values = [
-        student.display_name || '—',
+        fullName || student.display_name || '—',
         student.diagnostic ? student.diagnostic.score + '/10' : '—',
         student.challenge ? student.challenge.score + '/3' : '—',
         (student.strengths || []).join(', ') || '—',
@@ -181,7 +182,11 @@
         if (index === 0) {
           const meta = document.createElement('div');
           meta.className = 'teacher-muted';
-          meta.textContent = (student.submissions || 0) + ' enregistrement(s)';
+          const bits = [];
+          if (student.birth_date) bits.push('Né(e) le ' + new Date(student.birth_date + 'T12:00:00').toLocaleDateString('fr-FR'));
+          if (student.unknown_count) bits.push(student.unknown_count + ' « je ne sais pas »');
+          bits.push((student.submissions || 0) + ' enregistrement(s)');
+          meta.textContent = bits.join(' · ');
           cell.append(meta);
         }
         row.append(cell);

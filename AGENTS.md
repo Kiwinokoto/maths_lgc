@@ -7,10 +7,10 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - UI : sobre mais attractive pour des CAP 1re année ; palette principale violet/indigo, accents chauds pêche/ambre/rose, vert réservé aux états de réussite ; légère inspiration manga sans gamification infantilisante ni effets qui nuisent à la lecture.
 - Priorité pédagogique : situations PSR concrètes, progression guidée et remédiation.
 - Frontend mobile-first en HTML/CSS/JS, sans compte élève ni dépendance frontend.
-- Collecte V1 minimale : prénom ou code court + résultats pédagogiques, stockés dans SQLite côté serveur.
+- Collecte V1 minimale nécessaire pour éviter les homonymes : prénom + nom + date de naissance + résultats pédagogiques, stockés dans SQLite côté serveur. Dans l'interface élève, utiliser uniquement le prénom après l'identification.
 - La progression reste aussi dans `localStorage` pour éviter de perdre le travail en cas de réseau instable.
 - Le tableau enseignant est en lecture seule côté navigateur et protégé par `MATHS_TEACHER_TOKEN`.
-- Ne jamais stocker de nom de famille, email ou autre donnée inutile dans cette V1.
+- Ne jamais collecter d'email, adresse ou autre donnée inutile. La date de naissance n'est utilisée que pour distinguer les homonymes dans le suivi enseignant.
 - Ne pas transformer le site en Moodle bis : les interactions qui apportent une vraie valeur web restent ici ; les contenus classiques pourront migrer vers Moodle plus tard.
 - Ne pas ajouter de géométrie comme axe central du CAP PSR : le parcours suit le groupement 2 de mathématiques.
 
@@ -47,12 +47,12 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 
 ## État V1
 - Pré-page d'accueil avec vrai QR vers `https://maths.lagrandeclasse.fr/`.
-- Prénom/code court demandé avant démarrage.
+- Nom + prénom + date de naissance demandés avant démarrage pour distinguer les homonymes ; seul le prénom est utilisé dans le cours.
 - Présentation des objectifs centrée sur les usages concrets en PSR.
 - Mini-visualisation fractions ↔ pourcentages placée dans la correction du diagnostic, au niveau de la notion correspondante.
 - Parcours linéaire de séance de rentrée.
 - Auto-positionnement « les maths et moi ».
-- Diagnostic 10 questions sans note.
+- Diagnostic 10 situations sans note : le score numérique reste côté enseignant ; l'élève voit des priorités et peut répondre explicitement « Je ne sais pas ».
 - Correction guidée.
 - Premier défi PSR interactif (proportionnalité, durée, coût/CA).
 - Synchronisation serveur des résultats quand le réseau est disponible.
@@ -60,14 +60,12 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Prévisualisation prof via `/?preview=teacher#parcours` : étapes déverrouillées, aucune synchronisation de résultats, navigation sans remplir les exercices.
 - Historique complet des tentatives exportable pour analyse après séance.
 - Passe UI V1 : palette modernisée, topbar sticky, progression renforcée, cartes/diagnostic/défi plus visuels, sans changement du parcours pédagogique.
-- Passe UI V2 : vert retiré de la couleur d'action ; violet/indigo principal, accents chauds manga discrets, vert conservé seulement pour les réussites/étapes terminées.
-- Branche de déploiement en cours : `dev/deploy-lgc-vps`; ne pas merger avant présence des trois secrets.
+- Passe UI V2 : vert retiré de la couleur d'action ; violet/indigo principal, accents chauds manga discrets, vert menthe vif/tendre conservé seulement pour les réussites/étapes terminées.
+- Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes
-1. Ajouter les trois secrets GitHub sur `Kiwinokoto/maths_lgc`.
-2. Vérifier HEAD / absence de concurrence puis merger la PR de déploiement.
-3. Laisser l'Action `main` déployer vers `/opt/maths_lgc`.
-4. Vérifier `/healthz`, HTTPS, QR et rendu téléphone.
-5. Faire un mini test élève + contrôle du tableau `/teacher`.
-6. Après la séance, exporter l'historique JSON pour analyse et appréciations personnalisées.
-7. Ajouter ensuite les modules Durées puis Recettes & proportionnalité.
+1. Finaliser et tester la séance 1 de positionnement en conditions réelles sur téléphone.
+2. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs et réponses « Je ne sais pas ».
+3. Ajuster la remédiation après la première classe réelle.
+4. Ajouter ensuite les modules Durées puis Recettes & proportionnalité.
+5. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.

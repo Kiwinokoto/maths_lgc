@@ -14,7 +14,9 @@ Durée cible : 1 h 30. Extension possible à 3 h par remédiation et exercices s
 
 ## Posture pédagogique
 
-Le diagnostic sert à repérer les besoins, pas à classer les élèves. Demander régulièrement : « Quelles informations sont utiles ? », « Quel calcul choisis-tu ? », « Est-ce que ton résultat est plausible ? », « Comment l'expliquerais-tu à quelqu'un ? ».
+Le diagnostic sert à repérer les besoins, pas à classer les élèves. Aucun score numérique n'est affiché à l'élève. Une réponse « Je ne sais pas » est utile et doit être accueillie comme une information de positionnement, pas comme une faute. Demander régulièrement : « Quelles informations sont utiles ? », « Quel calcul choisis-tu ? », « Est-ce que ton résultat est plausible ? », « Comment l'expliquerais-tu à quelqu'un ? ».
+
+Cette séance ne suit volontairement pas une progression débutant / avancé / expert : son objectif est d'obtenir un point de départ fiable pour chaque élève avant de construire les remédiations et les futurs parcours différenciés.
 
 ## Compétences mobilisées dans la V1
 
@@ -35,6 +37,7 @@ La fiche de salade de fruits est volontairement simple. Le curseur de portions d
 
 ## À observer demain
 
+- élèves qui choisissent explicitement « Je ne sais pas » : distinguer notion inconnue, manque de confiance et difficulté de lecture ;
 - élèves qui bloquent sur l'énoncé avant même le calcul ;
 - confusion kg/g ou heure/minute ;
 - calcul posé correct mais absence d'ordre de grandeur ;

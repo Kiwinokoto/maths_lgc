@@ -60,10 +60,31 @@ def init_db() -> None:
 def clean_name(value: object) -> str:
     name = " ".join(str(value or "").split()).strip()
     if not (1 <= len(name) <= 40):
-        raise ValueError("Le prénom ou code doit contenir entre 1 et 40 caractères.")
+        raise ValueError("Le prénom doit contenir entre 1 et 40 caractères.")
     if any(ord(ch) < 32 for ch in name):
-        raise ValueError("Le prénom ou code contient un caractère invalide.")
+        raise ValueError("Le prénom contient un caractère invalide.")
     return name
+
+
+def clean_last_name(value: object) -> str:
+    name = " ".join(str(value or "").split()).strip()
+    if not (1 <= len(name) <= 60):
+        raise ValueError("Le nom doit contenir entre 1 et 60 caractères.")
+    if any(ord(ch) < 32 for ch in name):
+        raise ValueError("Le nom contient un caractère invalide.")
+    return name
+
+
+def clean_birth_date(value: object) -> str:
+    raw = str(value or "").strip()
+    try:
+        parsed = datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError("Date de naissance invalide.") from exc
+    today = datetime.now(timezone.utc).date()
+    if parsed.year < 1940 or parsed > today:
+        raise ValueError("Date de naissance hors plage autorisée.")
+    return parsed.isoformat()
 
 
 def validate_payload(raw: object) -> dict:
@@ -72,7 +93,20 @@ def validate_payload(raw: object) -> dict:
     student_id = str(raw.get("student_id", ""))
     if not STUDENT_ID_RE.fullmatch(student_id):
         raise ValueError("Identifiant élève invalide.")
-    display_name = clean_name(raw.get("display_name"))
+    # Compatibilité ascendante : les anciens clients n'envoyaient qu'un display_name.
+    first_name_raw = raw.get("first_name")
+    last_name_raw = raw.get("last_name")
+    birth_date_raw = raw.get("birth_date")
+    if first_name_raw is not None or last_name_raw is not None or birth_date_raw is not None:
+        first_name = clean_name(first_name_raw)
+        last_name = clean_last_name(last_name_raw)
+        birth_date = clean_birth_date(birth_date_raw)
+        display_name = first_name
+    else:
+        display_name = clean_name(raw.get("display_name"))
+        first_name = display_name
+        last_name = ""
+        birth_date = ""
     stage = str(raw.get("stage", ""))
     if stage not in VALID_STAGES:
         raise ValueError("Étape invalide.")
@@ -130,6 +164,9 @@ def validate_payload(raw: object) -> dict:
     return {
         "student_id": student_id,
         "display_name": display_name,
+        "first_name": first_name,
+        "last_name": last_name,
+        "birth_date": birth_date,
         "stage": stage,
         "diagnostic": diagnostic,
         "challenge": challenge,
@@ -150,6 +187,9 @@ def submission_history() -> list[dict]:
                 "id": row["id"],
                 "student_id": row["student_id"],
                 "display_name": row["display_name"],
+                "first_name": payload.get("first_name") or row["display_name"],
+                "last_name": payload.get("last_name") or "",
+                "birth_date": payload.get("birth_date") or "",
                 "stage": row["stage"],
                 "created_at": row["created_at"],
                 "diagnostic": payload.get("diagnostic"),
@@ -176,6 +216,9 @@ def latest_students() -> list[dict]:
             **current,
             "student_id": sid,
             "display_name": row["display_name"],
+            "first_name": payload.get("first_name") or current.get("first_name") or row["display_name"],
+            "last_name": payload.get("last_name") or current.get("last_name") or "",
+            "birth_date": payload.get("birth_date") or current.get("birth_date") or "",
             "stage": row["stage"],
             "updated_at": row["created_at"],
         }
@@ -192,11 +235,23 @@ def latest_students() -> list[dict]:
         diag = item.get("diagnostic") or {}
         weak = list(diag.get("weak_domains") or [])
         strong = list(diag.get("strong_domains") or [])
+        details = list(diag.get("details") or [])
+        item["unknown_count"] = sum(
+            1 for detail in details
+            if str(detail.get("value", "")).strip().casefold() == "je ne sais pas"
+        )
         item["recommended_start"] = weak[0] if weak else "Consolidation / défi PSR"
         item["strengths"] = strong
         item["weaknesses"] = weak
         out.append(item)
-    return sorted(out, key=lambda x: x["display_name"].casefold())
+    return sorted(
+        out,
+        key=lambda x: (
+            str(x.get("last_name", "")).casefold(),
+            str(x.get("first_name", x.get("display_name", ""))).casefold(),
+            str(x.get("birth_date", "")),
+        ),
+    )
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -249,13 +304,19 @@ class Handler(BaseHTTPRequestHandler):
             rows = latest_students()
             buffer = io.StringIO()
             writer = csv.writer(buffer)
-            writer.writerow(["eleve", "id", "derniere_activite", "diagnostic", "defi", "forces", "a_travailler", "commencer_par"])
+            writer.writerow([
+                "nom", "prenom", "date_naissance", "id", "derniere_activite",
+                "diagnostic", "je_ne_sais_pas", "defi", "forces", "a_travailler", "commencer_par"
+            ])
             for item in rows:
                 diag = item.get("diagnostic") or {}
                 challenge = item.get("challenge") or {}
                 writer.writerow([
-                    item["display_name"], item["student_id"], item["updated_at"],
-                    diag.get("score", ""), challenge.get("score", ""),
+                    item.get("last_name", ""),
+                    item.get("first_name", item.get("display_name", "")),
+                    item.get("birth_date", ""),
+                    item["student_id"], item["updated_at"],
+                    diag.get("score", ""), item.get("unknown_count", 0), challenge.get("score", ""),
                     " | ".join(item.get("strengths", [])),
                     " | ".join(item.get("weaknesses", [])),
                     item.get("recommended_start", ""),

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import socket
@@ -53,6 +54,28 @@ def main() -> int:
     port = free_port()
     base = f"http://127.0.0.1:{port}"
     with tempfile.TemporaryDirectory(prefix="maths-lgc-smoke-") as data_dir:
+        legacy_session = "legacy_session_0001"
+        legacy_admin = "legacy_admin_token_smoke_0001"
+        Path(data_dir, "sessions.json").write_text(
+            json.dumps({
+                "version": 1,
+                "sessions": {
+                    legacy_session: {
+                        "class_session_id": legacy_session,
+                        "teacher_id": "kevin",
+                        "teacher_label": "Monsieur Kevin",
+                        "course_session": "seance-1",
+                        "course_session_label": "Séance 1",
+                        "group_label": "PSR historique",
+                        "admin_token_hash": hashlib.sha256(legacy_admin.encode("utf-8")).hexdigest(),
+                        "corrections_unlocked": False,
+                        "created_at": "2026-01-10T08:00:00+00:00",
+                        "updated_at": "2026-01-10T08:00:00+00:00",
+                    }
+                },
+            }),
+            encoding="utf-8",
+        )
         env = {
             **os.environ,
             "MATHS_HOST": "127.0.0.1",
@@ -91,6 +114,25 @@ def main() -> int:
             )
             assert_status(status, 200, "teacher status with token")
             assert status_body.get("ok") is True
+
+            status, _, legacy_public = json_request(
+                base, f"/api/session?id={legacy_session}"
+            )
+            assert_status(status, 200, "legacy public session")
+            assert legacy_public["session_number"] == 1
+            assert legacy_public["session_title"] == ""
+            assert legacy_public["course_session"] == "seance-1"
+            assert legacy_public["course_session_label"] == "Séance 1"
+
+            status, _, legacy_summary = json_request(
+                base,
+                f"/api/teacher/session-summary?id={legacy_session}",
+                headers={"X-Session-Token": legacy_admin},
+            )
+            assert_status(status, 200, "legacy teacher dashboard")
+            assert legacy_summary["session"]["session_number"] == 1
+            assert legacy_summary["session"]["session_title"] == ""
+            assert legacy_summary["count"] == 0
 
             status, _, _ = json_request(
                 base,

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import mimetypes
@@ -15,17 +16,23 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
+
+import qrcode
+from qrcode.image.svg import SvgPathImage
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("MATHS_DATA_DIR", ROOT / "data")).resolve()
 DB_PATH = DATA_DIR / "maths_lgc.sqlite3"
 CLASS_STATE_PATH = DATA_DIR / "class_state.json"
+SESSIONS_PATH = DATA_DIR / "sessions.json"
 HOST = os.environ.get("MATHS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("MATHS_PORT", "8080"))
 TEACHER_TOKEN = os.environ.get("MATHS_TEACHER_TOKEN", "")
+PUBLIC_BASE_URL = os.environ.get("MATHS_PUBLIC_URL", "https://maths.lagrandeclasse.fr").rstrip("/")
 MAX_BODY = 64 * 1024
 STUDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+CLASS_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 VALID_STAGES = {"diagnostic", "challenge", "bilan", "activity"}
 ACTIVITY_EVENTS = {"session_started", "route_opened", "activity_checked"}
 ACTIVITY_ROUTES = {"parcours", "intro", "diagnostic", "correction", "defi", "bilan", "durees", "proportion", "pourcentages", "donnees", "equations", "fonctions", "commerce", "probabilites"}
@@ -36,6 +43,7 @@ TEACHERS = {
 }
 COURSE_SESSIONS = {"seance-1": "Séance 1"}
 CLASS_STATE_LOCK = Lock()
+SESSIONS_LOCK = Lock()
 
 
 def utc_now() -> str:
@@ -194,6 +202,128 @@ def clean_course_session(value: object) -> str:
     if course_session not in COURSE_SESSIONS:
         raise ValueError("Séance invalide.")
     return course_session
+
+
+def clean_group_label(value: object) -> str:
+    label = " ".join(str(value or "").split()).strip()
+    if not (1 <= len(label) <= 80):
+        raise ValueError("Le groupe doit contenir entre 1 et 80 caractères.")
+    if any(ord(ch) < 32 for ch in label):
+        raise ValueError("Le groupe contient un caractère invalide.")
+    return label
+
+
+def _read_sessions_file() -> dict:
+    try:
+        raw = json.loads(SESSIONS_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {"version": 1, "sessions": {}}
+    if not isinstance(raw, dict):
+        return {"version": 1, "sessions": {}}
+    sessions = raw.get("sessions")
+    if not isinstance(sessions, dict):
+        sessions = {}
+    return {"version": 1, "sessions": sessions}
+
+
+def _write_sessions_file(payload: dict) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    temporary = SESSIONS_PATH.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    temporary.replace(SESSIONS_PATH)
+
+
+def _hash_session_admin_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def public_session(session: dict) -> dict:
+    return {
+        "class_session_id": session["class_session_id"],
+        "teacher_id": session["teacher_id"],
+        "teacher_label": session["teacher_label"],
+        "course_session": session["course_session"],
+        "course_session_label": session["course_session_label"],
+        "group_label": session["group_label"],
+        "corrections_unlocked": bool(session.get("corrections_unlocked", False)),
+        "created_at": session["created_at"],
+        "updated_at": session.get("updated_at") or session["created_at"],
+    }
+
+
+def get_class_session(class_session_id: str) -> dict | None:
+    if not CLASS_SESSION_ID_RE.fullmatch(class_session_id):
+        return None
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        session = raw["sessions"].get(class_session_id)
+    return dict(session) if isinstance(session, dict) else None
+
+
+def create_class_session(*, teacher_id: str, course_session: str, group_label: str) -> tuple[dict, str]:
+    now = utc_now()
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        sessions = raw["sessions"]
+        while True:
+            class_session_id = secrets.token_urlsafe(15)
+            if CLASS_SESSION_ID_RE.fullmatch(class_session_id) and class_session_id not in sessions:
+                break
+        admin_token = secrets.token_urlsafe(32)
+        session = {
+            "class_session_id": class_session_id,
+            "teacher_id": teacher_id,
+            "teacher_label": TEACHERS[teacher_id],
+            "course_session": course_session,
+            "course_session_label": COURSE_SESSIONS[course_session],
+            "group_label": group_label,
+            "admin_token_hash": _hash_session_admin_token(admin_token),
+            "corrections_unlocked": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+        sessions[class_session_id] = session
+        _write_sessions_file(raw)
+    return public_session(session), admin_token
+
+
+def update_session_corrections(*, class_session_id: str, unlocked: bool) -> dict:
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        session = raw["sessions"].get(class_session_id)
+        if not isinstance(session, dict):
+            raise ValueError("Séance introuvable.")
+        session["corrections_unlocked"] = bool(unlocked)
+        session["updated_at"] = utc_now()
+        raw["sessions"][class_session_id] = session
+        _write_sessions_file(raw)
+    return public_session(session)
+
+
+def session_admin_authorized(class_session_id: str, supplied_token: str) -> bool:
+    session = get_class_session(class_session_id)
+    if not session or not supplied_token:
+        return False
+    supplied_hash = _hash_session_admin_token(supplied_token)
+    return secrets.compare_digest(supplied_hash, str(session.get("admin_token_hash", "")))
+
+
+def session_join_url(class_session_id: str) -> str:
+    return f"{PUBLIC_BASE_URL}/?{urlencode({'session': class_session_id})}"
+
+
+def session_qr_svg(class_session_id: str) -> bytes:
+    image = qrcode.make(
+        session_join_url(class_session_id),
+        image_factory=SvgPathImage,
+        box_size=8,
+        border=4,
+    )
+    svg = image.to_string()
+    return svg.encode("utf-8") if isinstance(svg, str) else svg
 
 
 def validate_payload(raw: object) -> dict:

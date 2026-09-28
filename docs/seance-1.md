@@ -18,6 +18,8 @@ Le diagnostic sert à repérer les besoins, pas à classer les élèves. Aucun s
 
 Cette séance ne suit volontairement pas une progression débutant / avancé / expert : son objectif est d'obtenir un point de départ fiable pour chaque élève avant de construire les remédiations et les futurs parcours différenciés.
 
+Pour la première prise en main, privilégier des consignes courtes et des mots courants. Montrer avant de nommer quand c'est possible : une quantité qui change, une heure, une monnaie rendue, un tableau simple. Introduire ensuite les mots comme « proportionnalité », « moyenne » ou « résoudre » en les reliant à l'exemple déjà compris. Cette précaution est particulièrement importante pour les élèves peu à l'aise avec l'écrit ou le français.
+
 ## Compétences mobilisées dans la V1
 
 - calcul décimal et automatismes ;

@@ -9,6 +9,27 @@
   const activitySessionId = createStudentId();
   const routesSeenThisSession = new Set();
   let activitySessionStarted = false;
+  let correctionsUnlocked = false;
+  let correctionsStateLoaded = false;
+
+  async function refreshCorrectionsState(force = false) {
+    if (teacherPreview) {
+      correctionsUnlocked = true;
+      correctionsStateLoaded = true;
+      return true;
+    }
+    if (correctionsStateLoaded && !force) return correctionsUnlocked;
+    try {
+      const response = await fetch('/api/class-state', { cache: 'no-store' });
+      if (!response.ok) throw new Error('class state unavailable');
+      const payload = await response.json();
+      correctionsUnlocked = Boolean(payload.corrections_unlocked);
+    } catch {
+      correctionsUnlocked = false;
+    }
+    correctionsStateLoaded = true;
+    return correctionsUnlocked;
+  }
 
   const diagnostic = [
     {

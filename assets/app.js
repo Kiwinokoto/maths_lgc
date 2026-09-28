@@ -199,7 +199,12 @@
   }
 
   function render() {
-    const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered ? 'parcours' : 'bienvenue'));
+    const hasIdentity = Boolean(state.firstName && state.lastName && state.birthDate);
+    const route = location.hash.replace('#', '') || (teacherPreview ? 'parcours' : (state.entered && hasIdentity ? 'parcours' : 'bienvenue'));
+    if (!teacherPreview && !hasIdentity && route !== 'bienvenue') {
+      location.hash = 'bienvenue';
+      return;
+    }
     if (route === 'bienvenue') return renderPrehome();
     if (route === 'intro') return renderIntro();
     if (route === 'diagnostic') return renderDiagnostic();

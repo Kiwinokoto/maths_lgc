@@ -85,10 +85,10 @@ Le libellé de la question 1 a été clarifié après audit pour éviter l'ambig
 Le taux de taxe est toujours fourni dans l'énoncé ; aucun taux légal n'est demandé de mémoire.
 
 ### Probabilités
-- 2 cas favorables sur 10 = **20 %** ;
+- sac de 10 jetons, dont 2 rouges : 2 cas favorables sur 10 = **20 %** ;
 - événement impossible : probabilité **0** ;
-- contraire d'un événement à 30 % : **70 %** ;
-- observer 40 % sur 10 essais alors que p = 30 % est **possible** : la fréquence fluctue sur un petit nombre d'essais.
+- contraire de « tirer violet » quand p = 30 % : **70 %** ;
+- obtenir 4 violets sur 10 pioches, soit 40 %, alors que p = 30 % reste **possible** : la fréquence fluctue sur un petit nombre d'essais.
 
 ## Politique de corrigé
 

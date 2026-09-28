@@ -98,11 +98,27 @@ def main() -> int:
                 method="POST",
                 payload={
                     "teacher_id": "kevin",
-                    "course_session": "seance-1",
+                    "session_number": 1,
+                    "session_title": "Proportionnalité",
                     "group_label": "PSR 1",
                 },
             )
             assert_status(status, 401, "create session without token")
+
+            status, _, invalid_number = json_request(
+                base,
+                "/api/teacher/sessions",
+                method="POST",
+                payload={
+                    "teacher_id": "kevin",
+                    "session_number": 0,
+                    "session_title": "",
+                    "group_label": "PSR 1",
+                },
+                headers=master_headers,
+            )
+            assert_status(status, 400, "reject invalid session number")
+            assert "numéro de séance" in invalid_number["error"].lower()
 
             status, _, created_a = json_request(
                 base,
@@ -110,7 +126,8 @@ def main() -> int:
                 method="POST",
                 payload={
                     "teacher_id": "kevin",
-                    "course_session": "seance-1",
+                    "session_number": 1,
+                    "session_title": "Proportionnalité",
                     "group_label": "PSR 1",
                 },
                 headers=master_headers,
@@ -125,7 +142,8 @@ def main() -> int:
                 method="POST",
                 payload={
                     "teacher_id": "fadhila",
-                    "course_session": "seance-1",
+                    "session_number": 2,
+                    "session_title": "",
                     "group_label": "PSR 2",
                 },
                 headers=master_headers,
@@ -139,6 +157,10 @@ def main() -> int:
             status, _, public_a = json_request(base, f"/api/session?id={session_a}")
             assert_status(status, 200, "public Kevin session")
             assert public_a["teacher_label"] == "Monsieur Kevin"
+            assert public_a["session_number"] == 1
+            assert public_a["session_title"] == "Proportionnalité"
+            assert public_a["course_session"] == "seance-1"
+            assert public_a["course_session_label"] == "Séance 1 · Proportionnalité"
             assert public_a["group_label"] == "PSR 1"
             assert public_a["corrections_unlocked"] is False
 
@@ -235,6 +257,9 @@ def main() -> int:
             )
             assert_status(status, 200, "Fadhila summary")
             assert summary_b["count"] == 1
+            assert summary_b["session"]["session_number"] == 2
+            assert summary_b["session"]["session_title"] == ""
+            assert summary_b["session"]["course_session_label"] == "Séance 2"
             assert summary_b["students"][0]["first_name"] == "Bob"
             assert summary_b["students"][0].get("diagnostic") is None
 

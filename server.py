@@ -825,9 +825,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
-        if path not in {"/api/progress", "/api/teacher/corrections"}:
+        allowed_paths = {
+            "/api/progress",
+            "/api/teacher/corrections",
+            "/api/teacher/sessions",
+            "/api/teacher/session-corrections",
+        }
+        if path not in allowed_paths:
             return self._json(404, {"error": "Route inconnue."})
-        if path == "/api/teacher/corrections" and not self._authorized():
+        if path in {"/api/teacher/corrections", "/api/teacher/sessions"} and not self._authorized():
             return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -839,6 +845,46 @@ class Handler(BaseHTTPRequestHandler):
             raw = json.loads(self.rfile.read(length))
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             return self._json(400, {"error": str(exc)})
+
+        if path == "/api/teacher/sessions":
+            if not isinstance(raw, dict):
+                return self._json(400, {"error": "Données de séance invalides."})
+            try:
+                teacher_id = clean_teacher_id(raw.get("teacher_id"))
+                course_session = clean_course_session(raw.get("course_session"))
+                group_label = clean_group_label(raw.get("group_label"))
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            session, admin_token = create_class_session(
+                teacher_id=teacher_id,
+                course_session=course_session,
+                group_label=group_label,
+            )
+            session_id = session["class_session_id"]
+            return self._json(201, {
+                "session": session,
+                "admin_token": admin_token,
+                "join_url": session_join_url(session_id),
+                "manage_url": f"{PUBLIC_BASE_URL}/teacher?session={session_id}#token={admin_token}",
+                "qr_url": f"/api/session-qr?id={session_id}",
+            })
+
+        if path == "/api/teacher/session-corrections":
+            if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):
+                return self._json(400, {"error": "État des corrigés invalide."})
+            class_session_id = str(raw.get("class_session_id", "") or "").strip()
+            if not get_class_session(class_session_id):
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            try:
+                session = update_session_corrections(
+                    class_session_id=class_session_id,
+                    unlocked=raw["unlocked"],
+                )
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, session)
 
         if path == "/api/teacher/corrections":
             if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):

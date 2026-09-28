@@ -406,7 +406,7 @@
     const previous = state.answers[q.id] ?? '';
     let input;
     if (q.type === 'select') {
-      input = `<select name="${q.id}" aria-label="Réponse à la question ${i+1}"><option value="">Choisir…</option>${q.options.map(o => `<option ${previous === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+      input = `<select name="${q.id}" aria-label="Réponse à la question ${i+1}"><option value="">Choisir…</option>${q.options.map(o => `<option ${previous === o ? 'selected' : ''}>${o}</option>`).join('')}<option ${previous === 'Je ne sais pas' ? 'selected' : ''}>Je ne sais pas</option></select>`;
     } else {
       input = `<input type="text" inputmode="${q.type === 'text' ? 'text' : 'decimal'}" name="${q.id}" value="${escapeHtml(previous)}" placeholder="${q.placeholder || 'Ta réponse'}" aria-label="Réponse à la question ${i+1}" />`;
     }

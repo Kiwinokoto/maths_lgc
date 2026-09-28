@@ -1133,6 +1133,125 @@ p { line-height: 1.65; }
   white-space: nowrap;
 }
 
+.percent-lab,
+.stats-lab {
+  display: grid;
+  grid-template-columns: minmax(230px,.82fr) minmax(0,1.18fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.percent-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0,1fr));
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.72);
+  aspect-ratio: 1;
+}
+
+.percent-grid span {
+  border-radius: 4px;
+  background: #eeeaf5;
+  box-shadow: inset 0 0 0 1px rgba(97,79,145,.05);
+  transition: background .12s ease, transform .12s ease;
+}
+
+.percent-grid span.filled {
+  background: linear-gradient(145deg, var(--accent), var(--rose));
+  transform: scale(.96);
+}
+
+.percent-equivalence {
+  margin: 16px 0;
+  padding: 13px 14px;
+  border: 1px solid rgba(102,86,242,.18);
+  border-radius: 13px;
+  background: rgba(255,255,255,.72);
+  color: var(--accent-strong);
+  font-weight: 900;
+  text-align: center;
+}
+
+.percent-range,
+.stats-range {
+  min-height: 100%;
+}
+
+.stats-chart-wrap {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.72);
+}
+
+.stats-chart {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 10px;
+  align-items: end;
+  min-height: 255px;
+  padding: 12px 6px 0;
+}
+
+.stats-bar-col {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 7px;
+  align-items: end;
+  height: 220px;
+  text-align: center;
+}
+
+.stats-bar-value {
+  color: var(--accent-strong);
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+.stats-bar-track {
+  display: flex;
+  align-items: end;
+  width: 100%;
+  height: 165px;
+  overflow: hidden;
+  border-radius: 10px 10px 6px 6px;
+  background: #f0edf5;
+}
+
+.stats-bar {
+  display: block;
+  width: 100%;
+  min-height: 8%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+  transition: height .2s ease;
+}
+
+.stats-bar-col strong {
+  font-size: .78rem;
+}
+
+.stats-average {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--warm-soft);
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.stats-average strong {
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+
 .question-list {
   display: grid;
   gap: 17px;
@@ -1567,7 +1686,9 @@ p { line-height: 1.65; }
   .module-context-grid,
   .time-controls,
   .method-steps,
-  .proportion-lab {
+  .proportion-lab,
+  .percent-lab,
+  .stats-lab {
     grid-template-columns: 1fr;
   }
 

@@ -354,12 +354,47 @@
   }
 
   function renderPrehome() {
+    if (!teacherPreview && !classContext) {
+      shell(`
+        <section class="card hero">
+          <p class="eyebrow">CAP PSR · Maths LGC</p>
+          <h1>Rejoins la séance de ton professeur.</h1>
+          <p class="lead">Scanne le QR code affiché par ton professeur ou ouvre le lien qu’il t’a envoyé. Tu arriveras automatiquement dans le bon groupe.</p>
+          ${classContextError ? `<div class="callout"><strong>Ce lien ne fonctionne pas :</strong> ${escapeHtml(classContextError)}</div>` : ''}
+          <div class="identity-card">
+            <div class="identity-heading">
+              <div>
+                <strong>Pas de QR ?</strong>
+                <p>Entre le code de séance donné par ton professeur.</p>
+              </div>
+            </div>
+            <div class="answer-row">
+              <input id="session-code" type="text" maxlength="64" autocomplete="off" placeholder="Code de séance" />
+              <button class="btn btn-primary" id="join-session">Rejoindre</button>
+            </div>
+          </div>
+          <p class="footer-note">Tu n’as pas à choisir ton professeur ni ton groupe : le lien de séance s’en charge.</p>
+        </section>
+      `, 0);
+      const join = () => {
+        const code = document.querySelector('#session-code').value.trim();
+        if (!code) return;
+        location.assign('/?session=' + encodeURIComponent(code));
+      };
+      document.querySelector('#join-session').addEventListener('click', join);
+      document.querySelector('#session-code').addEventListener('keydown', event => {
+        if (event.key === 'Enter') join();
+      });
+      return;
+    }
+
     shell(`
       <section class="card hero prehome-grid">
         <div>
-          <p class="eyebrow">Bienvenue en CAP PSR</p>
+          <p class="eyebrow">${teacherPreview ? 'Bienvenue en CAP PSR' : escapeHtml(classContext.course_session_label + ' · ' + classContext.group_label)}</p>
           <h1>Les maths qui servent vraiment.</h1>
           <p class="lead">Aujourd’hui, pas de note et pas de piège. On va repérer ce que tu sais déjà faire, voir à quoi servent les maths en PSR, puis relever un premier défi de restauration.</p>
+          ${teacherPreview ? '' : `<div class="callout"><strong>Ta séance :</strong> ${escapeHtml(classContext.teacher_label)} · ${escapeHtml(classContext.course_session_label)} · groupe <b>${escapeHtml(classContext.group_label)}</b>.</div>`}
           <div class="identity-card">
             <div class="identity-heading">
               <div>
@@ -381,31 +416,18 @@
                 <span>Date de naissance</span>
                 <input id="birth-date" type="date" autocomplete="bday" min="1940-01-01" max="${new Date().toISOString().slice(0, 10)}" value="${escapeHtml(state.birthDate || '')}" />
               </label>
-              <label>
-                <span>Professeur</span>
-                <select id="teacher-id" required>
-                  <option value="">Choisir le professeur…</option>
-                  ${Object.entries(TEACHERS).map(([id, label]) => `<option value="${id}" ${state.teacherId === id ? 'selected' : ''}>${label}</option>`).join('')}
-                </select>
-              </label>
-              <label>
-                <span>Séance</span>
-                <select id="course-session" required>
-                  ${Object.entries(COURSE_SESSIONS).map(([id, label]) => `<option value="${id}" ${(state.courseSession || 'seance-1') === id ? 'selected' : ''}>${label}</option>`).join('')}
-                </select>
-              </label>
             </div>
-            <small>Nom, prénom, date de naissance, professeur et séance restent dans le suivi enseignant ; aucune adresse mail ni adresse postale n’est demandée.</small>
+            <small>Nom, prénom et date de naissance restent dans le suivi enseignant ; aucune adresse mail ni adresse postale n’est demandée.</small>
           </div>
-          <p class="form-error hidden" id="name-error">Renseigne ton prénom, ton nom, ta date de naissance et choisis ton professeur avant de commencer.</p>
+          <p class="form-error hidden" id="name-error">Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.</p>
           <div class="actions">
             <button class="btn btn-primary" id="enter">Commencer</button>
           </div>
           <p class="footer-note">Ta progression reste sur cet appareil et peut être envoyée au tableau de suivi de la classe pour t’aider à choisir la suite.</p>
         </div>
-        <div class="qr-placeholder" aria-label="QR code vers maths.lagrandeclasse.fr">
-          <img class="qr-image" src="assets/qr-maths-lgc.svg" alt="QR code vers https://maths.lagrandeclasse.fr/" />
-          <div class="qr-label">Scanne pour ouvrir le cours<br><small>maths.lagrandeclasse.fr</small></div>
+        <div class="qr-placeholder">
+          <div class="brand-mark" aria-hidden="true">∑</div>
+          <div class="qr-label">${teacherPreview ? 'Prévisualisation enseignant' : escapeHtml(classContext.teacher_label)}<br><small>${teacherPreview ? 'navigation libre' : escapeHtml(classContext.group_label)}</small></div>
         </div>
       </section>
     `, 0);
@@ -414,22 +436,19 @@
       const firstName = document.querySelector('#first-name').value.trim();
       const lastName = document.querySelector('#last-name').value.trim();
       const birthDate = document.querySelector('#birth-date').value;
-      const teacherId = document.querySelector('#teacher-id').value;
-      const courseSession = document.querySelector('#course-session').value;
       const error = document.querySelector('#name-error');
       const today = new Date().toISOString().slice(0, 10);
-      if (!firstName || !lastName || !birthDate || !TEACHERS[teacherId] || !COURSE_SESSIONS[courseSession] || birthDate > today || birthDate < '1940-01-01') {
+      if (!firstName || !lastName || !birthDate || birthDate > today || birthDate < '1940-01-01') {
         error.textContent = birthDate && (birthDate > today || birthDate < '1940-01-01')
           ? 'Vérifie la date de naissance.'
-          : 'Renseigne ton prénom, ton nom, ta date de naissance et choisis ton professeur avant de commencer.';
+          : 'Renseigne ton prénom, ton nom et ta date de naissance avant de commencer.';
         error.classList.remove('hidden');
         return;
       }
       state.firstName = firstName.slice(0, 40);
       state.lastName = lastName.slice(0, 60);
       state.birthDate = birthDate;
-      state.teacherId = teacherId;
-      state.courseSession = courseSession;
+      state.classSessionId = classContext.class_session_id;
       correctionsUnlocked = false;
       correctionsStateLoaded = false;
       state.displayName = state.firstName;
@@ -2025,7 +2044,7 @@
       const teacherToken = sessionStorage.getItem('maths-lgc-teacher-token') || '';
       if (teacherToken) {
         try {
-          const response = await fetch('/api/teacher/summary', {
+          const response = await fetch('/api/teacher/status', {
             headers: { Authorization: 'Bearer ' + teacherToken },
             cache: 'no-store'
           });
@@ -2044,6 +2063,17 @@
           </section>
         `;
         return;
+      }
+    } else if (requestedClassSessionId) {
+      try {
+        const response = await fetch('/api/session?id=' + encodeURIComponent(requestedClassSessionId), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Séance introuvable ou expirée.');
+        classContext = await response.json();
+        state.classSessionId = classContext.class_session_id;
+        saveState();
+      } catch (error) {
+        classContext = null;
+        classContextError = error.message || 'Séance introuvable.';
       }
     }
     window.addEventListener('hashchange', render);

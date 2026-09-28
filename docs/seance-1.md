@@ -35,7 +35,7 @@ Pour la première prise en main, privilégier des consignes courtes et des mots 
 
 ## Défi PSR
 
-La fiche de salade de fruits est volontairement simple. Le curseur de portions donne un retour immédiat sur le coefficient de proportionnalité, les quantités et le coût estimé. Les questions ajoutent un calcul d'horaire et un chiffre d'affaires simple.
+La fiche de salade de fruits est volontairement simple. Le défi démarre sur **30 portions à partir d'une base de 10**, donc avec un coefficient rond **× 3** : l'objectif est d'identifier la méthode sans ajouter immédiatement une difficulté décimale. Le curseur reste manipulable pour explorer d'autres quantités. Le module Recettes & proportionnalité reprend ensuite le même raisonnement avec des coefficients décimaux (par exemple **× 2,4** puis **× 3,2**). Les questions du défi ajoutent aussi un calcul d'horaire et un chiffre d'affaires simple.
 
 ## À observer demain
 

@@ -754,15 +754,15 @@
           </div>
           <div class="range-wrap">
             <label for="portions"><strong>Nombre de portions à produire</strong></label>
-            <div class="big-number"><span id="portion-count">24</span></div>
-            <input id="portions" type="range" min="5" max="40" step="1" value="24" />
+            <div class="big-number"><span id="portion-count">30</span></div>
+            <input id="portions" type="range" min="5" max="40" step="1" value="30" />
             <div class="mini-stats">
-              <div class="mini-stat">Pommes<strong id="apples">1 920 g</strong></div>
-              <div class="mini-stat">Oranges<strong id="oranges">1 440 g</strong></div>
-              <div class="mini-stat">Bananes<strong id="bananas">960 g</strong></div>
-              <div class="mini-stat">Jus<strong id="juice">600 mL</strong></div>
-              <div class="mini-stat">Coût estimé<strong id="cost">20,40 €</strong></div>
-              <div class="mini-stat">Coefficient<strong id="factor">× 2,4</strong></div>
+              <div class="mini-stat">Pommes<strong id="apples">2 400 g</strong></div>
+              <div class="mini-stat">Oranges<strong id="oranges">1 800 g</strong></div>
+              <div class="mini-stat">Bananes<strong id="bananas">1 200 g</strong></div>
+              <div class="mini-stat">Jus<strong id="juice">750 mL</strong></div>
+              <div class="mini-stat">Coût estimé<strong id="cost">25,50 €</strong></div>
+              <div class="mini-stat">Coefficient<strong id="factor">× 3</strong></div>
             </div>
           </div>
         </div>
@@ -1022,18 +1022,18 @@
             </div>
             <div class="range-wrap proportion-range">
               <label for="proportion-portions"><strong>Je prépare pour</strong></label>
-              <div class="big-number"><span id="proportion-count">20</span> <small>portions</small></div>
-              <input id="proportion-portions" type="range" min="5" max="30" step="1" value="20" />
+              <div class="big-number"><span id="proportion-count">24</span> <small>portions</small></div>
+              <input id="proportion-portions" type="range" min="5" max="35" step="1" value="24" />
               <div class="portion-comparison">
                 <div><span>Base</span><strong>10</strong></div>
-                <div class="portion-arrow">× <strong id="proportion-factor">2</strong></div>
-                <div><span>Nouveau</span><strong id="proportion-new">20</strong></div>
+                <div class="portion-arrow">× <strong id="proportion-factor">2,4</strong></div>
+                <div><span>Nouveau</span><strong id="proportion-new">24</strong></div>
               </div>
               <div class="mini-stats">
-                <div class="mini-stat">Riz<strong id="proportion-rice">1 600 g</strong></div>
-                <div class="mini-stat">Légumes<strong id="proportion-veg">1 000 g</strong></div>
-                <div class="mini-stat">Sauce<strong id="proportion-sauce">500 mL</strong></div>
-                <div class="mini-stat">Même coefficient<strong id="proportion-factor-card">× 2</strong></div>
+                <div class="mini-stat">Riz<strong id="proportion-rice">1 920 g</strong></div>
+                <div class="mini-stat">Légumes<strong id="proportion-veg">1 200 g</strong></div>
+                <div class="mini-stat">Sauce<strong id="proportion-sauce">600 mL</strong></div>
+                <div class="mini-stat">Même coefficient<strong id="proportion-factor-card">× 2,4</strong></div>
               </div>
             </div>
           </div>
@@ -1056,7 +1056,7 @@
             <fieldset class="question"><legend><span class="question-index">1</span><span>400 g de riz suffisent pour 5 portions. Combien faut-il pour 15 portions ?</span></legend><span class="question-domain">Même multiplicateur</span><div class="answer-row"><input id="prop-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>g</span></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">2</span><span>2 L de soupe suffisent pour 8 personnes. Combien faut-il pour 20 personnes ?</span></legend><span class="question-domain">Coefficient 2,5</span><div class="answer-row"><input id="prop-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>L</span></div></fieldset>
             <fieldset class="question"><legend><span class="question-index">3</span><span>750 g de fruits sont prévus pour 6 portions. Combien faut-il pour 18 portions ?</span></legend><span class="question-domain">Multiplier par 3</span><div class="answer-row"><input id="prop-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>g</span></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">4</span><span>On passe de 10 portions à 25 portions. Par quel nombre faut-il multiplier les quantités ?</span></legend><span class="question-domain">Coefficient</span><div class="answer-row"><select id="prop-q4"><option value="">Choisir…</option><option value="1.5">× 1,5</option><option value="2">× 2</option><option value="2.5">× 2,5</option><option value="15">× 15</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>On passe de 10 portions à 32 portions. Par quel nombre faut-il multiplier les quantités ?</span></legend><span class="question-domain">Coefficient décimal</span><div class="answer-row"><select id="prop-q4"><option value="">Choisir…</option><option value="1.5">× 1,5</option><option value="2.5">× 2,5</option><option value="3.2">× 3,2</option><option value="32">× 32</option></select></div></fieldset>
           </div>
           <div id="proportion-feedback" class="callout hidden" aria-live="polite"></div>
           <div class="actions">
@@ -1089,7 +1089,7 @@
         Math.abs(parseNumber(document.querySelector('#prop-q1').value) - 1200) < 0.001,
         Math.abs(parseNumber(document.querySelector('#prop-q2').value) - 5) < 0.001,
         Math.abs(parseNumber(document.querySelector('#prop-q3').value) - 2250) < 0.001,
-        document.querySelector('#prop-q4').value === '2.5'
+        document.querySelector('#prop-q4').value === '3.2'
       ];
       const feedback = document.querySelector('#proportion-feedback');
       const count = checks.filter(Boolean).length;
@@ -1099,7 +1099,7 @@
           <span>${checks[0] ? '✓' : '↻'} 15 ÷ 5 = 3, donc 400 × 3 = <b>1 200 g</b></span>
           <span>${checks[1] ? '✓' : '↻'} 20 ÷ 8 = 2,5, donc 2 × 2,5 = <b>5 L</b></span>
           <span>${checks[2] ? '✓' : '↻'} 18 ÷ 6 = 3, donc 750 × 3 = <b>2 250 g</b></span>
-          <span>${checks[3] ? '✓' : '↻'} 25 ÷ 10 = <b>2,5</b></span>
+          <span>${checks[3] ? '✓' : '↻'} 32 ÷ 10 = <b>3,2</b></span>
         </div>`;
     };
 
@@ -1111,7 +1111,7 @@
       document.querySelector('#prop-q1').value = '1200';
       document.querySelector('#prop-q2').value = '5';
       document.querySelector('#prop-q3').value = '2250';
-      document.querySelector('#prop-q4').value = '2.5';
+      document.querySelector('#prop-q4').value = '3.2';
       showProportionFeedback();
     });
     document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
@@ -1776,34 +1776,34 @@
       <section class="card hero module-page">
         <p class="eyebrow">Module · Probabilités</p>
         <h2>Le hasard varie, mais il n’est pas sans repères.</h2>
-        <p class="lead">Si on choisit au hasard, on ne peut pas prévoir le prochain résultat avec certitude. En revanche, on peut mesurer les chances d’un événement et observer ce qui se passe quand on recommence beaucoup de fois.</p>
+        <p class="lead">Quand on choisit au hasard, on ne sait pas ce qui va sortir au prochain essai. On peut quand même mesurer la chance qu’un résultat arrive. En maths, cette chance s’appelle une <b>probabilité</b>.</p>
 
         <div class="module-context-grid">
-          <article class="module-context"><span aria-hidden="true">🎟️</span><strong>Tirage</strong><p>Parmi 10 tickets, 3 sont violets. Quelle chance de tirer un ticket violet ?</p></article>
+          <article class="module-context"><span aria-hidden="true">🟣</span><strong>Jeu du sac</strong><p>Dans un sac : 10 jetons, dont 3 violets. Tu pioches sans regarder. Quelle chance de tomber sur violet ?</p></article>
           <article class="module-context"><span aria-hidden="true">🔎</span><strong>Contrôle au hasard</strong><p>Choisir une barquette au hasard dans un lot pour effectuer un contrôle.</p></article>
-          <article class="module-context"><span aria-hidden="true">🎲</span><strong>Simulation</strong><p>Répéter virtuellement une expérience des dizaines ou centaines de fois.</p></article>
+          <article class="module-context"><span aria-hidden="true">🎲</span><strong>Simulation</strong><p>Faire le même tirage beaucoup de fois avec l’ordinateur pour observer les résultats.</p></article>
         </div>
 
-        <div class="callout module-rule"><strong>Repères :</strong> une probabilité est comprise entre <b>0 et 1</b>, donc entre 0 % et 100 %. 0 = impossible ; 1 = certain. Ici, 3 tickets violets sur 10 donnent une probabilité de <b>3/10 = 0,3 = 30 %</b>.</div>
+        <div class="callout module-rule"><strong>D’abord, l’idée simple :</strong> sur 10 jetons, 3 font gagner. La chance de gagner est donc <b>3 sur 10 = 30 %</b>. En maths, cette chance s’appelle une <b>probabilité</b>. On peut aussi écrire 30 % = <b>0,3</b>. Une probabilité va de 0 (impossible) à 1 (certain).</div>
 
         <section class="learning-lab">
           <div class="lab-heading">
-            <div><span class="pill">Simule</span><h3>3 tickets violets sur 10</h3></div>
-            <p>Chaque tirage remet le ticket dans le lot. La probabilité reste 30 %, mais la fréquence observée peut bouger, surtout au début.</p>
+            <div><span class="pill">Joue</span><h3>Le sac de 10 jetons</h3></div>
+            <p><strong>Règle du jeu :</strong> le sac contient 3 jetons violets et 7 gris. Tu pioches un jeton sans regarder. <b>Violet = gagné.</b> Puis tu remets le jeton dans le sac, tu mélanges et tu recommences. Remettre le jeton avant de rejouer s’appelle un <b>tirage avec remise</b>.</p>
           </div>
           <div class="probability-lab">
             <div class="probability-bag">
-              <div class="ticket-set" aria-label="Lot de dix tickets dont trois violets">
-                ${Array.from({length:10}, (_,i) => '<span class="ticket ' + (i < 3 ? 'success' : '') + '">' + (i < 3 ? 'V' : '·') + '</span>').join('')}
+              <div class="ticket-set" aria-label="Sac de dix jetons dont trois violets et sept gris">
+                ${Array.from({length:10}, (_,i) => '<span class="ticket ' + (i < 3 ? 'success' : '') + '" title="' + (i < 3 ? 'jeton violet' : 'jeton gris') + '">' + (i < 3 ? 'V' : 'G') + '</span>').join('')}
               </div>
-              <div class="probability-formula"><strong>3</strong><span>/</span><strong>10</strong><b>=</b><strong>30 %</strong></div>
+              <div class="probability-formula"><strong>3 violets</strong><span>/</span><strong>10 jetons</strong><b>=</b><strong>30 %</strong></div>
             </div>
             <div class="simulation-panel">
               <div class="simulation-stats">
-                <div class="mini-stat">Tirages<strong id="prob-draws">0</strong></div>
-                <div class="mini-stat">Violets<strong id="prob-successes">0</strong></div>
-                <div class="mini-stat">Fréquence observée<strong id="prob-frequency">—</strong></div>
-                <div class="mini-stat">Probabilité théorique<strong>30 %</strong></div>
+                <div class="mini-stat">Pioches<strong id="prob-draws">0</strong></div>
+                <div class="mini-stat">Violets tirés<strong id="prob-successes">0</strong></div>
+                <div class="mini-stat">Part obtenue · fréquence<strong id="prob-frequency">—</strong></div>
+                <div class="mini-stat">Chance d’un violet · probabilité<strong>30 %</strong></div>
               </div>
               <div class="probability-meter">
                 <span class="probability-theory" title="30 % théorique"></span>
@@ -1811,34 +1811,34 @@
               </div>
               <div class="simulation-history" id="prob-history" aria-label="Derniers résultats simulés"></div>
               <div class="actions compact-actions">
-                <button class="btn btn-secondary prob-run" data-count="1">1 tirage</button>
-                <button class="btn btn-secondary prob-run" data-count="20">20 tirages</button>
-                <button class="btn btn-primary prob-run" data-count="100">100 tirages</button>
+                <button class="btn btn-secondary prob-run" data-count="1">Piocher 1 fois</button>
+                <button class="btn btn-secondary prob-run" data-count="20">Jouer 20 fois</button>
+                <button class="btn btn-primary prob-run" data-count="100">Jouer 100 fois</button>
                 <button class="btn btn-ghost" id="prob-reset">Recommencer</button>
               </div>
-              <p id="prob-message" class="teacher-muted">Fais quelques tirages, puis compare avec 30 %.</p>
+              <p id="prob-message" class="teacher-muted">Commence par quelques pioches. Compte les violets obtenus, puis compare leur part avec la chance de départ : 30 %.</p>
             </div>
           </div>
         </section>
 
         <section class="method-card">
-          <p class="eyebrow">Deux idées importantes</p>
+          <p class="eyebrow">Trois idées importantes</p>
           <div class="method-steps">
-            <div><span>1</span><p>Pour des issues équiprobables : compte les cas favorables et les cas possibles.</p></div>
-            <div><span>2</span><p>La fréquence observée peut être différente de la probabilité sur peu d’essais.</p></div>
-            <div><span>3</span><p>Quand on répète beaucoup, la fréquence a tendance à se rapprocher de la probabilité.</p></div>
+            <div><span>1</span><p><b>3 jetons font gagner</b> sur 10 jetons possibles. En maths, les 3 violets sont les <b>cas favorables</b> et les 10 jetons sont les <b>cas possibles</b>.</p></div>
+            <div><span>2</span><p>Après plusieurs pioches, regarde la part de violets réellement obtenus. Cette part observée s’appelle la <b>fréquence</b>.</p></div>
+            <div><span>3</span><p>La chance de départ, 30 %, s’appelle la <b>probabilité</b>. Sur peu de pioches, la fréquence peut être différente. En répétant beaucoup, elle a tendance à s’en rapprocher.</p></div>
           </div>
-          <div class="worked-example"><strong>2 tickets rouges sur 10</strong><span>2 cas favorables</span><span>10 cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
+          <div class="worked-example"><strong>2 jetons rouges sur 10</strong><span>2 rouges = cas favorables</span><span>10 jetons = cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
         </section>
 
         <section class="practice-block">
           <p class="eyebrow">À toi</p>
           <h3>4 situations courtes</h3>
           <div class="question-list">
-            <fieldset class="question"><legend><span class="question-index">1</span><span>Dans un lot de 10 tickets, 2 sont rouges. Quelle est la probabilité de tirer un rouge au hasard ?</span></legend><span class="question-domain">Cas favorables / possibles</span><div class="answer-row"><input id="prob-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">2</span><span>Quelle est la probabilité d’un événement impossible ?</span></legend><span class="question-domain">Impossible</span><div class="answer-row"><select id="prob-q2"><option value="">Choisir…</option><option value="0">0</option><option value="0.5">0,5</option><option value="1">1</option><option value="100">100</option></select></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">3</span><span>Un événement a une probabilité de 30 %. Quelle est la probabilité de l’événement contraire (« ne pas arriver ») ?</span></legend><span class="question-domain">Événement contraire</span><div class="answer-row"><input id="prob-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">4</span><span>La probabilité vaut 30 %. Après seulement 10 essais, on observe 40 %. Que peut-on conclure ?</span></legend><span class="question-domain">Fréquence et probabilité</span><div class="answer-row"><select id="prob-q4"><option value="">Choisir…</option><option value="wrong">La probabilité est devenue 40 %</option><option value="normal">C’est possible : la fréquence varie sur peu d’essais</option><option value="impossible">Le résultat est impossible</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">1</span><span>Dans un sac de 10 jetons, 2 sont rouges. Tu pioches sans regarder. Quelle est la probabilité de tirer un rouge ?</span></legend><span class="question-domain">Cas favorables / possibles</span><div class="answer-row"><input id="prob-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Un événement impossible, c’est quelque chose qui ne peut pas arriver. Quelle probabilité lui correspond ?</span></legend><span class="question-domain">Impossible</span><div class="answer-row"><select id="prob-q2"><option value="">Choisir…</option><option value="0">0</option><option value="0.5">0,5</option><option value="1">1</option><option value="100">100</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>« Tirer un violet » a 30 % de chance d’arriver. Quelle est la chance de « ne pas tirer un violet » ? En maths, c’est l’événement contraire.</span></legend><span class="question-domain">Événement contraire</span><div class="answer-row"><input id="prob-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>La chance de tirer un violet reste 30 %. Après seulement 10 tirages, 4 violets sont sortis, soit 40 %. Est-ce possible ?</span></legend><span class="question-domain">Fréquence et probabilité</span><div class="answer-row"><select id="prob-q4"><option value="">Choisir…</option><option value="wrong">Non : la probabilité est devenue 40 %</option><option value="normal">Oui : sur peu de tirages, la part observée peut varier</option><option value="impossible">Non : obtenir 40 % est impossible</option></select></div></fieldset>
           </div>
           <div id="prob-feedback" class="callout hidden" aria-live="polite"></div>
           <div class="actions">
@@ -1863,12 +1863,12 @@
       document.querySelector('#prob-observed').style.width = `${frequency === null ? 0 : Math.min(100, frequency)}%`;
       document.querySelector('#prob-history').innerHTML = history.map(success => '<span class="' + (success ? 'success' : '') + '" title="' + (success ? 'violet' : 'autre') + '"></span>').join('');
       document.querySelector('#prob-message').textContent = draws === 0
-        ? 'Fais quelques tirages, puis compare avec 30 %.'
+        ? 'Commence par quelques pioches. La chance de tirer violet est de 30 %.'
         : draws < 20
-          ? 'Sur peu de tirages, la fréquence peut être assez loin de 30 %.'
+          ? 'Sur peu de pioches, la part de violets obtenue peut être assez loin de 30 %. C’est normal.'
           : draws < 100
-            ? 'En répétant, regarde si la fréquence se rapproche de 30 %.'
-            : `Après ${draws} tirages, la fréquence observée est de ${formatNumber(frequency)} %. Elle n’a pas besoin d’être exactement égale à 30 %.`;
+            ? 'En jouant encore, regarde si la part de violets obtenue se rapproche de 30 %.'
+            : `Après ${draws} pioches, ${formatNumber(frequency)} % des jetons tirés sont violets. Cette part observée s’appelle la fréquence. Elle n’a pas besoin d’être exactement égale à 30 %.`;
     };
 
     const runSimulation = count => {
@@ -1905,8 +1905,8 @@
         <div class="feedback-lines">
           <span>${checks[0] ? '✓' : '↻'} 2 sur 10 = 2/10 = <b>20 %</b></span>
           <span>${checks[1] ? '✓' : '↻'} Un événement impossible a une probabilité de <b>0</b></span>
-          <span>${checks[2] ? '✓' : '↻'} Événement contraire : 100 % − 30 % = <b>70 %</b></span>
-          <span>${checks[3] ? '✓' : '↻'} Sur 10 essais, <b>40 % est tout à fait possible</b> même si la probabilité reste 30 %</span>
+          <span>${checks[2] ? '✓' : '↻'} Ne pas tirer un violet : 100 % − 30 % = <b>70 %</b>. C’est l’événement contraire.</span>
+          <span>${checks[3] ? '✓' : '↻'} Sur seulement 10 tirages, <b>40 % est possible</b> même si la probabilité reste 30 %. La fréquence peut varier sur peu d’essais.</span>
         </div>`;
     };
 

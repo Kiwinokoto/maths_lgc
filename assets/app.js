@@ -124,6 +124,7 @@
       first_name: state.firstName,
       last_name: state.lastName,
       birth_date: state.birthDate,
+      session_id: activitySessionId,
       stage,
       self_eval: state.selfEval,
       diagnostic: result ? {

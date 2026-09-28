@@ -41,9 +41,9 @@ Avant le cours, le professeur ouvre `/teacher`, choisit son nom (**Monsieur Kevi
 - un code de séance de secours ;
 - un lien de gestion secret propre à cette occurrence.
 
-L'élève ouvre le QR/lien et n'a plus à choisir son professeur ni à recopier le groupe. Il renseigne uniquement nom, prénom et date de naissance. Dès son entrée dans le parcours, il apparaît dans la liste « Élèves inscrits » de cette séance.
+L'élève ouvre le QR/lien et n'a plus à choisir son professeur ni à recopier le groupe. Il renseigne uniquement nom, prénom et date de naissance. La date se tape directement au format français **JJ/MM/AAAA** ; les `/` sont ajoutés automatiquement afin d'éviter le calendrier natif mobile peu pratique pour remonter plusieurs années. Dès son entrée dans le parcours, il apparaît dans la liste « Élèves inscrits » de cette séance.
 
-Le jeton enseignant commun sert uniquement à **créer** les séances et à prévisualiser le cours. Il ne permet plus de lire les résultats de toutes les classes. Les résultats, exports et commandes d'une séance nécessitent son secret de gestion propre.
+Le jeton enseignant commun sert uniquement à **créer** les séances et à prévisualiser le cours. Il ne permet plus de lire les résultats de toutes les classes. Les résultats, exports et commandes d'une séance nécessitent son secret de gestion propre. Après création, la même page conserve le QR et propose un bloc central **Mon espace professeur** : suivi des élèves, exploration libre du cours et gestion des corrigés. Le but est d'éviter de répartir ces actions essentielles dans plusieurs écrans.
 
 Pour les corrigés, le choix V1 reste volontairement **manuel plutôt qu'automatique** :
 - le corrigé est verrouillé par défaut pour chaque nouvelle séance ;

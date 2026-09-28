@@ -29,6 +29,9 @@ jobs:
       - name: Student JavaScript syntax
         run: node --check assets/app.js
 
+      - name: Birth date mask
+        run: node tests/date_mask.mjs
+
       - name: Teacher JavaScript syntax
         run: |
           python - <<'PY'

@@ -52,7 +52,13 @@
     .recent-sessions { display:grid; gap:10px; margin-top:14px; }
     .recent-session { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.76); }
     .recent-session small { display:block; color:var(--muted); margin-top:3px; }
-    @media (max-width:760px) { .session-create-grid,.session-share { grid-template-columns:1fr; } .session-link-row { grid-template-columns:1fr; } }
+    .teacher-hub-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:16px; }
+    .teacher-hub-action { min-height:118px; display:flex; flex-direction:column; justify-content:center; gap:6px; padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.82); color:var(--ink); text-decoration:none; text-align:left; cursor:pointer; font:inherit; }
+    .teacher-hub-action:hover { border-color:#cfc3e5; background:var(--accent-soft); color:var(--accent-strong); }
+    .teacher-hub-action strong { font-size:1rem; }
+    .teacher-hub-action span { color:var(--muted); font-size:.84rem; line-height:1.4; }
+    .teacher-hub-action.primary { border-color:#cfc3e5; background:linear-gradient(135deg,#f7f1ff,#fffaf2); }
+    @media (max-width:760px) { .session-create-grid,.session-share,.teacher-hub-grid { grid-template-columns:1fr; } .session-link-row { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -156,11 +162,32 @@
               <button id="copy-manage-link" class="btn btn-secondary">Copier le lien de gestion</button>
             </div>
             <p class="teacher-muted"><strong>Important :</strong> le lien de gestion donne accès aux résultats de ce groupe. Garde-le côté enseignant.</p>
+            <div class="actions"><button id="open-teacher-space" class="btn btn-primary" type="button">Ouvrir mon espace professeur</button></div>
           </div>
         </div>
       </section>
 
-      <section class="card hero">
+      <section id="teacher-space" class="card hero">
+        <p class="eyebrow">Mon espace professeur</p>
+        <h3>Tout ce dont tu as besoin pour cette séance</h3>
+        <p class="teacher-muted">Trois accès simples : suivre le groupe, explorer librement le cours ou gérer les corrigés.</p>
+        <div class="teacher-hub-grid">
+          <button id="go-students" class="teacher-hub-action primary" type="button">
+            <strong>Suivre mes élèves</strong>
+            <span>Voir les inscrits, leur avancement et leurs résultats.</span>
+          </button>
+          <a id="explore-course" class="teacher-hub-action" href="/?preview=teacher#parcours">
+            <strong>Explorer le cours</strong>
+            <span>Naviguer librement dans toutes les étapes et tous les modules.</span>
+          </a>
+          <button id="go-corrections" class="teacher-hub-action" type="button">
+            <strong>Gérer les corrigés</strong>
+            <span>Voir leur état et les débloquer au moment choisi.</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="teacher-students" class="card hero">
         <p class="eyebrow">Présences</p>
         <h3>Élèves inscrits</h3>
         <p class="teacher-muted">Vérifie ici que chaque élève a bien rejoint la séance avant de poursuivre.</p>
@@ -175,7 +202,7 @@
       </div>
       <div class="teacher-timing-note"><strong>Temps indicatifs :</strong> ils donnent des indices de rythme, pas une mesure du niveau. Une explication collective, une pause ou une aide peuvent les allonger fortement.</div>
 
-      <section class="teacher-release-card">
+      <section id="teacher-corrections" class="teacher-release-card">
         <div>
           <strong>Corrigés détaillés de cette séance</strong>
           <p>Ils restent verrouillés par défaut. La liste ci-dessus t’aide à décider quand les ouvrir, sans bloquer automatiquement la classe à cause d’un absent ou d’un retardataire.</p>
@@ -388,6 +415,7 @@
     document.querySelector('#student-link').value = studentUrl(session.class_session_id);
     document.querySelector('#manage-link').value = managementUrl(session.class_session_id);
     document.querySelector('#session-qr').src = '/api/session-qr?id=' + encodeURIComponent(session.class_session_id);
+    document.querySelector('#explore-course').href = '/?preview=teacher&session=' + encodeURIComponent(session.class_session_id) + '#parcours';
     document.querySelector('#generated-at').textContent = payload.generated_at
       ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleString('fr-FR')
       : '';
@@ -596,6 +624,14 @@
       button.disabled = false;
     }
   });
+
+  const scrollToTeacherSection = id => {
+    const target = document.querySelector(id);
+    if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+  };
+  document.querySelector('#open-teacher-space').addEventListener('click', () => scrollToTeacherSection('#teacher-space'));
+  document.querySelector('#go-students').addEventListener('click', () => scrollToTeacherSection('#teacher-students'));
+  document.querySelector('#go-corrections').addEventListener('click', () => scrollToTeacherSection('#teacher-corrections'));
 
   document.querySelector('#copy-student-link').addEventListener('click', event => copyText(document.querySelector('#student-link').value, event.currentTarget));
   document.querySelector('#copy-manage-link').addEventListener('click', event => copyText(document.querySelector('#manage-link').value, event.currentTarget));

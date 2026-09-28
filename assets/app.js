@@ -226,9 +226,9 @@
           </div>
           <p class="footer-note">Ta progression reste sur cet appareil et peut être envoyée au tableau de suivi de la classe pour t’aider à choisir la suite.</p>
         </div>
-        <div class="qr-placeholder" aria-label="Emplacement du futur QR code">
-          <div class="qr-grid" aria-hidden="true"></div>
-          <div class="qr-label">QR code du site<br><small>sera ajouté après le déploiement</small></div>
+        <div class="qr-placeholder" aria-label="QR code vers maths.lagrandeclasse.fr">
+          <img class="qr-image" src="assets/qr-maths-lgc.svg" alt="QR code vers https://maths.lagrandeclasse.fr/" />
+          <div class="qr-label">Scanne pour ouvrir le cours<br><small>maths.lagrandeclasse.fr</small></div>
         </div>
       </section>
     `, 0);

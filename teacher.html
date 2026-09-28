@@ -214,9 +214,14 @@
     sessionStorage.removeItem('maths-lgc-teacher-token');
     location.reload();
   });
-  document.querySelector('#export-json').addEventListener('click', () => {
-    if (!data) return;
-    download('maths-lgc-classe.json', new Blob([JSON.stringify(data, null, 2)], { type:'application/json' }));
+  document.querySelector('#export-json').addEventListener('click', async () => {
+    try {
+      const response = await api('/api/teacher/history');
+      const history = await response.json();
+      download('maths-lgc-historique.json', new Blob([JSON.stringify(history, null, 2)], { type:'application/json' }));
+    } catch (error) {
+      dashboardStatus.textContent = error.message;
+    }
   });
   document.querySelector('#export-csv').addEventListener('click', async () => {
     try {

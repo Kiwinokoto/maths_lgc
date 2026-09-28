@@ -137,6 +137,29 @@ def validate_payload(raw: object) -> dict:
     }
 
 
+def submission_history() -> list[dict]:
+    with connect_db() as db:
+        rows = db.execute(
+            "SELECT id, student_id, display_name, stage, payload_json, created_at FROM submissions ORDER BY id ASC"
+        ).fetchall()
+    history = []
+    for row in rows:
+        payload = json.loads(row["payload_json"])
+        history.append(
+            {
+                "id": row["id"],
+                "student_id": row["student_id"],
+                "display_name": row["display_name"],
+                "stage": row["stage"],
+                "created_at": row["created_at"],
+                "diagnostic": payload.get("diagnostic"),
+                "challenge": payload.get("challenge"),
+                "self_eval": payload.get("self_eval"),
+            }
+        )
+    return history
+
+
 def latest_students() -> list[dict]:
     with connect_db() as db:
         rows = db.execute(
@@ -215,6 +238,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
             students = latest_students()
             return self._json(200, {"students": students, "count": len(students), "generated_at": utc_now()})
+        if path == "/api/teacher/history":
+            if not self._authorized():
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
+            history = submission_history()
+            return self._json(200, {"submissions": history, "count": len(history), "generated_at": utc_now()})
         if path == "/api/teacher/export.csv":
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})

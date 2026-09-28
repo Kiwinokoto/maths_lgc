@@ -69,10 +69,7 @@ p { line-height: 1.65; }
 .btn[disabled] { cursor: not-allowed; opacity: .5; transform: none; }
 .prehome-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(250px, .8fr); gap: 24px; align-items: center; }
 .qr-placeholder { aspect-ratio: 1; width: min(100%, 320px); margin-inline: auto; border-radius: 26px; background: #fff; border: 10px solid #fff; box-shadow: inset 0 0 0 1px #ddd, var(--shadow); display: grid; place-items: center; position: relative; overflow: hidden; }
-.qr-grid { width: 82%; aspect-ratio: 1; background-image:
-  linear-gradient(90deg, #22312b 18%, transparent 18% 33%, #22312b 33% 49%, transparent 49% 62%, #22312b 62% 78%, transparent 78%),
-  linear-gradient(#22312b 14%, transparent 14% 29%, #22312b 29% 44%, transparent 44% 58%, #22312b 58% 74%, transparent 74%);
-  background-size: 44px 44px; opacity: .14; filter: blur(.2px); }
+.qr-image { width: 82%; aspect-ratio: 1; display: block; image-rendering: pixelated; }
 .qr-label { position: absolute; inset: auto 12% 10%; padding: .7rem .8rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,.92); font-size: .84rem; font-weight: 800; color: var(--muted); }
 .progress-strip { display: flex; gap: 8px; margin: 16px 0 28px; }
 .progress-dot { flex: 1; height: 6px; border-radius: 999px; background: var(--line); }

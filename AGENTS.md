@@ -16,19 +16,36 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 ## Architecture V1
 - `server.py` : serveur HTTP Python standard library + API JSON + SQLite.
 - `index.html` + `assets/app.js` : parcours élève.
-- `teacher.html` : tableau enseignant, export JSON/CSV.
+- `teacher.html` : tableau enseignant, export CSV + historique JSON complet.
 - `data/` : base SQLite locale au serveur, ignorée par Git.
-- Routes utiles : `/healthz`, `/api/progress`, `/teacher`, `/api/teacher/summary`.
+- `Dockerfile` + `docker-compose.yml` : service autonome, non-root dans le conteneur.
+- Routes utiles : `/healthz`, `/api/progress`, `/teacher`, `/api/teacher/summary`, `/api/teacher/history`.
+
+## Infra LGC vérifiée le 2026-09-28
+- VPS production : `173.212.214.227`.
+- Reverse proxy : Traefik v3 en conteneur, ports 80/443.
+- Repo infra : `La-Grande-Classe-R-D/traefik`, branche `main`.
+- Réseau partagé : `traefik_network`.
+- Provider Docker : activé, `exposedByDefault=false`.
+- Resolver TLS : `letsencrypt`; PROD utilise Cloudflare DNS-01.
+- Aucun changement Traefik n'est requis pour Maths LGC : le service rejoint `traefik_network` et publie ses labels.
+- Cible : `https://maths.lagrandeclasse.fr`.
+- Dossier serveur : `/opt/maths_lgc`.
+- Données persistantes : `/opt/maths_lgc/data`.
+- Le workflow de déploiement ne redémarre pas Traefik.
 
 ## Git / livraison
-- `main` = version publiable.
+- `main` = version publiable et déclenche le déploiement production une fois le workflow mergé.
 - Développement non trivial sur `dev/<sujet>` puis PR.
 - Vérifier l'état du repo et les travaux concurrents avant écriture.
-- Pas de workflow de déploiement avant inspection de la cible VPS, du routage Traefik/nginx réel et des secrets nécessaires.
 - Ne jamais commit `MATHS_TEACHER_TOKEN`, clé SSH, base SQLite ou fichier `.env`.
+- Secrets GitHub requis avant merge du déploiement :
+  - `DEPLOY_SSH_KEY`
+  - `DEPLOY_KNOWN_HOSTS`
+  - `MATHS_TEACHER_TOKEN`
 
 ## État V1
-- Pré-page d'accueil avec placeholder QR.
+- Pré-page d'accueil avec vrai QR vers `https://maths.lagrandeclasse.fr/`.
 - Prénom/code court demandé avant démarrage.
 - Présentation des objectifs et mini-visualisation fractions ↔ pourcentages.
 - Parcours linéaire de séance de rentrée.
@@ -37,12 +54,15 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Correction guidée.
 - Premier défi PSR interactif (proportionnalité, durée, coût/CA).
 - Synchronisation serveur des résultats quand le réseau est disponible.
-- Tableau enseignant avec forces, difficultés, priorité de travail et exports JSON/CSV.
+- Tableau enseignant avec forces, difficultés, priorité de travail et exports.
+- Historique complet des tentatives exportable pour analyse après séance.
+- Branche de déploiement en cours : `dev/deploy-lgc-vps`; ne pas merger avant présence des trois secrets.
 
 ## Prochaines étapes
-1. Inspecter le VPS LGC en lecture seule (reverse proxy, réseaux, ports, chemins) avant d'écrire le déploiement.
-2. Configurer `maths.lagrandeclasse.fr`, HTTPS, le service et les secrets.
-3. Remplacer le placeholder par le vrai QR code.
-4. Tester sur téléphone en conditions de classe.
-5. Ajouter les modules Durées puis Recettes & proportionnalité.
-6. Après usage réel, décider ce qui reste ici et ce qui rejoint Moodle.
+1. Ajouter les trois secrets GitHub sur `Kiwinokoto/maths_lgc`.
+2. Vérifier HEAD / absence de concurrence puis merger la PR de déploiement.
+3. Laisser l'Action `main` déployer vers `/opt/maths_lgc`.
+4. Vérifier `/healthz`, HTTPS, QR et rendu téléphone.
+5. Faire un mini test élève + contrôle du tableau `/teacher`.
+6. Après la séance, exporter l'historique JSON pour analyse et appréciations personnalisées.
+7. Ajouter ensuite les modules Durées puis Recettes & proportionnalité.

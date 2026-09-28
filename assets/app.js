@@ -979,6 +979,258 @@
     document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
   }
 
+
+  function renderPercentageModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Pourcentages</p>
+        <h2>Un pourcentage, c’est une part sur 100.</h2>
+        <p class="lead">En PSR, les pourcentages servent à lire une part, une réduction ou une évolution. On commence par voir la part, puis on calcule.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">🥗</span><strong>Répartition</strong><p>Sur 100 menus, 30 sont végétariens : cela représente 30 %.</p></article>
+          <article class="module-context"><span aria-hidden="true">🏷️</span><strong>Réduction</strong><p>Une formule à 10 € avec 20 % de réduction ne coûte pas 8 % : on retire 2 €.</p></article>
+          <article class="module-context"><span aria-hidden="true">📦</span><strong>Stock</strong><p>Si 25 % de 40 produits sont utilisés, cela fait 10 produits.</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>À retenir :</strong> 50 % = 50 sur 100 = la moitié. Donc <b>50 % = 1/2 = 2/4</b>.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Colorie une part sur 100</h3></div>
+            <p>Bouge le curseur. Chaque petit carré vaut 1 %. Regarde aussi les écritures équivalentes pour les repères les plus simples.</p>
+          </div>
+          <div class="percent-lab">
+            <div>
+              <div id="percent-grid" class="percent-grid" aria-label="Grille de 100 cases représentant un pourcentage"></div>
+            </div>
+            <div class="range-wrap percent-range">
+              <label for="percent-slider"><strong>Part choisie</strong></label>
+              <div class="big-number"><span id="percent-value">50</span><small>%</small></div>
+              <input id="percent-slider" type="range" min="0" max="100" step="5" value="50" />
+              <div class="percent-equivalence" id="percent-equivalence">50 % = 50/100 = 1/2 = 2/4</div>
+              <div class="mini-stats">
+                <div class="mini-stat">Sur 100<strong id="percent-outof">50</strong></div>
+                <div class="mini-stat">Décimal<strong id="percent-decimal">0,5</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Une méthode simple</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Repère le nombre total.</p></div>
+            <div><span>2</span><p>Transforme le pourcentage en part sur 100, ou en nombre décimal.</p></div>
+            <div><span>3</span><p>Calcule la part, puis vérifie si le résultat est logique.</p></div>
+          </div>
+          <div class="worked-example"><strong>25 % de 40</strong><span>25 % = 1/4</span><span>40 ÷ 4</span><strong>→ 10</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>25 % de 40 produits sont utilisés. Combien de produits cela représente-t-il ?</span></legend><span class="question-domain">Calculer une part</span><div class="answer-row"><input id="percent-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>produits</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Un menu coûte 18 €. Une remise de 50 % est appliquée. Quel est le nouveau prix ?</span></legend><span class="question-domain">Moitié / réduction</span><div class="answer-row"><input id="percent-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>Une formule coûte 20 €. On retire 10 %. Quel prix reste à payer ?</span></legend><span class="question-domain">Réduction</span><div class="answer-row"><input id="percent-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>€</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>30 commandes sur 50 concernent le menu A. Cela représente quel pourcentage ?</span></legend><span class="question-domain">Part vers pourcentage</span><div class="answer-row"><select id="percent-q4"><option value="">Choisir…</option><option value="30">30 %</option><option value="50">50 %</option><option value="60">60 %</option><option value="80">80 %</option></select></div></fieldset>
+          </div>
+          <div id="percent-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-percent">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-percent-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="donnees">Module suivant · Données</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const percentGrid = document.querySelector('#percent-grid');
+    percentGrid.innerHTML = Array.from({ length: 100 }, (_, index) => `<span data-cell="${index}"></span>`).join('');
+    const percentSlider = document.querySelector('#percent-slider');
+    const updatePercentLab = () => {
+      const value = Number(percentSlider.value);
+      document.querySelector('#percent-value').textContent = value;
+      document.querySelector('#percent-outof').textContent = value;
+      document.querySelector('#percent-decimal').textContent = formatNumber(value / 100);
+      const equivalences = {
+        0: '0 % = 0/100 = rien',
+        25: '25 % = 25/100 = 1/4',
+        50: '50 % = 50/100 = 1/2 = 2/4',
+        75: '75 % = 75/100 = 3/4',
+        100: '100 % = 100/100 = tout'
+      };
+      document.querySelector('#percent-equivalence').textContent = equivalences[value] || `${value} % = ${value}/100`;
+      percentGrid.querySelectorAll('span').forEach((cell, index) => cell.classList.toggle('filled', index < value));
+    };
+    percentSlider.addEventListener('input', updatePercentLab);
+    updatePercentLab();
+
+    const showPercentFeedback = () => {
+      const checks = [
+        Math.abs(parseNumber(document.querySelector('#percent-q1').value) - 10) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#percent-q2').value) - 9) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#percent-q3').value) - 18) < 0.001,
+        document.querySelector('#percent-q4').value === '60'
+      ];
+      const feedback = document.querySelector('#percent-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 25 % de 40 = 1/4 de 40 = <b>10</b></span>
+          <span>${checks[1] ? '✓' : '↻'} 50 % de 18 € = 9 €, donc le prix devient <b>9 €</b></span>
+          <span>${checks[2] ? '✓' : '↻'} 10 % de 20 € = 2 €, donc 20 € − 2 € = <b>18 €</b></span>
+          <span>${checks[3] ? '✓' : '↻'} 30 ÷ 50 = 0,6 = <b>60 %</b></span>
+        </div>`;
+    };
+
+    document.querySelector('#check-percent').addEventListener('click', () => {
+      showPercentFeedback();
+      syncActivity('activity_checked', 'pourcentages');
+    });
+    document.querySelector('#show-percent-answers')?.addEventListener('click', () => {
+      document.querySelector('#percent-q1').value = '10';
+      document.querySelector('#percent-q2').value = '9';
+      document.querySelector('#percent-q3').value = '18';
+      document.querySelector('#percent-q4').value = '60';
+      showPercentFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
+  function renderDataModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    const baseValues = [24, 32, 28, 40, 26];
+    const labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'];
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Données & statistiques</p>
+        <h2>Lire des données pour décider.</h2>
+        <p class="lead">Un tableau ou un graphique aide à comparer des jours, repérer un maximum et résumer plusieurs valeurs. On va d’abord lire ce qu’on voit, puis calculer une moyenne.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">📊</span><strong>Ventes</strong><p>Comparer le nombre de menus servis chaque jour.</p></article>
+          <article class="module-context"><span aria-hidden="true">📦</span><strong>Stock</strong><p>Repérer les produits les plus ou les moins utilisés.</p></article>
+          <article class="module-context"><span aria-hidden="true">🥪</span><strong>Choix clients</strong><p>Voir quel menu revient le plus souvent.</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>Avant de calculer :</strong> lis le titre, les unités et les valeurs. Une moyenne résume plusieurs nombres : <b>on additionne, puis on divise par le nombre de valeurs</b>.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Une semaine de menus servis</h3></div>
+            <p>Fais varier le vendredi. Observe comment le graphique et la moyenne changent.</p>
+          </div>
+          <div class="stats-lab">
+            <div class="stats-chart-wrap">
+              <div class="stats-chart" id="stats-chart" aria-label="Graphique du nombre de menus servis du lundi au vendredi">
+                ${labels.map((label, index) => `<div class="stats-bar-col"><div class="stats-bar-value" id="stats-value-${index}">${baseValues[index]}</div><div class="stats-bar-track"><span class="stats-bar" id="stats-bar-${index}"></span></div><strong>${label}</strong></div>`).join('')}
+              </div>
+              <div class="stats-average"><span>Moyenne</span><strong id="stats-average">30</strong> menus</div>
+            </div>
+            <div class="range-wrap stats-range">
+              <label for="stats-friday"><strong>Menus servis vendredi</strong></label>
+              <div class="big-number"><span id="stats-friday-value">26</span><small>menus</small></div>
+              <input id="stats-friday" type="range" min="10" max="50" step="1" value="26" />
+              <div class="mini-stats">
+                <div class="mini-stat">Total semaine<strong id="stats-total">150</strong></div>
+                <div class="mini-stat">Maximum<strong id="stats-max">40</strong></div>
+                <div class="mini-stat">Minimum<strong id="stats-min">24</strong></div>
+                <div class="mini-stat">Moyenne<strong id="stats-average-card">30</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Une méthode simple</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Lis ce que représentent les nombres et leur unité.</p></div>
+            <div><span>2</span><p>Compare : plus grand, plus petit, écarts.</p></div>
+            <div><span>3</span><p>Si on demande une moyenne : additionne puis divise par le nombre de valeurs.</p></div>
+          </div>
+          <div class="worked-example"><strong>20, 30 et 40 menus</strong><span>20 + 30 + 40 = 90</span><span>90 ÷ 3</span><strong>→ moyenne 30</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>Lundi : 20 menus. Mardi : 35. Mercredi : 30. Quel jour a le plus de menus servis ?</span></legend><span class="question-domain">Lire et comparer</span><div class="answer-row"><select id="data-q1"><option value="">Choisir…</option><option value="lundi">Lundi</option><option value="mardi">Mardi</option><option value="mercredi">Mercredi</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>On a servi 20, 30 et 40 menus sur trois jours. Quelle est la moyenne ?</span></legend><span class="question-domain">Moyenne</span><div class="answer-row"><input id="data-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>menus</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>12 commandes sur 40 sont végétariennes. Quelle est leur fréquence en pourcentage ?</span></legend><span class="question-domain">Fréquence</span><div class="answer-row"><input id="data-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>Une série contient 18, 22, 22 et 30. Quelle valeur apparaît le plus souvent ?</span></legend><span class="question-domain">Valeur fréquente</span><div class="answer-row"><select id="data-q4"><option value="">Choisir…</option><option value="18">18</option><option value="22">22</option><option value="30">30</option><option value="23">23</option></select></div></fieldset>
+          </div>
+          <div id="data-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-data">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-data-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="pourcentages">Revoir les pourcentages</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const friday = document.querySelector('#stats-friday');
+    const updateStatsLab = () => {
+      const values = [...baseValues];
+      values[4] = Number(friday.value);
+      const total = values.reduce((sum, value) => sum + value, 0);
+      const average = total / values.length;
+      const max = Math.max(...values);
+      const min = Math.min(...values);
+      values.forEach((value, index) => {
+        document.querySelector(`#stats-value-${index}`).textContent = value;
+        document.querySelector(`#stats-bar-${index}`).style.height = `${Math.max(8, value / 50 * 100)}%`;
+      });
+      document.querySelector('#stats-friday-value').textContent = values[4];
+      document.querySelector('#stats-total').textContent = total;
+      document.querySelector('#stats-max').textContent = max;
+      document.querySelector('#stats-min').textContent = min;
+      document.querySelector('#stats-average').textContent = formatNumber(average);
+      document.querySelector('#stats-average-card').textContent = formatNumber(average);
+    };
+    friday.addEventListener('input', updateStatsLab);
+    updateStatsLab();
+
+    const showDataFeedback = () => {
+      const checks = [
+        document.querySelector('#data-q1').value === 'mardi',
+        Math.abs(parseNumber(document.querySelector('#data-q2').value) - 30) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#data-q3').value) - 30) < 0.001,
+        document.querySelector('#data-q4').value === '22'
+      ];
+      const feedback = document.querySelector('#data-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count} situation${count > 1 ? 's' : ''} réussie${count > 1 ? 's' : ''} sur 4.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 35 est la plus grande valeur : <b>mardi</b></span>
+          <span>${checks[1] ? '✓' : '↻'} (20 + 30 + 40) ÷ 3 = 90 ÷ 3 = <b>30</b></span>
+          <span>${checks[2] ? '✓' : '↻'} 12 ÷ 40 = 0,3 = <b>30 %</b></span>
+          <span>${checks[3] ? '✓' : '↻'} <b>22</b> apparaît deux fois : c’est la valeur la plus fréquente</span>
+        </div>`;
+    };
+
+    document.querySelector('#check-data').addEventListener('click', () => {
+      showDataFeedback();
+      syncActivity('activity_checked', 'donnees');
+    });
+    document.querySelector('#show-data-answers')?.addEventListener('click', () => {
+      document.querySelector('#data-q1').value = 'mardi';
+      document.querySelector('#data-q2').value = '30';
+      document.querySelector('#data-q3').value = '30';
+      document.querySelector('#data-q4').value = '22';
+      showDataFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
   function renderBilan() {
     if (!state.challengeDone && !teacherPreview) return go('defi');
     const result = diagnosticResult();

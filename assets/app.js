@@ -80,8 +80,8 @@
     { title: 'Données & statistiques', text: 'Lire un tableau ou un graphique, comparer et calculer une moyenne.', route: 'donnees', available: true },
     { title: 'Équations', text: 'Trouver un nombre inconnu et vérifier qu’il convient.', route: 'equations', available: true },
     { title: 'Graphiques & fonctions', text: 'Voir comment une quantité change quand une autre change.', route: 'fonctions', available: true },
-    { title: 'Prix & commerce', text: 'Coûts, prix, facture, réduction et marge simple.', available: false },
-    { title: 'Probabilités', text: 'Comprendre le hasard, les événements et les simulations.', available: false }
+    { title: 'Prix & commerce', text: 'Lire une facture, calculer une réduction et distinguer coût, prix et marge.', route: 'commerce', available: true },
+    { title: 'Probabilités', text: 'Comprendre le hasard, comparer fréquence et probabilité, puis simuler.', route: 'probabilites', available: true }
   ];
 
   function loadState() {
@@ -245,7 +245,9 @@
       pourcentages: 'Pourcentages · comprendre « sur 100 »',
       donnees: 'Données · lire et comparer',
       equations: 'Équations · trouver le nombre caché',
-      fonctions: 'Graphiques · deux quantités liées'
+      fonctions: 'Graphiques · deux quantités liées',
+      commerce: 'Prix & commerce · calculer un montant',
+      probabilites: 'Probabilités · comprendre le hasard'
     };
     const pageTitle = pageTitles[route] || 'Maths LGC · CAP PSR';
     const previewLinks = [
@@ -260,7 +262,9 @@
       ['pourcentages', 'Pourcentages'],
       ['donnees', 'Données'],
       ['equations', 'Équations'],
-      ['fonctions', 'Graphiques']
+      ['fonctions', 'Graphiques'],
+      ['commerce', 'Prix'],
+      ['probabilites', 'Probabilités']
     ];
 
     app.innerHTML = `
@@ -269,7 +273,7 @@
           <a class="brand-home" href="#parcours" aria-label="Retour au parcours" title="Retour au parcours"><span class="brand-mark">∑</span></a>
           <span class="brand-title">${pageTitle}</span>
         </div>
-        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (['durees','proportion','pourcentages','donnees','equations','fonctions'].includes(route) ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
+        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (['durees','proportion','pourcentages','donnees','equations','fonctions','commerce','probabilites'].includes(route) ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
       </header>
       ${teacherPreview ? `
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
@@ -279,7 +283,7 @@
           </div>
         </nav>
       ` : ''}
-      ${['durees','proportion','pourcentages','donnees','equations','fonctions'].includes(route) ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
+      ${['durees','proportion','pourcentages','donnees','equations','fonctions','commerce','probabilites'].includes(route) ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
       ${content}
     `;
   }
@@ -304,6 +308,8 @@
     if (route === 'donnees') return renderDataModule();
     if (route === 'equations') return renderEquationModule();
     if (route === 'fonctions') return renderFunctionModule();
+    if (route === 'commerce') return renderCommerceModule();
+    if (route === 'probabilites') return renderProbabilityModule();
     return renderPath();
   }
 
@@ -1445,7 +1451,7 @@
           <div class="actions">
             <button class="btn btn-primary" id="check-function">Vérifier</button>
             ${teacherPreview ? '<button class="btn btn-secondary" id="show-function-answers">Voir les réponses</button>' : ''}
-            <button class="btn btn-secondary" data-go="equations">Revoir les équations</button>
+            <button class="btn btn-secondary" data-go="commerce">Module suivant · Prix & commerce</button>
             <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
           </div>
         </section>

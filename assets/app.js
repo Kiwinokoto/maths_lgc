@@ -103,13 +103,13 @@
   function normaliseText(value) {
     return String(value || '')
       .toLowerCase()
-      .replace(/s+/g, '')
+      .replace(/\s+/g, '')
       .replace(',', '.')
       .trim();
   }
 
   function parseNumber(value) {
-    const n = Number(String(value || '').replace(',', '.').replace(/s/g, ''));
+    const n = Number(String(value || '').replace(',', '.').replace(/\s/g, ''));
     return Number.isFinite(n) ? n : NaN;
   }
 

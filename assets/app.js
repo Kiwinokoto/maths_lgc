@@ -217,7 +217,7 @@
           <a class="brand-home" href="#parcours" aria-label="Retour au parcours" title="Retour au parcours"><span class="brand-mark">∑</span></a>
           <span class="brand-title">${pageTitle}</span>
         </div>
-        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : 'CAP PSR · séance 1'}</span>
+        <span class="teacher-chip">${teacherPreview ? 'Vue prof · navigation libre' : (route === 'durees' || route === 'proportion' ? 'CAP PSR · modules' : 'CAP PSR · séance 1')}</span>
       </header>
       ${teacherPreview ? `
         <nav class="teacher-preview-nav" aria-label="Navigation de prévisualisation enseignant">
@@ -227,7 +227,7 @@
           </div>
         </nav>
       ` : ''}
-      <div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>
+      ${route === 'durees' || route === 'proportion' ? '' : `<div class="progress-strip" aria-label="Progression dans la séance">${dots}</div>`}
       ${content}
     `;
   }

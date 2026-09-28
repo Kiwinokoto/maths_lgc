@@ -107,7 +107,7 @@
       </section>
 
       <div class="teacher-stats">
-        <div class="teacher-stat"><span>Élèves vus</span><strong id="student-count">0</strong></div>
+        <div class="teacher-stat"><span>Élèves inscrits</span><strong id="student-count">0</strong></div>
         <div class="teacher-stat"><span>Moyenne diagnostic</span><strong id="diagnostic-average">—</strong></div>
         <div class="teacher-stat"><span>Temps médian diagnostic</span><strong id="diagnostic-median">—</strong></div>
         <div class="teacher-stat"><span>Défis terminés</span><strong id="challenge-complete">0</strong></div>
@@ -471,7 +471,8 @@
     } catch (error) {
       dashboardStatus.textContent = error.message;
     } finally {
-      button.disabled = false;
+      const filters = currentFilters();
+      button.disabled = !(filters.teacher && filters.session);
     }
   });
 

@@ -437,6 +437,8 @@
       state.birthDate = birthDate;
       state.teacherId = teacherId;
       state.courseSession = courseSession;
+      correctionsUnlocked = false;
+      correctionsStateLoaded = false;
       state.displayName = state.firstName;
       state.studentId = state.studentId || createStudentId();
       state.entered = true;

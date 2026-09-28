@@ -1776,20 +1776,20 @@
       <section class="card hero module-page">
         <p class="eyebrow">Module · Probabilités</p>
         <h2>Le hasard varie, mais il n’est pas sans repères.</h2>
-        <p class="lead">Si on choisit au hasard, on ne peut pas prévoir le prochain résultat avec certitude. En revanche, on peut mesurer les chances d’un événement et observer ce qui se passe quand on recommence beaucoup de fois.</p>
+        <p class="lead">Quand on choisit au hasard, on ne sait pas ce qui va sortir au prochain essai. On peut quand même mesurer la chance qu’un résultat arrive. En maths, cette chance s’appelle une <b>probabilité</b>.</p>
 
         <div class="module-context-grid">
           <article class="module-context"><span aria-hidden="true">🎟️</span><strong>Tirage</strong><p>Parmi 10 tickets, 3 sont violets. Quelle chance de tirer un ticket violet ?</p></article>
           <article class="module-context"><span aria-hidden="true">🔎</span><strong>Contrôle au hasard</strong><p>Choisir une barquette au hasard dans un lot pour effectuer un contrôle.</p></article>
-          <article class="module-context"><span aria-hidden="true">🎲</span><strong>Simulation</strong><p>Répéter virtuellement une expérience des dizaines ou centaines de fois.</p></article>
+          <article class="module-context"><span aria-hidden="true">🎲</span><strong>Simulation</strong><p>Faire le même tirage beaucoup de fois avec l’ordinateur pour observer les résultats.</p></article>
         </div>
 
-        <div class="callout module-rule"><strong>Repères :</strong> une probabilité est comprise entre <b>0 et 1</b>, donc entre 0 % et 100 %. 0 = impossible ; 1 = certain. Ici, 3 tickets violets sur 10 donnent une probabilité de <b>3/10 = 0,3 = 30 %</b>.</div>
+        <div class="callout module-rule"><strong>Repères :</strong> une probabilité indique une chance. <b>0 %</b> = impossible ; <b>100 %</b> = certain. Ici, 3 tickets violets sur 10 donnent <b>3/10 = 30 %</b>. En écriture décimale, 30 % = <b>0,3</b> : une probabilité peut aussi s’écrire entre 0 et 1.</div>
 
         <section class="learning-lab">
           <div class="lab-heading">
             <div><span class="pill">Simule</span><h3>3 tickets violets sur 10</h3></div>
-            <p>Chaque tirage remet le ticket dans le lot. La probabilité reste 30 %, mais la fréquence observée peut bouger, surtout au début.</p>
+            <p>Après chaque tirage, le ticket est remis dans le lot avant de recommencer. C’est un <b>tirage avec remise</b> : il y a donc toujours 3 tickets violets sur 10. La chance reste 30 %, mais la part de violets réellement obtenue peut changer, surtout au début.</p>
           </div>
           <div class="probability-lab">
             <div class="probability-bag">
@@ -1802,8 +1802,8 @@
               <div class="simulation-stats">
                 <div class="mini-stat">Tirages<strong id="prob-draws">0</strong></div>
                 <div class="mini-stat">Violets<strong id="prob-successes">0</strong></div>
-                <div class="mini-stat">Fréquence observée<strong id="prob-frequency">—</strong></div>
-                <div class="mini-stat">Probabilité théorique<strong>30 %</strong></div>
+                <div class="mini-stat">Part de violets · fréquence<strong id="prob-frequency">—</strong></div>
+                <div class="mini-stat">Chance de départ · probabilité<strong>30 %</strong></div>
               </div>
               <div class="probability-meter">
                 <span class="probability-theory" title="30 % théorique"></span>
@@ -1822,13 +1822,13 @@
         </section>
 
         <section class="method-card">
-          <p class="eyebrow">Deux idées importantes</p>
+          <p class="eyebrow">Trois idées importantes</p>
           <div class="method-steps">
-            <div><span>1</span><p>Pour des issues équiprobables : compte les cas favorables et les cas possibles.</p></div>
-            <div><span>2</span><p>La fréquence observée peut être différente de la probabilité sur peu d’essais.</p></div>
-            <div><span>3</span><p>Quand on répète beaucoup, la fréquence a tendance à se rapprocher de la probabilité.</p></div>
+            <div><span>1</span><p>Si tous les tickets ont la même chance d’être tirés, compte d’abord ceux qui t’intéressent, puis tous les tickets. En maths : <b>cas favorables / cas possibles</b>.</p></div>
+            <div><span>2</span><p>Après plusieurs tirages, calcule la part de violets obtenus. Cette part observée s’appelle la <b>fréquence</b>.</p></div>
+            <div><span>3</span><p>Sur peu d’essais, la fréquence peut être loin de la probabilité. Quand on répète beaucoup, elle a tendance à s’en rapprocher.</p></div>
           </div>
-          <div class="worked-example"><strong>2 tickets rouges sur 10</strong><span>2 cas favorables</span><span>10 cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
+          <div class="worked-example"><strong>2 tickets rouges sur 10</strong><span>2 tickets rouges = cas favorables</span><span>10 tickets en tout = cas possibles</span><strong>→ 2/10 = 20 %</strong></div>
         </section>
 
         <section class="practice-block">
@@ -1836,9 +1836,9 @@
           <h3>4 situations courtes</h3>
           <div class="question-list">
             <fieldset class="question"><legend><span class="question-index">1</span><span>Dans un lot de 10 tickets, 2 sont rouges. Quelle est la probabilité de tirer un rouge au hasard ?</span></legend><span class="question-domain">Cas favorables / possibles</span><div class="answer-row"><input id="prob-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">2</span><span>Quelle est la probabilité d’un événement impossible ?</span></legend><span class="question-domain">Impossible</span><div class="answer-row"><select id="prob-q2"><option value="">Choisir…</option><option value="0">0</option><option value="0.5">0,5</option><option value="1">1</option><option value="100">100</option></select></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">3</span><span>Un événement a une probabilité de 30 %. Quelle est la probabilité de l’événement contraire (« ne pas arriver ») ?</span></legend><span class="question-domain">Événement contraire</span><div class="answer-row"><input id="prob-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
-            <fieldset class="question"><legend><span class="question-index">4</span><span>La probabilité vaut 30 %. Après seulement 10 essais, on observe 40 %. Que peut-on conclure ?</span></legend><span class="question-domain">Fréquence et probabilité</span><div class="answer-row"><select id="prob-q4"><option value="">Choisir…</option><option value="wrong">La probabilité est devenue 40 %</option><option value="normal">C’est possible : la fréquence varie sur peu d’essais</option><option value="impossible">Le résultat est impossible</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Un événement impossible, c’est quelque chose qui ne peut pas arriver. Quelle probabilité lui correspond ?</span></legend><span class="question-domain">Impossible</span><div class="answer-row"><select id="prob-q2"><option value="">Choisir…</option><option value="0">0</option><option value="0.5">0,5</option><option value="1">1</option><option value="100">100</option></select></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>« Tirer un violet » a 30 % de chance d’arriver. Quelle est la chance de « ne pas tirer un violet » ? En maths, c’est l’événement contraire.</span></legend><span class="question-domain">Événement contraire</span><div class="answer-row"><input id="prob-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>%</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>La chance de tirer un violet reste 30 %. Après seulement 10 tirages, 4 violets sont sortis, soit 40 %. Est-ce possible ?</span></legend><span class="question-domain">Fréquence et probabilité</span><div class="answer-row"><select id="prob-q4"><option value="">Choisir…</option><option value="wrong">Non : la probabilité est devenue 40 %</option><option value="normal">Oui : sur peu de tirages, la part observée peut varier</option><option value="impossible">Non : obtenir 40 % est impossible</option></select></div></fieldset>
           </div>
           <div id="prob-feedback" class="callout hidden" aria-live="polite"></div>
           <div class="actions">
@@ -1865,10 +1865,10 @@
       document.querySelector('#prob-message').textContent = draws === 0
         ? 'Fais quelques tirages, puis compare avec 30 %.'
         : draws < 20
-          ? 'Sur peu de tirages, la fréquence peut être assez loin de 30 %.'
+          ? 'Sur peu de tirages, la part de violets obtenue peut être assez loin de 30 %.'
           : draws < 100
-            ? 'En répétant, regarde si la fréquence se rapproche de 30 %.'
-            : `Après ${draws} tirages, la fréquence observée est de ${formatNumber(frequency)} %. Elle n’a pas besoin d’être exactement égale à 30 %.`;
+            ? 'En répétant, regarde si la part observée se rapproche de 30 %.'
+            : `Après ${draws} tirages, ${formatNumber(frequency)} % des tickets tirés sont violets. Cette part observée s’appelle la fréquence. Elle n’a pas besoin d’être exactement égale à 30 %.`;
     };
 
     const runSimulation = count => {
@@ -1905,8 +1905,8 @@
         <div class="feedback-lines">
           <span>${checks[0] ? '✓' : '↻'} 2 sur 10 = 2/10 = <b>20 %</b></span>
           <span>${checks[1] ? '✓' : '↻'} Un événement impossible a une probabilité de <b>0</b></span>
-          <span>${checks[2] ? '✓' : '↻'} Événement contraire : 100 % − 30 % = <b>70 %</b></span>
-          <span>${checks[3] ? '✓' : '↻'} Sur 10 essais, <b>40 % est tout à fait possible</b> même si la probabilité reste 30 %</span>
+          <span>${checks[2] ? '✓' : '↻'} Ne pas tirer un violet : 100 % − 30 % = <b>70 %</b>. C’est l’événement contraire.</span>
+          <span>${checks[3] ? '✓' : '↻'} Sur seulement 10 tirages, <b>40 % est possible</b> même si la probabilité reste 30 %. La fréquence peut varier sur peu d’essais.</span>
         </div>`;
     };
 

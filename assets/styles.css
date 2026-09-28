@@ -117,6 +117,13 @@ p { line-height: 1.65; }
 .mini-stat strong { display: block; font-size: 1.2rem; margin-top: 4px; }
 .callout { padding: 18px 20px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); margin: 18px 0; }
 .callout strong { color: var(--accent-strong); }
+
+.fraction-demo { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.fraction-parts { display: grid; gap: 6px; height: 76px; margin: 14px 0; }
+.fraction-part { border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.fraction-part.filled { background: var(--accent); border-color: var(--accent); }
+.fraction-actions { margin-top: 0; }
+.fraction-label { margin-bottom: 0; font-weight: 850; }
 .footer-note { margin-top: 28px; color: var(--muted); font-size: .86rem; }
 .hidden { display: none !important; }
 

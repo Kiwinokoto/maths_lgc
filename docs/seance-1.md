@@ -35,16 +35,22 @@ Pour la première prise en main, privilégier des consignes courtes et des mots 
 
 ## Inscription et gestion du groupe
 
-Avant de commencer, chaque élève renseigne nom, prénom et date de naissance, choisit obligatoirement son professeur (**Monsieur Kevin**, **Monsieur Waren** ou **Madame Fadhila**) et conserve **Séance 1** préremplie.
+Avant le cours, le professeur ouvre `/teacher`, choisit son nom (**Monsieur Kevin**, **Monsieur Waren** ou **Madame Fadhila**), conserve **Séance 1** et renseigne librement le groupe (par exemple « PSR 1 »). Le serveur crée alors une occurrence de séance avec :
 
-Dans `/teacher`, le professeur peut filtrer sur son nom et la séance. La liste « Élèves inscrits » doit permettre de vérifier rapidement que toute la classe a rejoint le bon groupe avant de poursuivre.
+- un QR et un lien élève uniques ;
+- un code de séance de secours ;
+- un lien de gestion secret propre à cette occurrence.
 
-Pour les corrigés, le choix V1 est volontairement **manuel plutôt qu'automatique** :
-- le corrigé reste verrouillé par défaut ;
-- le tableau montre combien d'élèves sont inscrits et où ils en sont ;
-- le professeur débloque le corrigé pour son groupe quand il juge le moment adapté.
+L'élève ouvre le QR/lien et n'a plus à choisir son professeur ni à recopier le groupe. Il renseigne uniquement nom, prénom et date de naissance. Dès son entrée dans le parcours, il apparaît dans la liste « Élèves inscrits » de cette séance.
 
-Ne pas débloquer automatiquement « quand tout le monde a fini » : une absence, un retard, une mauvaise inscription ou un élève qui change d'appareil pourrait bloquer toute la classe. Le contrôle manuel garde la souplesse nécessaire tout en donnant au professeur les informations pour décider.
+Le jeton enseignant commun sert uniquement à **créer** les séances et à prévisualiser le cours. Il ne permet plus de lire les résultats de toutes les classes. Les résultats, exports et commandes d'une séance nécessitent son secret de gestion propre.
+
+Pour les corrigés, le choix V1 reste volontairement **manuel plutôt qu'automatique** :
+- le corrigé est verrouillé par défaut pour chaque nouvelle séance ;
+- le professeur voit combien d'élèves sont inscrits et combien ont terminé le diagnostic ou le défi ;
+- il débloque le corrigé uniquement pour cette occurrence quand il juge le moment adapté.
+
+Ne pas débloquer automatiquement « quand tout le monde a fini » : une absence, un retard, un appareil perdu ou une inscription inachevée pourrait bloquer tout le groupe.
 
 ## Défi PSR
 

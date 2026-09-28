@@ -383,11 +383,29 @@
       <section class="card hero">
         <p class="eyebrow">Étape 3 · Correction guidée</p>
         <h2>On regarde les stratégies.</h2>
-        <div class="result-summary">
-          <div class="result-score">${result.score}/10</div>
-          <div><h3>Ce score est un repère, pas une note.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
-        </div>
-        ${result.details.map((d, i) => `<article class="correction ${d.correct ? 'ok' : 'retry'}"><strong>${i+1}. ${d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong><p><b>Ta réponse :</b> ${escapeHtml(d.value)}</p><p>${d.explain}</p></article>`).join('')}
+        ${teacherPreview
+          ? '<div class="callout"><strong>Vue prof :</strong> correction complète affichée sans simuler de score élève.</div>'
+          : `<div class="result-summary">
+              <div class="result-score">${result.score}/10</div>
+              <div><h3>Ce score est un repère, pas une note.</h3><p>${summary}</p><div class="domain-chips">${result.weakDomains.length ? result.weakDomains.map(d => `<span class="pill warm">À travailler · ${d}</span>`).join('') : '<span class="pill ok">Bases solides sur ce diagnostic</span>'}</div></div>
+            </div>`}
+        ${result.details.map((d, i) => `<article class="correction ${teacherPreview ? '' : d.correct ? 'ok' : 'retry'}">
+          <strong>${i+1}. ${teacherPreview ? d.domain : d.correct ? '✓ Bonne stratégie' : '↻ À reprendre'}</strong>
+          ${teacherPreview ? '' : `<p><b>Ta réponse :</b> ${escapeHtml(d.value)}</p>`}
+          <p>${d.explain}</p>
+          ${d.id === 'q4' ? `
+            <div class="fraction-demo">
+              <h3>Voir la fraction</h3>
+              <p>Une même quantité peut s’écrire de plusieurs façons.</p>
+              <div id="fraction-parts" class="fraction-parts"></div>
+              <div class="actions fraction-actions">
+                <button class="btn btn-secondary" type="button" data-fraction="1/2">1/2</button>
+                <button class="btn btn-secondary" type="button" data-fraction="2/4">2/4</button>
+                <button class="btn btn-secondary" type="button" data-fraction="3/4">3/4</button>
+              </div>
+              <p id="fraction-label" class="fraction-label"></p>
+            </div>` : ''}
+        </article>`).join('')}
         <div class="actions">
           <button class="btn btn-primary" id="to-challenge">Passer au défi PSR</button>
           <button class="btn btn-secondary" id="redo-diagnostic">Refaire le diagnostic</button>
@@ -395,6 +413,28 @@
         </div>
       </section>
     `, 3);
+    const fractionParts = document.querySelector('#fraction-parts');
+    if (fractionParts) {
+      const showFraction = (numerator, denominator) => {
+        fractionParts.style.gridTemplateColumns = `repeat(${denominator}, minmax(0, 1fr))`;
+        fractionParts.replaceChildren();
+        for (let i = 0; i < denominator; i += 1) {
+          const part = document.createElement('span');
+          part.className = i < numerator ? 'fraction-part filled' : 'fraction-part';
+          fractionParts.append(part);
+        }
+        const percent = (numerator / denominator) * 100;
+        document.querySelector('#fraction-label').textContent = numerator / denominator === 0.5
+          ? '1/2 = 2/4 = 50 %'
+          : `${numerator}/${denominator} = ${formatNumber(percent)} %`;
+      };
+      document.querySelectorAll('[data-fraction]').forEach(button => button.addEventListener('click', () => {
+        const [n, d] = button.dataset.fraction.split('/').map(Number);
+        showFraction(n, d);
+      }));
+      showFraction(1, 2);
+    }
+
     document.querySelector('#to-challenge').addEventListener('click', () => go('defi'));
     document.querySelector('#redo-diagnostic').addEventListener('click', () => go('diagnostic'));
     document.querySelector('#correction-back').addEventListener('click', () => go('parcours'));

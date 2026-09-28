@@ -77,6 +77,8 @@ def read_class_state() -> dict:
         raw = json.loads(CLASS_STATE_PATH.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return default
+    if not isinstance(raw, dict):
+        return default
     return {
         "corrections_unlocked": bool(raw.get("corrections_unlocked", False)),
         "updated_at": raw.get("updated_at"),

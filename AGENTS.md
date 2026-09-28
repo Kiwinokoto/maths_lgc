@@ -65,13 +65,17 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Passe accessibilité séance 1 : fond moins rosé, en-tête contextuel avec ∑ vers le parcours, intro simplifiée avec exemples concrets et vocabulaire technique introduit progressivement.
 - Modules V1 construits : `#durees` et `#proportion`, accessibles aux élèves après la séance 1 et toujours accessibles en prévisualisation prof. Feedback local uniquement, non synchronisé au serveur.
 - Timing V1 : jalons serveur légers (début de session, première ouverture de page, validations d'activités) réutilisant la table `submissions`, sans migration. Les temps calculés sont des indices de rythme uniquement, jamais une mesure de niveau.
+- Modules V1 construits : `#pourcentages` et `#donnees`, avec manipulations visuelles, méthodes simples et exercices courts ; feedback local comme pour Durées/Proportionnalité.
+- Évolution future du tableau enseignant : commencer par un **avis sur le groupe**, puis détailler élève par élève. Si plusieurs enseignants/séances utilisent durablement le site, ajouter un contexte explicite groupe / séance / enseignant plutôt que l'inférer.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
 ## Prochaines étapes
-1. Tester la séance 1, les deux premiers modules et les temps indicatifs sur téléphone en conditions réelles.
+1. Tester la séance 1 et les quatre modules disponibles sur téléphone en conditions réelles.
 2. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs, réponses « Je ne sais pas » et écarts de rythme sans interpréter les durées isolément.
-3. Ajuster la remédiation après la première classe réelle.
-4. Construire ensuite Pourcentages puis Données & statistiques avec la même règle « voir/comprendre avant de nommer ».
-5. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
-6. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
-7. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.
+3. Après la première classe réelle, ajouter une synthèse « avis sur le groupe » au-dessus du détail élève, fondée sur les résultats observés.
+4. Ajuster la remédiation après cette première classe.
+5. Construire ensuite Équations puis Graphiques & fonctions, ou réordonner selon les besoins constatés demain.
+6. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
+7. Si le site devient multi-enseignants / multi-séances, modéliser explicitement groupe, séance et enseignant avant de multiplier les usages.
+8. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
+9. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.

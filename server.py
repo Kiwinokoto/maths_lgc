@@ -204,6 +204,32 @@ def clean_course_session(value: object) -> str:
     return course_session
 
 
+def clean_session_number(value: object) -> int:
+    if isinstance(value, bool):
+        raise ValueError("Numéro de séance invalide.")
+    raw = str(value or "").strip()
+    if not raw.isdigit():
+        raise ValueError("Le numéro de séance doit être un entier.")
+    number = int(raw)
+    if not (1 <= number <= 999):
+        raise ValueError("Le numéro de séance doit être compris entre 1 et 999.")
+    return number
+
+
+def clean_session_title(value: object) -> str:
+    title = " ".join(str(value or "").split()).strip()
+    if len(title) > 120:
+        raise ValueError("Le titre de séance doit contenir au maximum 120 caractères.")
+    if any(ord(ch) < 32 for ch in title):
+        raise ValueError("Le titre de séance contient un caractère invalide.")
+    return title
+
+
+def session_label(number: int, title: str = "") -> str:
+    base = f"Séance {number}"
+    return f"{base} · {title}" if title else base
+
+
 def clean_group_label(value: object) -> str:
     label = " ".join(str(value or "").split()).strip()
     if not (1 <= len(label) <= 80):
@@ -241,12 +267,19 @@ def _hash_session_admin_token(token: str) -> str:
 
 
 def public_session(session: dict) -> dict:
+    course_session = str(session.get("course_session") or "seance-1")
+    match = re.fullmatch(r"seance-(\d+)", course_session)
+    session_number = int(session.get("session_number") or (match.group(1) if match else 1))
+    session_title = str(session.get("session_title") or "")
+    course_session_label = str(session.get("course_session_label") or session_label(session_number, session_title))
     return {
         "class_session_id": session["class_session_id"],
         "teacher_id": session["teacher_id"],
         "teacher_label": session["teacher_label"],
-        "course_session": session["course_session"],
-        "course_session_label": session["course_session_label"],
+        "session_number": session_number,
+        "session_title": session_title,
+        "course_session": course_session,
+        "course_session_label": course_session_label,
         "group_label": session["group_label"],
         "corrections_unlocked": bool(session.get("corrections_unlocked", False)),
         "created_at": session["created_at"],
@@ -263,8 +296,10 @@ def get_class_session(class_session_id: str) -> dict | None:
     return dict(session) if isinstance(session, dict) else None
 
 
-def create_class_session(*, teacher_id: str, course_session: str, group_label: str) -> tuple[dict, str]:
+def create_class_session(*, teacher_id: str, session_number: int, session_title: str, group_label: str) -> tuple[dict, str]:
     now = utc_now()
+    course_session = f"seance-{session_number}"
+    course_session_label = session_label(session_number, session_title)
     with SESSIONS_LOCK:
         raw = _read_sessions_file()
         sessions = raw["sessions"]
@@ -277,8 +312,10 @@ def create_class_session(*, teacher_id: str, course_session: str, group_label: s
             "class_session_id": class_session_id,
             "teacher_id": teacher_id,
             "teacher_label": TEACHERS[teacher_id],
+            "session_number": session_number,
+            "session_title": session_title,
             "course_session": course_session,
-            "course_session_label": COURSE_SESSIONS[course_session],
+            "course_session_label": course_session_label,
             "group_label": group_label,
             "admin_token_hash": _hash_session_admin_token(admin_token),
             "corrections_unlocked": False,
@@ -851,13 +888,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(400, {"error": "Données de séance invalides."})
             try:
                 teacher_id = clean_teacher_id(raw.get("teacher_id"))
-                course_session = clean_course_session(raw.get("course_session"))
+                session_number = clean_session_number(raw.get("session_number"))
+                session_title = clean_session_title(raw.get("session_title"))
                 group_label = clean_group_label(raw.get("group_label"))
             except ValueError as exc:
                 return self._json(400, {"error": str(exc)})
             session, admin_token = create_class_session(
                 teacher_id=teacher_id,
-                course_session=course_session,
+                session_number=session_number,
+                session_title=session_title,
                 group_label=group_label,
             )
             session_id = session["class_session_id"]

@@ -1,0 +1,143 @@
+name: Deploy Maths LGC
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-maths-lgc-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DEPLOY_HOST: 173.212.214.227
+  DEPLOY_USER: root
+  PROJECT_DIR: /opt/maths_lgc
+  PUBLIC_HOST: maths.lagrandeclasse.fr
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate deployment secrets
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          MATHS_TEACHER_TOKEN: ${{ secrets.MATHS_TEACHER_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          [ -n "${DEPLOY_SSH_KEY}" ] || { echo "Missing DEPLOY_SSH_KEY"; exit 1; }
+          [ -n "${DEPLOY_KNOWN_HOSTS}" ] || { echo "Missing DEPLOY_KNOWN_HOSTS"; exit 1; }
+          [[ "${MATHS_TEACHER_TOKEN}" =~ ^[A-Za-z0-9_-]{32,128}$ ]] || {
+            echo "MATHS_TEACHER_TOKEN must be 32-128 URL-safe characters."
+            exit 1
+          }
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Pin VPS host key
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: VPS preflight
+        run: |
+          set -euo pipefail
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" '
+            set -euo pipefail
+            docker info >/dev/null
+            docker compose version >/dev/null
+            docker network inspect traefik_network >/dev/null
+            docker ps --format "{{.Names}}" | grep -qx traefik
+          '
+
+      - name: Prepare persistent directories
+        run: |
+          set -euo pipefail
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "
+            set -euo pipefail
+            install -d -m 0755 '${PROJECT_DIR}'
+            install -d -o 65532 -g 65532 -m 0750 '${PROJECT_DIR}/data'
+          "
+
+      - name: Sync application
+        run: |
+          set -euo pipefail
+          rsync -az --delete             -e "ssh"             --exclude '.git'             --exclude '.github'             --exclude '.env'             --exclude 'data'             ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${PROJECT_DIR}/"
+
+      - name: Write runtime configuration
+        env:
+          MATHS_TEACHER_TOKEN: ${{ secrets.MATHS_TEACHER_TOKEN }}
+        run: |
+          set -euo pipefail
+          TOKEN_B64="$(printf '%s' "${MATHS_TEACHER_TOKEN}" | base64 -w0)"
+          IMAGE_TAG="${GITHUB_SHA::12}"
+
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}"             "PROJECT_DIR='${PROJECT_DIR}' TOKEN_B64='${TOKEN_B64}' IMAGE_TAG='${IMAGE_TAG}' bash -s" <<'EOF'
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          umask 077
+          TOKEN="$(printf '%s' "$TOKEN_B64" | base64 -d)"
+          printf 'MATHS_TEACHER_TOKEN=%s\nMATHS_IMAGE_TAG=%s\n' "$TOKEN" "$IMAGE_TAG" > .env
+          chmod 600 .env
+          EOF
+
+      - name: Validate and deploy
+        run: |
+          set -euo pipefail
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "
+            set -euo pipefail
+            cd '${PROJECT_DIR}'
+            docker compose config >/dev/null
+            docker compose build --pull
+            docker compose up -d --remove-orphans
+          "
+
+      - name: Verify container and Traefik route
+        run: |
+          set -euo pipefail
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "PUBLIC_HOST='${PUBLIC_HOST}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          deadline=$(( $(date +%s) + 90 ))
+          while :; do
+            health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' maths_lgc 2>/dev/null || true)"
+            if [ "$health" = "healthy" ]; then
+              break
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "Container did not become healthy; status=$health" >&2
+              docker logs --tail 120 maths_lgc >&2 || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          health_code="$(curl -k -sS -o /dev/null -w '%{http_code}'             --resolve "$PUBLIC_HOST:443:127.0.0.1"             "https://$PUBLIC_HOST/healthz")"
+          [ "$health_code" = "200" ] || {
+            echo "Unexpected /healthz code through Traefik: $health_code" >&2
+            exit 1
+          }
+
+          teacher_code="$(curl -k -sS -o /dev/null -w '%{http_code}'             --resolve "$PUBLIC_HOST:443:127.0.0.1"             "https://$PUBLIC_HOST/api/teacher/summary")"
+          [ "$teacher_code" = "401" ] || {
+            echo "Teacher API is not protected as expected: HTTP $teacher_code" >&2
+            exit 1
+          }
+
+          echo "Maths LGC is healthy and routed through Traefik."
+          EOF

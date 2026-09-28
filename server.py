@@ -673,6 +673,10 @@ def filter_by_context(items: list[dict], teacher_id: str = "", course_session: s
     return filtered
 
 
+def filter_by_class_session(items: list[dict], class_session_id: str) -> list[dict]:
+    return [item for item in items if item.get("class_session_id") == class_session_id]
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "MathsLGC/1.0"
 
@@ -703,43 +707,79 @@ class Handler(BaseHTTPRequestHandler):
         supplied = auth[7:] if auth.startswith("Bearer ") else self.headers.get("X-Teacher-Token", "")
         return bool(supplied) and secrets.compare_digest(supplied, TEACHER_TOKEN)
 
+    def _session_admin_authorized(self, class_session_id: str) -> bool:
+        supplied = self.headers.get("X-Session-Token", "")
+        return session_admin_authorized(class_session_id, supplied)
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
         teacher_filter = str((query.get("teacher") or [""])[0]).strip()
-        session_filter = str((query.get("session") or [""])[0]).strip()
+        legacy_session_filter = str((query.get("session") or [""])[0]).strip()
+        class_session_id = str((query.get("id") or [""])[0]).strip()
         if teacher_filter and teacher_filter not in TEACHERS:
             return self._json(400, {"error": "Professeur invalide."})
-        if session_filter and session_filter not in COURSE_SESSIONS:
+        if legacy_session_filter and path == "/api/class-state" and legacy_session_filter not in COURSE_SESSIONS:
             return self._json(400, {"error": "Séance invalide."})
         if path == "/healthz":
             return self._json(200, {"ok": True})
+        if path == "/api/session":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            return self._json(200, public_session(session))
+        if path == "/api/session-qr":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            body = session_qr_svg(class_session_id)
+            self._headers(200, "image/svg+xml; charset=utf-8", len(body))
+            self.wfile.write(body)
+            return
         if path == "/api/class-state":
-            return self._json(200, read_class_state(teacher_filter, session_filter))
-        if path == "/api/teacher/summary":
+            return self._json(200, read_class_state(teacher_filter, legacy_session_filter))
+        if path in {"/api/teacher/status", "/api/teacher/summary"}:
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            students = filter_by_context(latest_students(), teacher_filter, session_filter)
+            return self._json(200, {"ok": True, "generated_at": utc_now()})
+        if path == "/api/teacher/session-summary":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            students = filter_by_class_session(latest_students(), class_session_id)
             return self._json(200, {
+                "session": public_session(session),
                 "students": students,
                 "count": len(students),
                 "generated_at": utc_now(),
-                "class_state": read_class_state(),
             })
-        if path == "/api/teacher/history":
-            if not self._authorized():
-                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            history = filter_by_context(submission_history(), teacher_filter, session_filter)
-            return self._json(200, {"submissions": history, "count": len(history), "generated_at": utc_now()})
-        if path == "/api/teacher/export.csv":
-            if not self._authorized():
-                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            rows = filter_by_context(latest_students(), teacher_filter, session_filter)
+        if path == "/api/teacher/session-history":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            history = filter_by_class_session(submission_history(), class_session_id)
+            return self._json(200, {
+                "session": public_session(session),
+                "submissions": history,
+                "count": len(history),
+                "generated_at": utc_now(),
+            })
+        if path == "/api/teacher/session-export.csv":
+            session = get_class_session(class_session_id)
+            if not session:
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            rows = filter_by_class_session(latest_students(), class_session_id)
             buffer = io.StringIO()
             writer = csv.writer(buffer)
             writer.writerow([
-                "nom", "prenom", "date_naissance", "professeur", "seance", "id", "derniere_activite",
+                "nom", "prenom", "date_naissance", "professeur", "seance", "groupe", "id", "derniere_activite",
                 "diagnostic", "je_ne_sais_pas", "defi", "forces", "a_travailler", "commencer_par",
                 "debut_session", "diagnostic_ouvert", "diagnostic_rendu", "temps_diagnostic_s",
                 "defi_ouvert", "premiere_reponse_defi", "temps_defi_s",
@@ -755,6 +795,7 @@ class Handler(BaseHTTPRequestHandler):
                     item.get("birth_date", ""),
                     item.get("teacher_label", ""),
                     item.get("course_session_label", ""),
+                    item.get("group_label", ""),
                     item["student_id"], item["updated_at"],
                     diag.get("score", ""), item.get("unknown_count", 0), challenge.get("score", ""),
                     " | ".join(item.get("strengths", [])),

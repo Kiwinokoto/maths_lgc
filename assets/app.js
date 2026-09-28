@@ -531,6 +531,12 @@
     if (!state.challengeDone) return go('defi');
     const result = diagnosticResult();
     const priorities = result.weakDomains.length ? result.weakDomains : ['Consolider et expliquer mes méthodes'];
+    const firstPriority = priorities[0];
+    const encouragement = result.score >= 8
+      ? `Très bon point de départ. Ton prochain objectif est de consolider ${firstPriority} et d’expliquer tes méthodes clairement.`
+      : result.score >= 5
+        ? `Tu as déjà plusieurs bases utiles. Commence par ${firstPriority}, puis refais une situation proche pour vérifier que la méthode devient automatique.`
+        : `Ce diagnostic montre précisément où commencer : ${firstPriority}. Travaille une étape à la fois, avec un exemple puis un exercice très proche.`;
     shell(`
       <section class="card hero">
         <p class="eyebrow">Étape 5 · Bilan</p>
@@ -541,6 +547,7 @@
           <article class="info-tile"><span class="pill ok">Défi PSR</span><h3>Terminé</h3><p>Tu as adapté une recette, manipulé une durée et calculé un montant.</p></article>
         </div>
         <div class="callout"><strong>Mes priorités :</strong> ${priorities.join(' · ')}</div>
+        <div class="callout"><strong>Mon conseil pour commencer :</strong> ${encouragement}</div>
         <p>La suite du parcours travaillera les durées, la proportionnalité, les pourcentages, les données, les équations, les graphiques, les prix et les probabilités.</p>
         <div class="actions">
           <button class="btn btn-primary" id="summary-path">Retour au parcours</button>

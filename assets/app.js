@@ -675,6 +675,253 @@
     document.querySelector('#factor').textContent = `× ${formatNumber(factor)}`;
   }
 
+  function parseClock(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    const match = raw.match(/^(\d{1,2})\s*(?:h|:|\.)\s*(\d{1,2})$/);
+    if (!match) return NaN;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return NaN;
+    return hours * 60 + minutes;
+  }
+
+  function minutesToClock(totalMinutes) {
+    const wrapped = ((Number(totalMinutes) % 1440) + 1440) % 1440;
+    const hours = Math.floor(wrapped / 60);
+    const minutes = wrapped % 60;
+    return `${hours} h ${String(minutes).padStart(2, '0')}`;
+  }
+
+  function renderDurationModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Durées</p>
+        <h2>Heures et minutes, sans piège.</h2>
+        <p class="lead">En restauration, une heure sert à organiser le travail : commencer une préparation, respecter une cuisson, être prêt avant le service. On va d’abord voir le temps, puis seulement faire les calculs.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">🍲</span><strong>Cuisson</strong><p>Une soupe commence à 9 h 35 et cuit 50 min. Quand est-elle prête ?</p></article>
+          <article class="module-context"><span aria-hidden="true">🧑‍🍳</span><strong>Mise en place</strong><p>Le service est à 11 h 45. Il faut 35 min avant. Quand commencer ?</p></article>
+          <article class="module-context"><span aria-hidden="true">🧽</span><strong>Organisation</strong><p>Une tâche va de 10 h 15 à 12 h 00. Combien de temps dure-t-elle ?</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>À retenir :</strong> 1 heure = 60 minutes. Une heure n’a pas 100 minutes.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Fais bouger le temps</h3></div>
+            <p>Change l’heure de départ et la durée. L’heure de fin se recalcule tout de suite.</p>
+          </div>
+          <div class="time-controls">
+            <label><span>Départ</span><strong id="time-start-label">9 h 35</strong><input id="time-start-range" type="range" min="480" max="780" step="5" value="575" /></label>
+            <label><span>Durée</span><strong><span id="time-duration-label">50</span> min</strong><input id="time-duration-range" type="range" min="10" max="120" step="5" value="50" /></label>
+          </div>
+          <div class="time-equation" aria-live="polite">
+            <span id="time-start-value">9 h 35</span><b>+</b><span id="time-duration-value">50 min</span><b>=</b><strong id="time-end-value">10 h 25</strong>
+          </div>
+          <div class="time-track" aria-hidden="true"><span class="time-track-fill" id="time-track-fill"></span></div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Une méthode simple</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Va jusqu’à l’heure ronde.</p></div>
+            <div><span>2</span><p>Regarde combien de minutes tu as utilisées.</p></div>
+            <div><span>3</span><p>Ajoute les minutes qui restent.</p></div>
+          </div>
+          <div class="worked-example"><strong>9 h 35 + 50 min</strong><span>+ 25 min → 10 h 00</span><span>il reste 25 min</span><strong>→ 10 h 25</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>Une préparation commence à 9 h 35 et dure 50 min. À quelle heure finit-elle ?</span></legend><span class="question-domain">Ajouter une durée</span><div class="answer-row"><input id="duration-q1" type="text" placeholder="ex. 10 h 25" /></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>Le service commence à 11 h 45. La mise en place demande 35 min. À quelle heure faut-il commencer ?</span></legend><span class="question-domain">Revenir en arrière</span><div class="answer-row"><input id="duration-q2" type="text" placeholder="ex. 11 h 10" /></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>Tu travailles sur une tâche de 10 h 15 à 12 h 00. Combien de minutes cela dure-t-il ?</span></legend><span class="question-domain">Calculer une durée</span><div class="answer-row"><input id="duration-q3" inputmode="numeric" type="text" placeholder="Ta réponse" /><span>min</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>1 h 30 correspond à combien de minutes ?</span></legend><span class="question-domain">Convertir</span><div class="answer-row"><select id="duration-q4"><option value="">Choisir…</option><option value="30">30 min</option><option value="60">60 min</option><option value="90">90 min</option><option value="130">130 min</option></select></div></fieldset>
+          </div>
+          <div id="duration-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-duration">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-duration-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="proportion">Module suivant · Recettes</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const startRange = document.querySelector('#time-start-range');
+    const durationRange = document.querySelector('#time-duration-range');
+    const updateTimeLab = () => {
+      const start = Number(startRange.value);
+      const duration = Number(durationRange.value);
+      const end = start + duration;
+      document.querySelector('#time-start-label').textContent = minutesToClock(start);
+      document.querySelector('#time-duration-label').textContent = duration;
+      document.querySelector('#time-start-value').textContent = minutesToClock(start);
+      document.querySelector('#time-duration-value').textContent = `${duration} min`;
+      document.querySelector('#time-end-value').textContent = minutesToClock(end);
+      document.querySelector('#time-track-fill').style.width = `${Math.min(100, Math.max(12, duration / 1.2))}%`;
+    };
+    startRange.addEventListener('input', updateTimeLab);
+    durationRange.addEventListener('input', updateTimeLab);
+    updateTimeLab();
+
+    const showDurationFeedback = () => {
+      const checks = [
+        parseClock(document.querySelector('#duration-q1').value) === 625,
+        parseClock(document.querySelector('#duration-q2').value) === 670,
+        Math.abs(parseNumber(document.querySelector('#duration-q3').value) - 105) < 0.001,
+        document.querySelector('#duration-q4').value === '90'
+      ];
+      const feedback = document.querySelector('#duration-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count}/4 situations réussies.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 9 h 35 + 50 min = <b>10 h 25</b></span>
+          <span>${checks[1] ? '✓' : '↻'} 11 h 45 − 35 min = <b>11 h 10</b></span>
+          <span>${checks[2] ? '✓' : '↻'} De 10 h 15 à 12 h 00 = <b>105 min</b> = 1 h 45</span>
+          <span>${checks[3] ? '✓' : '↻'} 1 h 30 = 60 min + 30 min = <b>90 min</b></span>
+        </div>`;
+    };
+
+    document.querySelector('#check-duration').addEventListener('click', showDurationFeedback);
+    document.querySelector('#show-duration-answers')?.addEventListener('click', () => {
+      document.querySelector('#duration-q1').value = '10 h 25';
+      document.querySelector('#duration-q2').value = '11 h 10';
+      document.querySelector('#duration-q3').value = '105';
+      document.querySelector('#duration-q4').value = '90';
+      showDurationFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
+  function renderProportionModule() {
+    if (!state.challengeDone && !teacherPreview) return go('parcours');
+    shell(`
+      <section class="card hero module-page">
+        <p class="eyebrow">Module · Recettes</p>
+        <h2>Changer les portions, garder la recette.</h2>
+        <p class="lead">Si le nombre de clients change, les quantités changent aussi. L’idée est simple : on garde les mêmes proportions pour que la recette reste la même.</p>
+
+        <div class="module-context-grid">
+          <article class="module-context"><span aria-hidden="true">🍚</span><strong>Recette</strong><p>5 portions utilisent 400 g de riz. Pour 15 portions, il faut plus de riz.</p></article>
+          <article class="module-context"><span aria-hidden="true">🥤</span><strong>Boisson</strong><p>2 L suffisent pour 8 personnes. Pour 20 personnes, la quantité doit changer de la même façon.</p></article>
+          <article class="module-context"><span aria-hidden="true">📦</span><strong>Barquettes</strong><p>Si 6 barquettes demandent une quantité, 18 barquettes en demandent 3 fois plus.</p></article>
+        </div>
+
+        <div class="callout module-rule"><strong>L’idée avant le mot :</strong> si les portions sont multipliées par un nombre, chaque quantité est multipliée par le même nombre. En maths, ce lien s’appelle la <b>proportionnalité</b>.</div>
+
+        <section class="learning-lab">
+          <div class="lab-heading">
+            <div><span class="pill">Manipule</span><h3>Fais varier les portions</h3></div>
+            <p>La fiche de base est prévue pour 10 portions. Bouge le curseur et observe ce qui change.</p>
+          </div>
+          <div class="proportion-lab">
+            <div class="recipe-card compact-recipe">
+              <h3>Base · 10 portions</h3>
+              <div class="recipe-simple-row"><span>Riz</span><strong>800 g</strong></div>
+              <div class="recipe-simple-row"><span>Légumes</span><strong>500 g</strong></div>
+              <div class="recipe-simple-row"><span>Sauce</span><strong>250 mL</strong></div>
+            </div>
+            <div class="range-wrap proportion-range">
+              <label for="proportion-portions"><strong>Je prépare pour</strong></label>
+              <div class="big-number"><span id="proportion-count">20</span> <small>portions</small></div>
+              <input id="proportion-portions" type="range" min="5" max="30" step="1" value="20" />
+              <div class="portion-comparison">
+                <div><span>Base</span><strong>10</strong></div>
+                <div class="portion-arrow">× <strong id="proportion-factor">2</strong></div>
+                <div><span>Nouveau</span><strong id="proportion-new">20</strong></div>
+              </div>
+              <div class="mini-stats">
+                <div class="mini-stat">Riz<strong id="proportion-rice">1 600 g</strong></div>
+                <div class="mini-stat">Légumes<strong id="proportion-veg">1 000 g</strong></div>
+                <div class="mini-stat">Sauce<strong id="proportion-sauce">500 mL</strong></div>
+                <div class="mini-stat">Même coefficient<strong id="proportion-factor-card">× 2</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="method-card">
+          <p class="eyebrow">Une méthode simple</p>
+          <div class="method-steps">
+            <div><span>1</span><p>Compare le nouveau nombre de portions au nombre de départ.</p></div>
+            <div><span>2</span><p>Trouve par combien on multiplie.</p></div>
+            <div><span>3</span><p>Multiplie chaque quantité par ce même nombre.</p></div>
+          </div>
+          <div class="worked-example"><strong>5 portions → 15 portions</strong><span>15 ÷ 5 = 3</span><span>400 g × 3</span><strong>→ 1 200 g</strong></div>
+        </section>
+
+        <section class="practice-block">
+          <p class="eyebrow">À toi</p>
+          <h3>4 situations courtes</h3>
+          <div class="question-list">
+            <fieldset class="question"><legend><span class="question-index">1</span><span>400 g de riz suffisent pour 5 portions. Combien faut-il pour 15 portions ?</span></legend><span class="question-domain">Même multiplicateur</span><div class="answer-row"><input id="prop-q1" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>g</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">2</span><span>2 L de soupe suffisent pour 8 personnes. Combien faut-il pour 20 personnes ?</span></legend><span class="question-domain">Coefficient 2,5</span><div class="answer-row"><input id="prop-q2" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>L</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">3</span><span>750 g de fruits sont prévus pour 6 portions. Combien faut-il pour 18 portions ?</span></legend><span class="question-domain">Multiplier par 3</span><div class="answer-row"><input id="prop-q3" inputmode="decimal" type="text" placeholder="Ta réponse" /><span>g</span></div></fieldset>
+            <fieldset class="question"><legend><span class="question-index">4</span><span>On passe de 10 portions à 25 portions. Par quel nombre faut-il multiplier les quantités ?</span></legend><span class="question-domain">Coefficient</span><div class="answer-row"><select id="prop-q4"><option value="">Choisir…</option><option value="1.5">× 1,5</option><option value="2">× 2</option><option value="2.5">× 2,5</option><option value="15">× 15</option></select></div></fieldset>
+          </div>
+          <div id="proportion-feedback" class="callout hidden" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="check-proportion">Vérifier</button>
+            ${teacherPreview ? '<button class="btn btn-secondary" id="show-proportion-answers">Voir les réponses</button>' : ''}
+            <button class="btn btn-secondary" data-go="durees">Revoir les durées</button>
+            <button class="btn btn-ghost" data-go="parcours">Retour au parcours</button>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const range = document.querySelector('#proportion-portions');
+    const updateProportionLab = () => {
+      const portions = Number(range.value);
+      const factor = portions / 10;
+      document.querySelector('#proportion-count').textContent = portions;
+      document.querySelector('#proportion-new').textContent = portions;
+      document.querySelector('#proportion-factor').textContent = formatNumber(factor);
+      document.querySelector('#proportion-factor-card').textContent = `× ${formatNumber(factor)}`;
+      document.querySelector('#proportion-rice').textContent = `${formatQty(800 * factor)} g`;
+      document.querySelector('#proportion-veg').textContent = `${formatQty(500 * factor)} g`;
+      document.querySelector('#proportion-sauce').textContent = `${formatQty(250 * factor)} mL`;
+    };
+    range.addEventListener('input', updateProportionLab);
+    updateProportionLab();
+
+    const showProportionFeedback = () => {
+      const checks = [
+        Math.abs(parseNumber(document.querySelector('#prop-q1').value) - 1200) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#prop-q2').value) - 5) < 0.001,
+        Math.abs(parseNumber(document.querySelector('#prop-q3').value) - 2250) < 0.001,
+        document.querySelector('#prop-q4').value === '2.5'
+      ];
+      const feedback = document.querySelector('#proportion-feedback');
+      const count = checks.filter(Boolean).length;
+      feedback.classList.remove('hidden');
+      feedback.innerHTML = `<strong>${count}/4 situations réussies.</strong>
+        <div class="feedback-lines">
+          <span>${checks[0] ? '✓' : '↻'} 15 ÷ 5 = 3, donc 400 × 3 = <b>1 200 g</b></span>
+          <span>${checks[1] ? '✓' : '↻'} 20 ÷ 8 = 2,5, donc 2 × 2,5 = <b>5 L</b></span>
+          <span>${checks[2] ? '✓' : '↻'} 18 ÷ 6 = 3, donc 750 × 3 = <b>2 250 g</b></span>
+          <span>${checks[3] ? '✓' : '↻'} 25 ÷ 10 = <b>2,5</b></span>
+        </div>`;
+    };
+
+    document.querySelector('#check-proportion').addEventListener('click', showProportionFeedback);
+    document.querySelector('#show-proportion-answers')?.addEventListener('click', () => {
+      document.querySelector('#prop-q1').value = '1200';
+      document.querySelector('#prop-q2').value = '5';
+      document.querySelector('#prop-q3').value = '2250';
+      document.querySelector('#prop-q4').value = '2.5';
+      showProportionFeedback();
+    });
+    document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => go(button.dataset.go)));
+  }
+
   function renderBilan() {
     if (!state.challengeDone && !teacherPreview) return go('defi');
     const result = diagnosticResult();

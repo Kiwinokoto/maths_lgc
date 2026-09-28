@@ -18,7 +18,7 @@ La V1 est mobile-first, sans compte élève et sans build frontend :
 - bilan et priorités enregistrés localement dans le navigateur ;
 - synchronisation vers une petite base SQLite quand le serveur est disponible ;
 - tableau enseignant protégé avec export CSV et historique JSON complet.
-- deux premiers modules post-diagnostic : **Durées** et **Recettes & proportionnalité**, avec manipulations interactives et feedback local.
+- quatre modules post-diagnostic : **Durées**, **Recettes & proportionnalité**, **Pourcentages** et **Données & statistiques**, avec manipulations interactives et feedback local.
 - jalons temporels serveur indicatifs : début de session, premières ouvertures des étapes et validations ; visibles dans le tableau enseignant et les exports.
 
 La collecte est limitée au besoin pédagogique de suivi : nom, prénom, date de naissance et résultats. Aucun email, aucune adresse et aucun compte élève. La date de naissance sert uniquement à distinguer les homonymes dans le tableau enseignant.
@@ -82,3 +82,5 @@ La route `/teacher` affiche l'état courant de la classe. L'export CSV donne une
 - [`docs/seance-1.md`](docs/seance-1.md) : déroulé enseignant pour la séance de rentrée.
 - [`docs/module-durees.md`](docs/module-durees.md) : intentions et progression du module Durées.
 - [`docs/module-proportionnalite.md`](docs/module-proportionnalite.md) : intentions et progression du module Recettes & proportionnalité.
+- [`docs/module-pourcentages.md`](docs/module-pourcentages.md) : repères et progression du module Pourcentages.
+- [`docs/module-donnees-statistiques.md`](docs/module-donnees-statistiques.md) : repères et progression du module Données & statistiques.

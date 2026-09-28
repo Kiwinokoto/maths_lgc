@@ -288,8 +288,9 @@
         parts.append(part);
       }
       const percent = (numerator / denominator) * 100;
-      const equivalent = numerator / denominator === 0.5 ? ' = 1/2 = 2/4' : '';
-      document.querySelector('#fraction-label').textContent = `${numerator}/${denominator}${equivalent} = ${formatNumber(percent)} %`;
+      document.querySelector('#fraction-label').textContent = numerator / denominator === 0.5
+        ? '1/2 = 2/4 = 50 %'
+        : `${numerator}/${denominator} = ${formatNumber(percent)} %`;
     };
     document.querySelectorAll('[data-fraction]').forEach(button => button.addEventListener('click', () => {
       const [n, d] = button.dataset.fraction.split('/').map(Number);

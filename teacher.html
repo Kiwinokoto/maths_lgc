@@ -60,7 +60,34 @@
     .teacher-hub-action strong { font-size:1rem; }
     .teacher-hub-action span { color:var(--muted); font-size:.84rem; line-height:1.4; }
     .teacher-hub-action.primary { border-color:#cfc3e5; background:linear-gradient(135deg,#f7f1ff,#fffaf2); }
-    @media (max-width:760px) { .session-create-grid,.session-share,.teacher-hub-grid { grid-template-columns:1fr; } .session-link-row { grid-template-columns:1fr; } }
+    .teacher-home-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:14px; margin-bottom:4px; }
+    .teacher-home-head h1 { margin:.15rem 0 .35rem; font-size:clamp(2rem,5vw,3.6rem); }
+    .teacher-tabs-shell { display:grid; gap:18px; }
+    .teacher-tabs { display:flex; gap:8px; padding:6px; overflow-x:auto; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.72); box-shadow:0 10px 30px rgba(54,39,83,.06); scrollbar-width:thin; }
+    .teacher-tab { position:relative; flex:1 0 auto; min-height:54px; padding:10px 16px; border:0; border-radius:13px; background:transparent; color:var(--muted); font:inherit; font-weight:850; cursor:pointer; text-align:left; white-space:nowrap; }
+    .teacher-tab span { display:block; font-size:.72rem; font-weight:750; opacity:.8; margin-bottom:2px; }
+    .teacher-tab[aria-selected="true"] { color:var(--accent-strong); background:#fff; box-shadow:0 6px 18px rgba(54,39,83,.10); }
+    .teacher-tab:disabled { cursor:not-allowed; opacity:.48; }
+    .teacher-tab-badge { display:inline-block !important; margin-left:6px; padding:2px 7px; border-radius:999px; background:#eee9f5; color:#776b89; font-size:.64rem !important; vertical-align:middle; }
+    .teacher-tab-panel { min-width:0; }
+    .teacher-tab-panel[hidden] { display:none; }
+    .teacher-tab-intro { margin-bottom:16px; }
+    .teacher-tab-intro h2 { margin:.1rem 0 .35rem; }
+    .teacher-course-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .teacher-course-link { display:flex; flex-direction:column; gap:6px; min-height:108px; padding:16px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.82); color:var(--ink); text-decoration:none; font-weight:850; }
+    .teacher-course-link:hover { border-color:#cfc3e5; background:var(--accent-soft); color:var(--accent-strong); }
+    .teacher-course-link small { color:var(--muted); font-weight:650; line-height:1.35; }
+    .correction-session-list { display:grid; gap:10px; }
+    .correction-session-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:14px 16px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.82); }
+    .correction-session-row small { display:block; margin-top:3px; color:var(--muted); }
+    .report-placeholder { border:1px dashed #cfc7d9; background:linear-gradient(135deg,rgba(247,241,255,.72),rgba(255,250,242,.72)); }
+    @media (max-width:760px) {
+      .session-create-grid,.session-share,.teacher-hub-grid,.teacher-course-grid { grid-template-columns:1fr; }
+      .session-link-row { grid-template-columns:1fr; }
+      .teacher-tabs { margin-inline:-2px; }
+      .teacher-tab { flex:0 0 auto; }
+      .correction-session-row { grid-template-columns:1fr; align-items:stretch; }
+    }
   </style>
 </head>
 <body>
@@ -68,7 +95,6 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark">∑</span><span>Maths LGC · Tableau enseignant</span></div>
       <div class="actions" style="margin-top:0">
-        <a class="btn btn-secondary" href="/?preview=teacher#parcours">Inspecter la séance 1</a>
         <a class="btn btn-ghost" href="/">Vue élève</a>
       </div>
     </header>
@@ -85,54 +111,113 @@
     </section>
 
     <section id="teacher-home" class="hidden">
-      <div class="teacher-toolbar">
+      <div class="teacher-home-head">
         <div>
-          <p class="eyebrow">Accueil enseignant</p>
-          <h2 style="margin-bottom:6px">Créer une séance</h2>
-          <p class="teacher-muted">Chaque séance crée son propre groupe, son QR élève et son accès de suivi.</p>
+          <p class="eyebrow">Espace professeur</p>
+          <h1>Préparer et piloter mes séances</h1>
+          <p class="teacher-muted">Tout est regroupé ici, dans l’ordre où tu en as besoin.</p>
         </div>
-        <div class="actions" style="margin-top:0">
-          <a class="btn btn-secondary" href="/?preview=teacher#parcours">Inspecter le cours</a>
-          <button id="logout" class="btn btn-ghost">Fermer l’accès enseignant</button>
-        </div>
+        <button id="logout" class="btn btn-ghost">Fermer l’accès enseignant</button>
       </div>
 
-      <section class="card hero">
-        <p class="eyebrow">Nouvelle séance</p>
-        <h3>Prépare le QR de ton groupe</h3>
-        <div class="session-create-grid">
-          <label>
-            <span>Professeur</span>
-            <select id="create-teacher" class="teacher-select" required>
-              <option value="">Choisir…</option>
-              <option value="kevin">Monsieur Kevin</option>
-              <option value="waren">Monsieur Waren</option>
-              <option value="fadhila">Madame Fadhila</option>
-            </select>
-          </label>
-          <label>
-            <span>Numéro de séance</span>
-            <input id="create-session-number" class="teacher-input" type="number" inputmode="numeric" min="1" max="999" step="1" value="1" required />
-          </label>
-          <label>
-            <span>Titre de séance <small>(facultatif)</small></span>
-            <input id="create-session-title" class="teacher-input" type="text" maxlength="120" placeholder="Ex. Proportionnalité" />
-          </label>
-          <label>
-            <span>Groupe / classe</span>
-            <input id="create-group" class="teacher-input" type="text" maxlength="80" placeholder="Ex. PSR 1" />
-          </label>
+      <div class="teacher-tabs-shell">
+        <div class="teacher-tabs" role="tablist" aria-label="Espace professeur">
+          <button id="tab-create" class="teacher-tab" role="tab" aria-selected="true" aria-controls="panel-create" data-tab="create">
+            <span>Étape 1</span>Créer une séance
+          </button>
+          <button id="tab-inspect" class="teacher-tab" role="tab" aria-selected="false" aria-controls="panel-inspect" data-tab="inspect">
+            <span>Étape 2</span>Explorer les cours
+          </button>
+          <button id="tab-corrections" class="teacher-tab" role="tab" aria-selected="false" aria-controls="panel-corrections" data-tab="corrections">
+            <span>Étape 3</span>Corrigés
+          </button>
+          <button id="tab-reports" class="teacher-tab" role="tab" aria-selected="false" aria-controls="panel-reports" data-tab="reports" disabled title="Disponible lorsque les rapports pédagogiques seront activés">
+            <span>Étape 4</span>Rapports <b class="teacher-tab-badge">à venir</b>
+          </button>
         </div>
-        <div class="actions"><button id="create-session" class="btn btn-primary">Créer la séance et le QR</button></div>
-        <p id="home-status" class="teacher-status" role="status"></p>
-      </section>
 
-      <section class="card hero">
-        <p class="eyebrow">Sur cet appareil</p>
-        <h3>Séances récemment créées</h3>
-        <p class="teacher-muted">Ces raccourcis sont enregistrés uniquement dans ce navigateur. Le lien de gestion affiché après création permet de reprendre une séance sur un autre appareil.</p>
-        <div id="recent-sessions" class="recent-sessions"></div>
-      </section>
+        <section id="panel-create" class="teacher-tab-panel" role="tabpanel" aria-labelledby="tab-create" data-panel="create">
+          <div class="teacher-tab-intro">
+            <p class="eyebrow">Créer une séance</p>
+            <h2>Prépare le QR de ton groupe</h2>
+            <p class="teacher-muted">Choisis ton nom, le numéro de séance et le groupe. Le QR obtenu rattache automatiquement les élèves à la bonne séance.</p>
+          </div>
+
+          <section class="card hero">
+            <div class="session-create-grid">
+              <label>
+                <span>Professeur</span>
+                <select id="create-teacher" class="teacher-select" required>
+                  <option value="">Choisir…</option>
+                  <option value="kevin">Monsieur Kevin</option>
+                  <option value="waren">Monsieur Waren</option>
+                  <option value="fadhila">Madame Fadhila</option>
+                </select>
+              </label>
+              <label>
+                <span>Numéro de séance</span>
+                <input id="create-session-number" class="teacher-input" type="number" inputmode="numeric" min="1" max="999" step="1" value="1" required />
+              </label>
+              <label>
+                <span>Titre de séance <small>(facultatif)</small></span>
+                <input id="create-session-title" class="teacher-input" type="text" maxlength="120" placeholder="Ex. Proportionnalité" />
+              </label>
+              <label>
+                <span>Groupe / classe</span>
+                <input id="create-group" class="teacher-input" type="text" maxlength="80" placeholder="Ex. PSR 1" />
+              </label>
+            </div>
+            <div class="actions"><button id="create-session" class="btn btn-primary">Créer la séance et afficher le QR</button></div>
+            <p id="home-status" class="teacher-status" role="status"></p>
+          </section>
+
+          <section class="card hero">
+            <p class="eyebrow">Reprendre</p>
+            <h3>Séances récemment créées</h3>
+            <p class="teacher-muted">Rouvre rapidement une séance déjà préparée sur cet appareil.</p>
+            <div id="recent-sessions" class="recent-sessions"></div>
+          </section>
+        </section>
+
+        <section id="panel-inspect" class="teacher-tab-panel" role="tabpanel" aria-labelledby="tab-inspect" data-panel="inspect" hidden>
+          <div class="teacher-tab-intro">
+            <p class="eyebrow">Explorer les cours</p>
+            <h2>Inspecte librement le parcours</h2>
+            <p class="teacher-muted">La vue professeur déverrouille les étapes et affiche les corrigés sans enregistrer de résultats élève.</p>
+          </div>
+          <div class="teacher-course-grid">
+            <a class="teacher-course-link" href="/?preview=teacher#parcours"><strong>Parcours complet</strong><small>Vue d’ensemble et navigation libre.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#diagnostic"><strong>Diagnostic</strong><small>10 situations de positionnement.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#correction"><strong>Correction guidée</strong><small>Explications et stratégies.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#defi"><strong>Défi PSR</strong><small>Quantités, durée et coût.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#durees"><strong>Durées</strong><small>Horaires et temps professionnels.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#proportion"><strong>Recettes & proportionnalité</strong><small>Adapter des quantités.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#pourcentages"><strong>Pourcentages</strong><small>Repères visuels et calculs simples.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#donnees"><strong>Données & statistiques</strong><small>Lire et résumer des données.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#equations"><strong>Équations</strong><small>Trouver une valeur inconnue.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#fonctions"><strong>Graphiques & fonctions</strong><small>Relier deux quantités.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#commerce"><strong>Prix & commerce</strong><small>Remise, coût et marge simple.</small></a>
+            <a class="teacher-course-link" href="/?preview=teacher#probabilites"><strong>Probabilités</strong><small>Hasard, fréquence et simulation.</small></a>
+          </div>
+        </section>
+
+        <section id="panel-corrections" class="teacher-tab-panel" role="tabpanel" aria-labelledby="tab-corrections" data-panel="corrections" hidden>
+          <div class="teacher-tab-intro">
+            <p class="eyebrow">Corrigés</p>
+            <h2>Choisis la séance à piloter</h2>
+            <p class="teacher-muted">Les corrigés sont verrouillés par défaut. Ouvre une séance pour les débloquer ou les reverrouiller au bon moment.</p>
+          </div>
+          <div id="correction-sessions" class="correction-session-list"></div>
+        </section>
+
+        <section id="panel-reports" class="teacher-tab-panel" role="tabpanel" aria-labelledby="tab-reports" data-panel="reports" hidden>
+          <section class="card hero report-placeholder">
+            <p class="eyebrow">Rapports</p>
+            <h2>Rapports pédagogiques à venir</h2>
+            <p class="teacher-muted">Après les premières séances réelles, cet espace regroupera la synthèse du groupe puis le détail élève par élève : acquis, difficultés et pistes de travail.</p>
+          </section>
+        </section>
+      </div>
     </section>
 
     <section id="session-dashboard" class="hidden">
@@ -254,6 +339,7 @@
     fadhila: 'Madame Fadhila'
   };
   const RECENTS_KEY = 'maths-lgc-recent-sessions-v1';
+  const HOME_TAB_KEY = 'maths-lgc-teacher-home-tab';
 
   const login = document.querySelector('#login');
   const teacherHome = document.querySelector('#teacher-home');
@@ -310,6 +396,72 @@
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recent.slice(0, 12)));
   }
 
+  function setHomeTab(tabName, { remember = true } = {}) {
+    const target = ['create', 'inspect', 'corrections'].includes(tabName) ? tabName : 'create';
+    document.querySelectorAll('.teacher-tab[data-tab]').forEach(button => {
+      button.setAttribute('aria-selected', button.dataset.tab === target ? 'true' : 'false');
+    });
+    document.querySelectorAll('.teacher-tab-panel[data-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.panel !== target;
+    });
+    if (remember) sessionStorage.setItem(HOME_TAB_KEY, target);
+    if (target === 'corrections') renderCorrectionSessions();
+  }
+
+  async function renderCorrectionSessions() {
+    const box = document.querySelector('#correction-sessions');
+    box.replaceChildren();
+    const recents = readRecents();
+    if (!recents.length) {
+      const empty = document.createElement('section');
+      empty.className = 'card hero';
+      empty.innerHTML = '<p class="eyebrow">Aucune séance récente</p><h3>Crée d’abord une séance</h3><p class="teacher-muted">Elle apparaîtra ici automatiquement, avec son état de corrigé.</p>';
+      box.append(empty);
+      return;
+    }
+
+    for (const session of recents) {
+      const row = document.createElement('div');
+      row.className = 'correction-session-row';
+      const text = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = session.teacher_label + ' · ' + session.group_label;
+      const meta = document.createElement('small');
+      meta.textContent = session.course_session_label;
+      text.append(title, meta);
+
+      const status = document.createElement('span');
+      status.className = 'pill teacher-release-status locked';
+      status.textContent = sessionToken(session.class_session_id) ? 'Vérification…' : 'Accès requis';
+
+      const button = document.createElement('button');
+      button.className = 'btn btn-secondary';
+      button.type = 'button';
+      button.textContent = 'Gérer les corrigés';
+      button.disabled = !sessionToken(session.class_session_id);
+      button.addEventListener('click', async () => {
+        await openSession(session.class_session_id);
+        requestAnimationFrame(() => scrollToTeacherSection('#teacher-corrections'));
+      });
+
+      row.append(text, status, button);
+      box.append(row);
+
+      if (sessionToken(session.class_session_id)) {
+        try {
+          const response = await sessionApi('/api/teacher/session-summary?id=' + encodeURIComponent(session.class_session_id), session.class_session_id);
+          const payload = await response.json();
+          const unlocked = Boolean(payload.session && payload.session.corrections_unlocked);
+          status.textContent = unlocked ? 'Débloqués' : 'Verrouillés';
+          status.className = 'pill teacher-release-status ' + (unlocked ? 'unlocked' : 'locked');
+        } catch {
+          status.textContent = 'État indisponible';
+          status.className = 'pill';
+        }
+      }
+    }
+  }
+
   function renderRecents() {
     const box = document.querySelector('#recent-sessions');
     box.replaceChildren();
@@ -348,6 +500,7 @@
       teacherHome.classList.remove('hidden');
       loginStatus.textContent = '';
       renderRecents();
+      setHomeTab(sessionStorage.getItem(HOME_TAB_KEY) || 'create', { remember:false });
     } catch (error) {
       sessionStorage.removeItem('maths-lgc-teacher-token');
       teacherHome.classList.add('hidden');
@@ -571,6 +724,13 @@
   });
   tokenInput.addEventListener('keydown', event => {
     if (event.key === 'Enter') document.querySelector('#open-dashboard').click();
+  });
+
+  document.querySelectorAll('.teacher-tab[data-tab]:not(:disabled)').forEach(button => {
+    button.addEventListener('click', () => setHomeTab(button.dataset.tab));
+  });
+  document.querySelectorAll('#panel-inspect a').forEach(link => {
+    link.addEventListener('click', () => sessionStorage.setItem(HOME_TAB_KEY, 'inspect'));
   });
 
   document.querySelector('#create-session').addEventListener('click', async () => {

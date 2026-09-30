@@ -11,6 +11,13 @@
     .teacher-wrap { display:grid; gap:18px; }
     .teacher-wrap > * { min-width:0; }
     .teacher-login { max-width:620px; margin:8vh auto 0; }
+    .teacher-sso-actions { display:grid; gap:8px; margin:22px 0 16px; }
+    .teacher-sso-actions .btn { justify-self:start; }
+    .teacher-sso-actions small { color:var(--muted); font-weight:650; }
+    .teacher-legacy-access { margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+    .teacher-legacy-access summary { cursor:pointer; color:var(--muted); font-size:.84rem; font-weight:850; }
+    .teacher-legacy-access[open] summary { color:var(--accent-strong); }
+    .teacher-legacy-access .answer-row { margin-top:10px; }
     .teacher-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
     .teacher-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:14px 0 18px; }
     .teacher-filters label { display:grid; gap:6px; min-width:220px; font-size:.82rem; font-weight:800; color:var(--muted); }
@@ -106,11 +113,19 @@
     <section id="login" class="card hero teacher-login">
       <p class="eyebrow">Accès enseignant</p>
       <h1 style="font-size:clamp(2rem,7vw,4.2rem)">Suivi de la classe</h1>
-      <p class="lead">Entre le jeton enseignant configuré sur le serveur. Il reste uniquement dans cet onglet.</p>
-      <div class="answer-row">
-        <input id="token" class="teacher-input" type="password" autocomplete="current-password" placeholder="Jeton enseignant" aria-label="Jeton enseignant" />
-        <button id="open-dashboard" class="btn btn-primary">Ouvrir</button>
+      <p class="lead">Si tu utilises déjà le Portail LGC, reprends simplement ta session enseignant.</p>
+      <div class="teacher-sso-actions">
+        <button id="portal-sso" class="btn btn-primary" type="button">Continuer avec le Portail LGC <span aria-hidden="true">→</span></button>
+        <small>Pas de mot de passe ou de jeton à recopier.</small>
       </div>
+      <details class="teacher-legacy-access">
+        <summary>Accès de secours par jeton</summary>
+        <p class="teacher-muted">À conserver pendant la transition SSO.</p>
+        <div class="answer-row">
+          <input id="token" class="teacher-input" type="password" autocomplete="current-password" placeholder="Jeton enseignant" aria-label="Jeton enseignant" />
+          <button id="open-dashboard" class="btn btn-secondary">Ouvrir avec le jeton</button>
+        </div>
+      </details>
       <p id="login-status" class="teacher-status" role="status"></p>
     </section>
 
@@ -509,21 +524,24 @@
     });
   }
 
-  async function validateMasterAndShowHome() {
+  async function validateMasterAndShowHome({ quiet = false } = {}) {
     try {
-      await masterApi('/api/teacher/status');
+      const response = await masterApi('/api/teacher/status');
+      const payload = await response.json();
       login.classList.add('hidden');
       sessionDashboard.classList.add('hidden');
       teacherHome.classList.remove('hidden');
       loginStatus.textContent = '';
       renderRecents();
       setHomeTab(requestedHomeTab() || sessionStorage.getItem(HOME_TAB_KEY) || 'create', { remember:false });
+      return payload;
     } catch (error) {
       sessionStorage.removeItem('maths-lgc-teacher-token');
       teacherHome.classList.add('hidden');
       sessionDashboard.classList.add('hidden');
       login.classList.remove('hidden');
-      loginStatus.textContent = error.message;
+      loginStatus.textContent = quiet ? '' : error.message;
+      return null;
     }
   }
 
@@ -778,6 +796,11 @@
     }
   }
 
+  document.querySelector('#portal-sso').addEventListener('click', () => {
+    const tab = requestedHomeTab() || sessionStorage.getItem(HOME_TAB_KEY) || 'create';
+    location.assign('/api/sso/start?tab=' + encodeURIComponent(tab));
+  });
+
   document.querySelector('#open-dashboard').addEventListener('click', () => {
     const value = tokenInput.value.trim();
     if (!value) {
@@ -880,14 +903,20 @@
     }
   });
 
-  document.querySelector('#logout').addEventListener('click', () => {
+  document.querySelector('#logout').addEventListener('click', async () => {
     stopSessionPolling();
     currentSessionId = '';
+    try {
+      await request('/api/teacher/logout', { method:'POST' });
+    } catch {
+      // Legacy-token mode has no server-side browser session to revoke.
+    }
     sessionStorage.removeItem('maths-lgc-teacher-token');
     teacherHome.classList.add('hidden');
     sessionDashboard.classList.add('hidden');
     login.classList.remove('hidden');
     tokenInput.value = '';
+    loginStatus.textContent = '';
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -915,7 +944,12 @@
       await validateMasterAndShowHome();
       return;
     }
+    const ssoSession = await validateMasterAndShowHome({ quiet:true });
+    if (ssoSession) return;
     login.classList.remove('hidden');
+    if (params.get('sso') === 'failed') {
+      loginStatus.textContent = 'La connexion avec le Portail LGC a expiré ou a échoué. Réessaie, ou utilise l’accès de secours.';
+    }
   }
 
   initialize();

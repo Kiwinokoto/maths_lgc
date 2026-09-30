@@ -55,6 +55,10 @@ CLASS_STATE_LOCK = Lock()
 SESSIONS_LOCK = Lock()
 
 
+class ClosedSessionError(ValueError):
+    pass
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -527,7 +531,7 @@ def validate_payload(raw: object) -> dict:
         if not class_session:
             raise ValueError("Séance de classe invalide ou inconnue.")
         if not bool(class_session.get("active", True)):
-            raise ValueError("Cette séance est fermée.")
+            raise ClosedSessionError("Cette séance est fermée.")
         teacher_id = class_session["teacher_id"]
         course_session = class_session["course_session"]
         group_label = class_session["group_label"]
@@ -1269,6 +1273,8 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             payload = validate_payload(raw)
+        except ClosedSessionError as exc:
+            return self._json(HTTPStatus.GONE, {"error": str(exc)})
         except ValueError as exc:
             return self._json(400, {"error": str(exc)})
         created_at = utc_now()

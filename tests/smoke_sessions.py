@@ -234,6 +234,26 @@ def main() -> int:
             assert_status(status, 200, "closed session report remains readable")
             assert closed_summary["session"]["active"] is False
 
+            closed_progress = {
+                "student_id": "student_closed_sso_001",
+                "display_name": "Eleve test",
+                "first_name": "Eleve",
+                "last_name": "Test",
+                "birth_date": "2008-04-12",
+                "class_session_id": sso_session,
+                "stage": "activity",
+                "activity": {
+                    "event": "session_started",
+                    "route": "parcours",
+                    "session_id": "activity_closed_sso_001",
+                },
+            }
+            status, _, closed_progress_body = json_request(
+                base, "/api/progress", method="POST", payload=closed_progress
+            )
+            assert_status(status, 410, "closed session rejects progress writes")
+            assert "fermée" in closed_progress_body["error"]
+
             status, _, denied_reopen = json_request(
                 base,
                 "/api/teacher/session-active",

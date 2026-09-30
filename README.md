@@ -28,7 +28,7 @@ Les temps observés sont volontairement grossiers : ils peuvent inclure une expl
 
 ## Lancer localement
 
-Définir un jeton enseignant puis lancer le serveur Python :
+Pour le développement local autonome, définir le jeton enseignant de secours puis lancer le serveur Python :
 
 ```bash
 export MATHS_TEACHER_TOKEN='un-secret-local'
@@ -45,7 +45,9 @@ La base est créée dans `data/maths_lgc.sqlite3` et n'est pas versionnée.
 
 ## Variables d'environnement
 
-- `MATHS_TEACHER_TOKEN` : secret nécessaire pour lire le tableau enseignant ;
+- `MATHS_TEACHER_TOKEN` : accès enseignant de secours pendant la transition SSO ;
+- `MATHS_PORTAL_URL` : URL du Portail LGC utilisé pour le SSO, défaut `https://portail.lagrandeclasse.fr` ;
+- `MATHS_TEACHER_SESSION_TTL_HOURS` : durée d’une session SSO Maths, défaut `12` heures ;
 - `MATHS_HOST` : adresse d'écoute, défaut `0.0.0.0` ;
 - `MATHS_PORT` : port, défaut `8080` ;
 - `MATHS_DATA_DIR` : dossier de données, défaut `./data`.
@@ -74,6 +76,10 @@ Le workflow :
 Le workflow ne redémarre pas Traefik et ne supprime pas les anciennes images Docker.
 
 ## Suivi enseignant
+
+En production, l’accès recommandé part du Portail LGC. Maths génère une demande PKCE, le portail vérifie la session enseignant déjà ouverte et renvoie un code valable 90 secondes et une seule fois. Maths échange ce code côté serveur puis crée sa propre session navigateur HttpOnly. Aucun jeton enseignant n’est transmis dans l’URL ou partagé entre sous-domaines.
+
+Le bouton d’accès par jeton reste disponible dans un bloc « accès de secours » pendant la phase de validation.
 
 La route `/teacher` sert d'abord à créer une occurrence de séance (professeur + séance + groupe). Elle affiche ensuite le QR et le lien élève ainsi qu'un lien de gestion secret. Ce secret donne accès uniquement au suivi de cette occurrence : liste des inscrits, avancement, résultats, déblocage des corrigés et exports CSV/JSON.
 

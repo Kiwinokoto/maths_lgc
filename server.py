@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import base64
 import csv
 import hashlib
 import io
@@ -11,8 +12,11 @@ import re
 import secrets
 import sqlite3
 import sys
-from datetime import datetime, timezone
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
@@ -30,6 +34,11 @@ HOST = os.environ.get("MATHS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("MATHS_PORT", "8080"))
 TEACHER_TOKEN = os.environ.get("MATHS_TEACHER_TOKEN", "")
 PUBLIC_BASE_URL = os.environ.get("MATHS_PUBLIC_URL", "https://maths.lagrandeclasse.fr").rstrip("/")
+PORTAL_BASE_URL = os.environ.get("MATHS_PORTAL_URL", "https://portail.lagrandeclasse.fr").rstrip("/")
+TEACHER_SESSION_COOKIE = "maths_teacher_session"
+SSO_PENDING_COOKIE = "maths_sso_pending"
+TEACHER_SESSION_TTL_HOURS = int(os.environ.get("MATHS_TEACHER_SESSION_TTL_HOURS", "12"))
+SSO_PENDING_TTL_SECONDS = 300
 MAX_BODY = 64 * 1024
 STUDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 CLASS_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
@@ -85,6 +94,86 @@ def init_db() -> None:
             """
         )
         db.execute("CREATE INDEX IF NOT EXISTS idx_submissions_student ON submissions(student_id, id)")
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS teacher_browser_sessions (
+                token_hash TEXT PRIMARY KEY,
+                portal_user_id TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_teacher_browser_sessions_expiry "
+            "ON teacher_browser_sessions(expires_at)"
+        )
+
+
+def _hash_secret(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _pkce_challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+def create_teacher_browser_session(user: dict) -> tuple[str, datetime]:
+    role = str(user.get("role") or "")
+    display_name = " ".join(str(user.get("display_name") or "").split()).strip()
+    portal_user_id = str(user.get("id") or "")
+    if role not in {"admin", "teacher"} or not portal_user_id or not (1 <= len(display_name) <= 80):
+        raise ValueError("Identité enseignant invalide.")
+
+    raw = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(hours=TEACHER_SESSION_TTL_HOURS)
+    with connect_db() as db:
+        db.execute(
+            "DELETE FROM teacher_browser_sessions WHERE expires_at<?",
+            (now.isoformat(timespec="seconds"),),
+        )
+        db.execute(
+            """INSERT INTO teacher_browser_sessions(
+                token_hash,portal_user_id,display_name,role,expires_at,created_at
+            ) VALUES(?,?,?,?,?,?)""",
+            (
+                _hash_secret(raw),
+                portal_user_id,
+                display_name,
+                role,
+                expires.isoformat(timespec="seconds"),
+                now.isoformat(timespec="seconds"),
+            ),
+        )
+    return raw, expires
+
+
+def teacher_from_browser_session(raw: str) -> dict | None:
+    if not raw:
+        return None
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with connect_db() as db:
+        row = db.execute(
+            """SELECT portal_user_id,display_name,role,expires_at
+               FROM teacher_browser_sessions
+               WHERE token_hash=? AND expires_at>?""",
+            (_hash_secret(raw), now),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def delete_teacher_browser_session(raw: str) -> None:
+    if not raw:
+        return
+    with connect_db() as db:
+        db.execute(
+            "DELETE FROM teacher_browser_sessions WHERE token_hash=?",
+            (_hash_secret(raw),),
+        )
 
 
 def _read_class_state_file() -> dict:
@@ -720,7 +809,14 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args: object) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
-    def _headers(self, status: int, content_type: str, length: int | None = None) -> None:
+    def _headers(
+        self,
+        status: int,
+        content_type: str,
+        length: int | None = None,
+        *,
+        cookies: list[str] | None = None,
+    ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -728,16 +824,56 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         self.send_header("Cache-Control", "no-store" if self.path.startswith("/api/") else "no-cache")
+        for cookie in cookies or []:
+            self.send_header("Set-Cookie", cookie)
         if length is not None:
             self.send_header("Content-Length", str(length))
         self.end_headers()
 
-    def _json(self, status: int, payload: object) -> None:
+    def _json(self, status: int, payload: object, *, cookies: list[str] | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        self._headers(status, "application/json; charset=utf-8", len(body))
+        self._headers(status, "application/json; charset=utf-8", len(body), cookies=cookies)
         self.wfile.write(body)
 
+    def _redirect(self, location: str, *, cookies: list[str] | None = None) -> None:
+        self.send_response(HTTPStatus.SEE_OTHER)
+        self.send_header("Location", location)
+        self.send_header("Cache-Control", "no-store")
+        for cookie in cookies or []:
+            self.send_header("Set-Cookie", cookie)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def _cookie(self, name: str) -> str:
+        cookie = SimpleCookie(self.headers.get("Cookie", ""))
+        morsel = cookie.get(name)
+        return morsel.value if morsel else ""
+
+    def _cookie_header(
+        self,
+        name: str,
+        value: str,
+        *,
+        max_age: int,
+        path: str = "/",
+        same_site: str = "Strict",
+    ) -> str:
+        secure = "; Secure" if PUBLIC_BASE_URL.startswith("https://") else ""
+        return (
+            f"{name}={value}; Path={path}; HttpOnly; SameSite={same_site}; "
+            f"Max-Age={max_age}{secure}"
+        )
+
+    def _clear_cookie(self, name: str, *, path: str = "/") -> str:
+        secure = "; Secure" if PUBLIC_BASE_URL.startswith("https://") else ""
+        return f"{name}=; Path={path}; HttpOnly; SameSite=Strict; Max-Age=0{secure}"
+
+    def _teacher_identity(self) -> dict | None:
+        return teacher_from_browser_session(self._cookie(TEACHER_SESSION_COOKIE))
+
     def _authorized(self) -> bool:
+        if self._teacher_identity():
+            return True
         if not TEACHER_TOKEN:
             return False
         auth = self.headers.get("Authorization", "")
@@ -761,6 +897,76 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "Séance invalide."})
         if path == "/healthz":
             return self._json(200, {"ok": True})
+        if path == "/api/sso/start":
+            tab = str((query.get("tab") or [""])[0]).strip()
+            tab = tab if tab in {"create", "inspect", "corrections"} else "create"
+            if self._teacher_identity():
+                return self._redirect("/teacher?" + urlencode({"tab": tab}))
+
+            verifier = secrets.token_urlsafe(48)
+            state = secrets.token_urlsafe(24)
+            challenge = _pkce_challenge(verifier)
+            pending = f"{state}.{verifier}.{tab}"
+            pending_cookie = self._cookie_header(
+                SSO_PENDING_COOKIE,
+                pending,
+                max_age=SSO_PENDING_TTL_SECONDS,
+                path="/api/sso",
+                same_site="Lax",
+            )
+            authorize_url = PORTAL_BASE_URL + "/api/sso/authorize?" + urlencode({
+                "target": "maths",
+                "challenge": challenge,
+                "state": state,
+            })
+            return self._redirect(authorize_url, cookies=[pending_cookie])
+        if path == "/api/sso/callback":
+            code = str((query.get("code") or [""])[0]).strip()
+            state = str((query.get("state") or [""])[0]).strip()
+            pending = self._cookie(SSO_PENDING_COOKIE)
+            clear_pending = self._clear_cookie(SSO_PENDING_COOKIE, path="/api/sso")
+            try:
+                pending_state, verifier, tab = pending.split(".", 2)
+            except ValueError:
+                return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
+            if not code or not state or not secrets.compare_digest(state, pending_state):
+                return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
+            if tab not in {"create", "inspect", "corrections"}:
+                tab = "create"
+
+            try:
+                body = json.dumps({
+                    "target": "maths",
+                    "code": code,
+                    "verifier": verifier,
+                }, separators=(",", ":")).encode("utf-8")
+                request = urllib.request.Request(
+                    PORTAL_BASE_URL + "/api/sso/redeem",
+                    data=body,
+                    method="POST",
+                    headers={"Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                user = payload.get("user") if isinstance(payload, dict) else None
+                if not isinstance(user, dict):
+                    raise ValueError("Réponse SSO invalide.")
+                raw_session, expires = create_teacher_browser_session(user)
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+                return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
+
+            max_age = max(1, int((expires - datetime.now(timezone.utc)).total_seconds()))
+            teacher_cookie = self._cookie_header(
+                TEACHER_SESSION_COOKIE,
+                raw_session,
+                max_age=max_age,
+                path="/",
+                same_site="Strict",
+            )
+            return self._redirect(
+                "/teacher?" + urlencode({"tab": tab}),
+                cookies=[teacher_cookie, clear_pending],
+            )
         if path == "/api/session":
             session = get_class_session(class_session_id)
             if not session:
@@ -779,7 +985,13 @@ class Handler(BaseHTTPRequestHandler):
         if path in {"/api/teacher/status", "/api/teacher/summary"}:
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
-            return self._json(200, {"ok": True, "generated_at": utc_now()})
+            identity = self._teacher_identity()
+            return self._json(200, {
+                "ok": True,
+                "user": identity,
+                "auth_mode": "portal-sso" if identity else "legacy-token",
+                "generated_at": utc_now(),
+            })
         if path == "/api/teacher/session-summary":
             session = get_class_session(class_session_id)
             if not session:
@@ -862,6 +1074,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/teacher/logout":
+            raw = self._cookie(TEACHER_SESSION_COOKIE)
+            delete_teacher_browser_session(raw)
+            return self._json(
+                200,
+                {"ok": True},
+                cookies=[self._clear_cookie(TEACHER_SESSION_COOKIE)],
+            )
+
         allowed_paths = {
             "/api/progress",
             "/api/teacher/corrections",

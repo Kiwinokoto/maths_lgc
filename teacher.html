@@ -93,9 +93,29 @@
     .correction-session-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:14px 16px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.82); }
     .correction-session-row small { display:block; margin-top:3px; color:var(--muted); }
     .report-placeholder { border:1px dashed #cfc7d9; background:linear-gradient(135deg,rgba(247,241,255,.82),rgba(237,241,255,.74)); }
+    .report-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .report-card { display:grid; gap:12px; padding:18px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.82); transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease; }
+    .report-card:hover { transform:translateY(-2px); border-color:#cfc3e5; box-shadow:0 10px 24px rgba(54,39,83,.08); }
+    .report-card-head { display:flex; justify-content:space-between; align-items:start; gap:12px; }
+    .report-card-head small { display:block; margin-top:4px; color:var(--muted); }
+    .report-mini-metrics,.report-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+    .report-mini-metric,.report-metric { padding:11px 12px; border:1px solid var(--line); border-radius:13px; background:#fff; }
+    .report-mini-metric span,.report-metric span { display:block; color:var(--muted); font-size:.72rem; font-weight:750; line-height:1.25; }
+    .report-mini-metric strong { display:block; margin-top:3px; font-size:1.05rem; color:var(--accent-strong); }
+    .report-metric strong { display:block; margin-top:4px; font-size:1.35rem; color:var(--accent-strong); }
+    .report-priorities { display:grid; gap:8px; margin:16px 0; }
+    .report-priority-line { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .report-priority-line > strong { min-width:118px; font-size:.82rem; }
+    .report-table-wrap,.report-comparison-table-wrap { overflow:auto; border:1px solid var(--line); border-radius:15px; background:#fff; }
+    .report-table,.report-comparison-table { width:100%; border-collapse:collapse; min-width:780px; }
+    .report-table th,.report-table td,.report-comparison-table th,.report-comparison-table td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    .report-table th,.report-comparison-table th { background:#f8f6ff; color:var(--accent-strong); font-size:.78rem; }
+    .report-table tr:last-child td,.report-comparison-table tr:last-child td { border-bottom:0; }
+    .report-comparison-block + .report-comparison-block { margin-top:18px; }
+    .report-comparison-block h4 { margin:0 0 8px; }
     @media (max-width:1180px) { .teacher-hub-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
     @media (max-width:760px) {
-      .session-create-grid,.session-share,.teacher-hub-grid,.teacher-course-grid { grid-template-columns:1fr; }
+      .session-create-grid,.session-share,.teacher-hub-grid,.teacher-course-grid,.report-grid,.report-mini-metrics,.report-metrics { grid-template-columns:1fr; }
       .session-link-row { grid-template-columns:1fr; }
       .teacher-tabs { margin-inline:-2px; }
       .teacher-tab { flex:0 0 auto; }
@@ -156,7 +176,7 @@
             <span>Étape 4</span>Suivi en direct <b class="teacher-tab-badge ready">4 s</b>
           </button>
           <button id="tab-reports" class="teacher-tab" role="tab" aria-selected="false" aria-controls="panel-reports" data-tab="reports">
-            <span>Étape 5</span>Rapports <b class="teacher-tab-badge">à venir</b>
+            <span>Étape 5</span>Rapports <b class="teacher-tab-badge ready">V1</b>
           </button>
         </div>
 
@@ -244,10 +264,36 @@
         </section>
 
         <section id="panel-reports" class="teacher-tab-panel" role="tabpanel" aria-labelledby="tab-reports" data-panel="reports" hidden>
-          <section class="card hero report-placeholder">
+          <div class="teacher-tab-intro">
             <p class="eyebrow">Rapports</p>
-            <h2>Transformer la séance en synthèse utile</h2>
-            <p class="teacher-muted">Prévu en trois niveaux : synthèse du groupe, détail élève par élève, puis comparaison entre groupes lorsque les données sont réellement comparables. Cette partie n’est pas encore active.</p>
+            <h2>Transformer les séances en repères utiles</h2>
+            <p class="teacher-muted">Synthèse du groupe, détail élève et comparaison descriptive entre groupes ayant travaillé la même séance. Les durées restent des indices de rythme, jamais une mesure de niveau.</p>
+          </div>
+          <p id="reports-status" class="teacher-status" role="status"></p>
+          <div id="report-groups" class="report-grid"></div>
+          <section id="report-detail" class="card hero hidden" aria-live="polite">
+            <div class="teacher-toolbar">
+              <div>
+                <p class="eyebrow">Détail</p>
+                <h3 id="report-detail-title">Groupe</h3>
+                <p id="report-detail-meta" class="teacher-muted"></p>
+              </div>
+              <button id="report-open-live" class="btn btn-secondary" type="button">Ouvrir le suivi</button>
+            </div>
+            <div id="report-detail-stats" class="report-metrics"></div>
+            <div id="report-priorities" class="report-priorities"></div>
+            <div class="report-table-wrap">
+              <table class="report-table">
+                <thead><tr><th>Élève</th><th>Diagnostic</th><th>Défi</th><th>À travailler</th><th>Commencer par</th><th>Temps indicatifs</th></tr></thead>
+                <tbody id="report-student-rows"></tbody>
+              </table>
+            </div>
+          </section>
+          <section id="report-comparison" class="card hero hidden">
+            <p class="eyebrow">Comparaison descriptive</p>
+            <h3>Mêmes séances, groupes différents</h3>
+            <p class="teacher-muted">Comparer aide à préparer la remédiation collective. Il ne s’agit ni d’un classement des groupes ni d’une mesure de niveau.</p>
+            <div id="report-comparison-content"></div>
           </section>
         </section>
       </div>
@@ -316,7 +362,7 @@
           </button>
           <button id="go-reports" class="teacher-hub-action" type="button">
             <strong>Rapports</strong>
-            <span>Synthèses groupe et individuelles — à venir.</span>
+            <span>Synthèse du groupe, détail individuel et comparaison descriptive.</span>
           </button>
         </div>
       </section>
@@ -511,6 +557,7 @@
     }
     if (target === 'corrections') renderCorrectionSessions();
     if (target === 'live') renderLiveSessions();
+    if (target === 'reports') renderReports();
   }
 
   async function renderCorrectionSessions() {
@@ -605,6 +652,281 @@
       row.append(text, status, button);
       box.append(row);
     });
+  }
+
+  function median(values) {
+    const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+    if (!sorted.length) return null;
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  function summarizeReport(payload) {
+    const students = payload.students || [];
+    const diagnostics = students.filter(student => student.diagnostic && Number.isFinite(student.diagnostic.score));
+    const challenges = students.filter(student => (student.challenge || {}).score === 3);
+    const weaknessCounts = new Map();
+    const strengthCounts = new Map();
+    const diagnosticTimes = [];
+    const sessionTimes = [];
+    let unknownTotal = 0;
+
+    students.forEach(student => {
+      (student.weaknesses || []).forEach(label => weaknessCounts.set(label, (weaknessCounts.get(label) || 0) + 1));
+      (student.strengths || []).forEach(label => strengthCounts.set(label, (strengthCounts.get(label) || 0) + 1));
+      unknownTotal += Number(student.unknown_count || 0);
+      const timing = student.timing || {};
+      if (Number.isFinite(timing.diagnostic_seconds)) diagnosticTimes.push(timing.diagnostic_seconds);
+      if (Number.isFinite(timing.session_to_bilan_seconds)) sessionTimes.push(timing.session_to_bilan_seconds);
+    });
+
+    const ordered = map => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
+    return {
+      payload,
+      session: payload.session,
+      students,
+      enrolled: students.length,
+      diagnosticCount: diagnostics.length,
+      diagnosticAverage: diagnostics.length ? diagnostics.reduce((sum, student) => sum + student.diagnostic.score, 0) / diagnostics.length : null,
+      challengeComplete: challenges.length,
+      unknownTotal,
+      medianDiagnosticSeconds: median(diagnosticTimes),
+      medianSessionSeconds: median(sessionTimes),
+      weaknesses: ordered(weaknessCounts),
+      strengths: ordered(strengthCounts),
+    };
+  }
+
+  function reportMetric(label, value) {
+    const box = document.createElement('div');
+    box.className = 'report-metric';
+    const name = document.createElement('span');
+    name.textContent = label;
+    const strong = document.createElement('strong');
+    strong.textContent = value;
+    box.append(name, strong);
+    return box;
+  }
+
+  function miniReportMetric(label, value) {
+    const box = document.createElement('div');
+    box.className = 'report-mini-metric';
+    const name = document.createElement('span');
+    name.textContent = label;
+    const strong = document.createElement('strong');
+    strong.textContent = value;
+    box.append(name, strong);
+    return box;
+  }
+
+  function ratioLabel(count, total) {
+    return total ? count + '/' + total : '0';
+  }
+
+  function diagnosticAverageLabel(value) {
+    return Number.isFinite(value) ? value.toFixed(1).replace('.', ',') + '/10' : '—';
+  }
+
+  function addPriorityLine(container, label, entries, emptyText) {
+    const row = document.createElement('div');
+    row.className = 'report-priority-line';
+    const heading = document.createElement('strong');
+    heading.textContent = label;
+    row.append(heading);
+    if (!entries.length) {
+      const text = document.createElement('span');
+      text.className = 'teacher-muted';
+      text.textContent = emptyText;
+      row.append(text);
+    } else {
+      entries.slice(0, 5).forEach(([name, count]) => {
+        const chip = document.createElement('span');
+        chip.className = 'pill';
+        chip.textContent = name + ' · ' + count;
+        row.append(chip);
+      });
+    }
+    container.append(row);
+  }
+
+  function renderReportDetail(report) {
+    const detail = document.querySelector('#report-detail');
+    detail.classList.remove('hidden');
+    detail.dataset.sessionId = report.session.class_session_id;
+    document.querySelector('#report-detail-title').textContent = report.session.group_label;
+    document.querySelector('#report-detail-meta').textContent =
+      report.session.course_session_label + ' · ' + report.session.teacher_label + ' · créée ' +
+      new Date(report.session.created_at).toLocaleDateString('fr-FR');
+
+    const stats = document.querySelector('#report-detail-stats');
+    stats.replaceChildren(
+      reportMetric('Inscrits', String(report.enrolled)),
+      reportMetric('Diagnostic terminé', ratioLabel(report.diagnosticCount, report.enrolled)),
+      reportMetric('Moyenne diagnostic', diagnosticAverageLabel(report.diagnosticAverage)),
+      reportMetric('Défi validé', ratioLabel(report.challengeComplete, report.enrolled))
+    );
+
+    const priorities = document.querySelector('#report-priorities');
+    priorities.replaceChildren();
+    addPriorityLine(priorities, 'À retravailler', report.weaknesses, 'Pas encore assez de réponses.');
+    addPriorityLine(priorities, 'Points solides', report.strengths, 'Pas encore assez de réponses.');
+    const rhythm = document.createElement('div');
+    rhythm.className = 'report-priority-line';
+    const rhythmLabel = document.createElement('strong');
+    rhythmLabel.textContent = 'Rythme indicatif';
+    const rhythmText = document.createElement('span');
+    rhythmText.className = 'teacher-muted';
+    const bits = [];
+    if (Number.isFinite(report.medianDiagnosticSeconds)) bits.push('diagnostic médian ' + formatDuration(report.medianDiagnosticSeconds));
+    if (Number.isFinite(report.medianSessionSeconds)) bits.push('début → bilan médian ' + formatDuration(report.medianSessionSeconds));
+    rhythmText.textContent = bits.length ? bits.join(' · ') : 'Pas encore de durée exploitable.';
+    rhythm.append(rhythmLabel, rhythmText);
+    priorities.append(rhythm);
+
+    const tbody = document.querySelector('#report-student-rows');
+    tbody.replaceChildren();
+    report.students
+      .slice()
+      .sort((a, b) => String(a.last_name || '').localeCompare(String(b.last_name || ''), 'fr') || String(a.first_name || a.display_name || '').localeCompare(String(b.first_name || b.display_name || ''), 'fr'))
+      .forEach(student => {
+        const row = document.createElement('tr');
+        const timing = student.timing || {};
+        const timingBits = [];
+        if (Number.isFinite(timing.diagnostic_seconds)) timingBits.push('Diagnostic ' + formatDuration(timing.diagnostic_seconds));
+        if (Number.isFinite(timing.challenge_seconds)) timingBits.push('Défi ' + formatDuration(timing.challenge_seconds));
+        if (Number.isFinite(timing.session_to_bilan_seconds)) timingBits.push('Début → bilan ' + formatDuration(timing.session_to_bilan_seconds));
+        const values = [
+          [student.first_name || student.display_name, student.last_name].filter(Boolean).join(' ') || '—',
+          student.diagnostic ? student.diagnostic.score + '/10' : '—',
+          student.challenge ? student.challenge.score + '/3' : '—',
+          (student.weaknesses || []).join(', ') || '—',
+          student.recommended_start || '—',
+          timingBits.join(' · ') || '—',
+        ];
+        values.forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.append(cell);
+        });
+        tbody.append(row);
+      });
+
+    detail.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  function renderReportComparison(reports) {
+    const section = document.querySelector('#report-comparison');
+    const content = document.querySelector('#report-comparison-content');
+    content.replaceChildren();
+
+    const byCourse = new Map();
+    reports.forEach(report => {
+      const key = report.session.course_session || report.session.course_session_label;
+      if (!byCourse.has(key)) byCourse.set(key, []);
+      byCourse.get(key).push(report);
+    });
+    const comparable = [...byCourse.values()].filter(group => group.length >= 2);
+    section.classList.toggle('hidden', !comparable.length);
+    if (!comparable.length) return;
+
+    comparable.forEach(group => {
+      const block = document.createElement('div');
+      block.className = 'report-comparison-block';
+      const title = document.createElement('h4');
+      title.textContent = group[0].session.course_session_label;
+      const wrap = document.createElement('div');
+      wrap.className = 'report-comparison-table-wrap';
+      const table = document.createElement('table');
+      table.className = 'report-comparison-table';
+      const head = document.createElement('thead');
+      head.innerHTML = '<tr><th>Groupe</th><th>Inscrits</th><th>Diagnostic terminé</th><th>Moyenne diagnostic</th><th>Défi validé</th><th>Diagnostic médian</th></tr>';
+      const body = document.createElement('tbody');
+      group
+        .slice()
+        .sort((a, b) => a.session.group_label.localeCompare(b.session.group_label, 'fr'))
+        .forEach(report => {
+          const row = document.createElement('tr');
+          [
+            report.session.group_label,
+            String(report.enrolled),
+            ratioLabel(report.diagnosticCount, report.enrolled),
+            diagnosticAverageLabel(report.diagnosticAverage),
+            ratioLabel(report.challengeComplete, report.enrolled),
+            Number.isFinite(report.medianDiagnosticSeconds) ? formatDuration(report.medianDiagnosticSeconds) : '—',
+          ].forEach(value => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.append(cell);
+          });
+          body.append(row);
+        });
+      table.append(head, body);
+      wrap.append(table);
+      block.append(title, wrap);
+      content.append(block);
+    });
+  }
+
+  async function renderReports() {
+    const status = document.querySelector('#reports-status');
+    const grid = document.querySelector('#report-groups');
+    const detail = document.querySelector('#report-detail');
+    const comparison = document.querySelector('#report-comparison');
+    status.textContent = 'Préparation des synthèses…';
+    grid.replaceChildren();
+    detail.classList.add('hidden');
+    comparison.classList.add('hidden');
+
+    const sessions = visibleSessions().filter(session => canAccessSession(session.class_session_id));
+    if (!sessions.length) {
+      status.textContent = portalIdentity
+        ? 'Crée une première séance : son rapport apparaîtra ici automatiquement.'
+        : 'Aucune séance accessible sur cet appareil.';
+      return;
+    }
+
+    const settled = await Promise.allSettled(sessions.map(session => fetchSessionSummary(session.class_session_id)));
+    const reports = settled
+      .filter(result => result.status === 'fulfilled')
+      .map(result => summarizeReport(result.value));
+
+    if (!reports.length) {
+      status.textContent = 'Les séances existent, mais aucun rapport n’a pu être chargé pour le moment.';
+      return;
+    }
+
+    status.textContent = reports.length + ' séance' + (reports.length > 1 ? 's' : '') + ' analysée' + (reports.length > 1 ? 's' : '') + '.';
+    reports.forEach(report => {
+      const card = document.createElement('article');
+      card.className = 'report-card';
+      const head = document.createElement('div');
+      head.className = 'report-card-head';
+      const text = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = report.session.group_label;
+      const meta = document.createElement('small');
+      meta.textContent = report.session.course_session_label + ' · ' + new Date(report.session.created_at).toLocaleDateString('fr-FR');
+      text.append(title, meta);
+      const open = document.createElement('button');
+      open.className = 'btn btn-secondary';
+      open.type = 'button';
+      open.textContent = 'Voir le détail';
+      open.addEventListener('click', () => renderReportDetail(report));
+      head.append(text, open);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'report-mini-metrics';
+      metrics.append(
+        miniReportMetric('Inscrits', String(report.enrolled)),
+        miniReportMetric('Diagnostic', ratioLabel(report.diagnosticCount, report.enrolled)),
+        miniReportMetric('Moyenne', diagnosticAverageLabel(report.diagnosticAverage)),
+        miniReportMetric('Défi validé', ratioLabel(report.challengeComplete, report.enrolled))
+      );
+      card.append(head, metrics);
+      grid.append(card);
+    });
+
+    renderReportComparison(reports);
   }
 
   function renderRecents() {
@@ -914,6 +1236,13 @@
       dashboardStatus.textContent = error.message;
     }
   }
+
+  document.querySelector('#report-open-live').addEventListener('click', async () => {
+    const id = document.querySelector('#report-detail').dataset.sessionId || '';
+    if (!id) return;
+    await openSession(id);
+    requestAnimationFrame(() => scrollToTeacherSection('#teacher-students'));
+  });
 
   document.querySelector('#portal-sso').addEventListener('click', () => {
     const tab = requestedHomeTab() || sessionStorage.getItem(HOME_TAB_KEY) || 'create';

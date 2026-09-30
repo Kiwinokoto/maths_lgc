@@ -77,7 +77,7 @@ Le workflow ne redémarre pas Traefik et ne supprime pas les anciennes images Do
 
 ## Suivi enseignant
 
-L’interface enseignant reprend les cinq mêmes espaces que le Portail LGC : **Séances**, **Parcours**, **Corrigés**, **Suivi en direct**, **Rapports**. Cette nomenclature est volontairement commune aux matières internes et externes. Rapports est visible mais encore indiqué « à venir ».
+L’interface enseignant reprend les cinq mêmes espaces que le Portail LGC : **Séances**, **Parcours**, **Corrigés**, **Suivi en direct**, **Rapports**. Cette nomenclature est volontairement commune aux matières internes et externes. **Rapports V1** produit une synthèse par groupe, un détail élève par élève et une comparaison descriptive entre groupes lorsqu’ils ont travaillé la même séance.
 
 En production, l’accès recommandé part du Portail LGC. Maths génère une demande PKCE, le portail vérifie la session enseignant déjà ouverte et renvoie un code valable 90 secondes et une seule fois. Maths échange ce code côté serveur puis crée sa propre session navigateur HttpOnly. Aucun jeton enseignant n’est transmis dans l’URL ou partagé entre sous-domaines.
 
@@ -98,3 +98,7 @@ La route `/teacher` sert à créer une occurrence de séance puis à la piloter.
 - [`docs/module-commerce.md`](docs/module-commerce.md) : prix, remise, coût, marge simple et facture.
 - [`docs/module-probabilites.md`](docs/module-probabilites.md) : hasard, fréquence et simulation.
 - [`docs/audit-exercices.md`](docs/audit-exercices.md) : audit des énoncés, clés et corrigés du diagnostic, du défi et des modules.
+
+### État de validation au 30 septembre 2026
+
+La récupération des séances SSO par identité Portail est couverte par les tests automatisés et déployée. Le test manuel sur deux machines / navigateurs distincts reste à faire par Kevin ; il ne doit pas être considéré comme validé terrain avant ce contrôle.

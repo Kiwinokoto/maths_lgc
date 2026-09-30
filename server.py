@@ -385,10 +385,39 @@ def get_class_session(class_session_id: str) -> dict | None:
     return dict(session) if isinstance(session, dict) else None
 
 
-def create_class_session(*, teacher_id: str, session_number: int, session_title: str, group_label: str) -> tuple[dict, str]:
+def teacher_owned_sessions(portal_user_id: str) -> list[dict]:
+    if not portal_user_id:
+        return []
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        sessions = [
+            public_session(item)
+            for item in raw["sessions"].values()
+            if isinstance(item, dict)
+            and str(item.get("owner_portal_user_id") or "") == portal_user_id
+        ]
+    return sorted(sessions, key=lambda item: item["created_at"], reverse=True)
+
+
+def create_class_session(
+    *,
+    teacher_id: str,
+    session_number: int,
+    session_title: str,
+    group_label: str,
+    teacher_label: str = "",
+    owner_portal_user_id: str = "",
+) -> tuple[dict, str]:
     now = utc_now()
     course_session = f"seance-{session_number}"
     course_session_label = session_label(session_number, session_title)
+    if owner_portal_user_id:
+        teacher_label = " ".join(str(teacher_label or "").split()).strip()
+        if not (1 <= len(teacher_label) <= 80):
+            raise ValueError("Identité enseignant invalide.")
+    else:
+        teacher_label = TEACHERS[teacher_id]
+
     with SESSIONS_LOCK:
         raw = _read_sessions_file()
         sessions = raw["sessions"]
@@ -400,7 +429,8 @@ def create_class_session(*, teacher_id: str, session_number: int, session_title:
         session = {
             "class_session_id": class_session_id,
             "teacher_id": teacher_id,
-            "teacher_label": TEACHERS[teacher_id],
+            "teacher_label": teacher_label,
+            "owner_portal_user_id": owner_portal_user_id,
             "session_number": session_number,
             "session_title": session_title,
             "course_session": course_session,
@@ -881,6 +911,14 @@ class Handler(BaseHTTPRequestHandler):
         return bool(supplied) and secrets.compare_digest(supplied, TEACHER_TOKEN)
 
     def _session_admin_authorized(self, class_session_id: str) -> bool:
+        session = get_class_session(class_session_id)
+        if not session:
+            return False
+        identity = self._teacher_identity()
+        if identity:
+            owner_id = str(session.get("owner_portal_user_id") or "")
+            if owner_id and secrets.compare_digest(owner_id, str(identity["portal_user_id"])):
+                return True
         supplied = self.headers.get("X-Session-Token", "")
         return session_admin_authorized(class_session_id, supplied)
 
@@ -991,6 +1029,15 @@ class Handler(BaseHTTPRequestHandler):
                 "user": identity,
                 "auth_mode": "portal-sso" if identity else "legacy-token",
                 "generated_at": utc_now(),
+            })
+        if path == "/api/teacher/sessions":
+            if not self._authorized():
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
+            identity = self._teacher_identity()
+            sessions = teacher_owned_sessions(str(identity["portal_user_id"])) if identity else []
+            return self._json(200, {
+                "sessions": sessions,
+                "auth_mode": "portal-sso" if identity else "legacy-token",
             })
         if path == "/api/teacher/session-summary":
             session = get_class_session(class_session_id)
@@ -1107,27 +1154,41 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/teacher/sessions":
             if not isinstance(raw, dict):
                 return self._json(400, {"error": "Données de séance invalides."})
+            identity = self._teacher_identity()
             try:
-                teacher_id = clean_teacher_id(raw.get("teacher_id"))
                 session_number = clean_session_number(raw.get("session_number"))
                 session_title = clean_session_title(raw.get("session_title"))
                 group_label = clean_group_label(raw.get("group_label"))
+                if identity:
+                    owner_id = str(identity["portal_user_id"])
+                    teacher_id = f"portal-{owner_id}"
+                    teacher_label = str(identity["display_name"])
+                else:
+                    owner_id = ""
+                    teacher_id = clean_teacher_id(raw.get("teacher_id"))
+                    teacher_label = TEACHERS[teacher_id]
             except ValueError as exc:
                 return self._json(400, {"error": str(exc)})
             session, admin_token = create_class_session(
                 teacher_id=teacher_id,
+                teacher_label=teacher_label,
+                owner_portal_user_id=owner_id,
                 session_number=session_number,
                 session_title=session_title,
                 group_label=group_label,
             )
             session_id = session["class_session_id"]
-            return self._json(201, {
+            response = {
                 "session": session,
-                "admin_token": admin_token,
                 "join_url": session_join_url(session_id),
-                "manage_url": f"{PUBLIC_BASE_URL}/teacher?session={session_id}#token={admin_token}",
+                "manage_url": f"{PUBLIC_BASE_URL}/teacher?session={session_id}",
                 "qr_url": f"/api/session-qr?id={session_id}",
-            })
+                "access_mode": "portal-owner" if identity else "session-token",
+            }
+            if not identity:
+                response["admin_token"] = admin_token
+                response["manage_url"] += f"#token={admin_token}"
+            return self._json(201, response)
 
         if path == "/api/teacher/session-corrections":
             if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):

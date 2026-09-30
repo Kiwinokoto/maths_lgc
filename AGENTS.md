@@ -4,7 +4,7 @@
 Support web interactif de mathématiques pour les CAP Production et service en restaurations (PSR) de La Grande Classe.
 
 ## Principes
-- UI : sobre mais attractive pour des CAP 1re année ; palette principale violet/indigo, accents chauds pêche/ambre/rose, vert réservé aux états de réussite ; légère inspiration manga sans gamification infantilisante ni effets qui nuisent à la lecture.
+- UI : sobre mais attractive pour des CAP 1re année ; identité visuelle violet/indigo avec bleu et rose décoratifs. **Couleurs sémantiques réservées** : vert = correct/réussi/terminé ; orange = à reprendre/erreur pédagogique/attention ; rouge = objectif fort/à retenir/important (et erreur système/destructif). Ne jamais employer vert/orange comme simple décoration, et ne jamais transmettre un état par la couleur seule. Légère inspiration manga sans gamification infantilisante ni effets qui nuisent à la lecture.
 - Priorité pédagogique : situations PSR concrètes, progression guidée et remédiation.
 - Accessibilité linguistique : au début du parcours, phrases courtes, vocabulaire courant, exemples visuels/concrets ; introduire le vocabulaire mathématique et professionnel progressivement, en particulier pour les élèves avec parcours scolaire fragile ou français en cours d'acquisition.
 - Frontend mobile-first en HTML/CSS/JS, sans compte élève ni dépendance frontend.

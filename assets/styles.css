@@ -2357,3 +2357,66 @@ p { line-height: 1.65; }
     break-inside: avoid;
   }
 }
+
+
+/* Student session entry — simple, high-contrast and clearly interactive. */
+.join-landing{
+  isolation:isolate;
+  background:
+    radial-gradient(circle at 88% 18%,rgba(156,132,255,.11),transparent 18rem),
+    linear-gradient(180deg,rgba(255,255,255,.90),rgba(255,254,250,.98));
+  border-color:#ddd5ee;
+}
+.join-landing h1{max-width:10ch}
+.join-code-card{
+  position:relative;
+  max-width:42rem;
+  border-color:#d8ceec;
+  background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(246,241,255,.78));
+  box-shadow:0 12px 30px rgba(75,60,126,.08);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.join-code-card:focus-within{
+  transform:translateY(-2px);
+  border-color:rgba(102,86,242,.55);
+  box-shadow:0 16px 36px rgba(75,60,126,.12);
+}
+.join-code-kicker{
+  display:block;
+  margin-bottom:4px;
+  color:var(--accent-strong);
+  font-size:.7rem;
+  font-weight:900;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.join-code-row input{
+  flex:1 1 260px;
+  min-height:52px;
+  padding:.78rem .92rem;
+  border:1px solid var(--line-strong);
+  border-radius:14px;
+  color:var(--ink);
+  background:#fff;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.join-code-row input:hover{border-color:#bfb2dc}
+.join-code-row input:focus{
+  border-color:var(--accent);
+  outline:none;
+  box-shadow:0 0 0 4px rgba(102,86,242,.12);
+}
+.join-code-row .btn-primary{
+  min-width:132px;
+  gap:8px;
+}
+.join-code-row .btn-primary span{
+  display:inline-block;
+  transition:transform .16s ease;
+}
+.join-code-row .btn-primary:hover span{transform:translateX(3px)}
+@media (max-width:620px){
+  .join-landing h1{font-size:clamp(2.35rem,14vw,4.2rem)}
+  .join-code-row{align-items:stretch}
+  .join-code-row .btn-primary{width:100%}
+}

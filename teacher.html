@@ -34,6 +34,10 @@
     .teacher-table tr:last-child td { border-bottom:0; }
     .teacher-muted { color:var(--muted); font-size:.86rem; }
     .teacher-timing-note { margin:12px 0 20px; padding:13px 15px; border:1px solid #d7defe; border-radius:13px; background:var(--blue-soft); color:#4056c8; font-size:.84rem; line-height:1.5; }
+    .teacher-live-state { display:inline-flex; align-items:center; gap:7px; margin-top:5px; padding:5px 9px; border:1px solid #d7defe; border-radius:999px; color:#4056c8; background:var(--blue-soft); font-size:.76rem; font-weight:850; }
+    .teacher-live-dot { width:7px; height:7px; border-radius:50%; background:var(--blue); box-shadow:0 0 0 0 rgba(95,124,255,.28); animation:teacherLivePulse 1.8s ease-out infinite; }
+    @keyframes teacherLivePulse { 70% { box-shadow:0 0 0 7px rgba(95,124,255,0); } 100% { box-shadow:0 0 0 0 rgba(95,124,255,0); } }
+    @media (prefers-reduced-motion:reduce) { .teacher-live-dot { animation:none; } }
     .teacher-release-card { display:flex; justify-content:space-between; gap:18px; align-items:center; margin:0 0 20px; padding:16px 18px; border:1px solid #d8ceec; border-radius:16px; background:linear-gradient(135deg,#f8f4ff,#edf1ff); }
     .teacher-release-card p { margin:4px 0 0; color:var(--muted); font-size:.86rem; line-height:1.5; }
     .teacher-release-actions { display:flex; gap:10px; align-items:center; flex:0 0 auto; }
@@ -226,6 +230,10 @@
           <p class="eyebrow" id="session-eyebrow">Séance</p>
           <h2 id="session-title" style="margin-bottom:6px">Suivi du groupe</h2>
           <p class="teacher-muted" id="generated-at"></p>
+          <div id="live-refresh-state" class="teacher-live-state" title="Le suivi de cette séance se met à jour automatiquement.">
+            <span class="teacher-live-dot" aria-hidden="true"></span>
+            <span>Suivi automatique · 4 s</span>
+          </div>
         </div>
         <div class="actions" style="margin-top:0">
           <button id="back-home" class="btn btn-ghost">Accueil enseignant</button>
@@ -349,8 +357,12 @@
   const homeStatus = document.querySelector('#home-status');
   const dashboardStatus = document.querySelector('#dashboard-status');
 
+  const LIVE_REFRESH_MS = 4000;
+
   let data = null;
   let currentSessionId = '';
+  let sessionPollTimer = null;
+  let sessionPollInFlight = false;
 
   const masterToken = () => sessionStorage.getItem('maths-lgc-teacher-token') || '';
   const sessionTokenKey = id => 'maths-lgc-session-token:' + id;
@@ -394,6 +406,11 @@
       created_at: session.created_at
     });
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recent.slice(0, 12)));
+  }
+
+  function requestedHomeTab() {
+    const tab = new URLSearchParams(location.search).get('tab') || '';
+    return ['create', 'inspect', 'corrections'].includes(tab) ? tab : '';
   }
 
   function setHomeTab(tabName, { remember = true } = {}) {
@@ -500,7 +517,7 @@
       teacherHome.classList.remove('hidden');
       loginStatus.textContent = '';
       renderRecents();
-      setHomeTab(sessionStorage.getItem(HOME_TAB_KEY) || 'create', { remember:false });
+      setHomeTab(requestedHomeTab() || sessionStorage.getItem(HOME_TAB_KEY) || 'create', { remember:false });
     } catch (error) {
       sessionStorage.removeItem('maths-lgc-teacher-token');
       teacherHome.classList.add('hidden');
@@ -560,20 +577,24 @@
     });
   }
 
-  function renderSession(payload) {
+  function renderSession(payload, { full = true } = {}) {
     data = payload;
     const session = payload.session;
     const students = payload.students || [];
-    document.querySelector('#session-eyebrow').textContent = session.course_session_label;
-    document.querySelector('#session-title').textContent = session.teacher_label + ' · ' + session.group_label;
-    document.querySelector('#session-context').textContent = session.teacher_label + ' · ' + session.course_session_label + ' · ' + session.group_label;
-    document.querySelector('#session-code').value = session.class_session_id;
-    document.querySelector('#student-link').value = studentUrl(session.class_session_id);
-    document.querySelector('#manage-link').value = managementUrl(session.class_session_id);
-    document.querySelector('#session-qr').src = '/api/session-qr?id=' + encodeURIComponent(session.class_session_id);
-    document.querySelector('#explore-course').href = '/?preview=teacher&session=' + encodeURIComponent(session.class_session_id) + '#parcours';
+
+    if (full) {
+      document.querySelector('#session-eyebrow').textContent = session.course_session_label;
+      document.querySelector('#session-title').textContent = session.teacher_label + ' · ' + session.group_label;
+      document.querySelector('#session-context').textContent = session.teacher_label + ' · ' + session.course_session_label + ' · ' + session.group_label;
+      document.querySelector('#session-code').value = session.class_session_id;
+      document.querySelector('#student-link').value = studentUrl(session.class_session_id);
+      document.querySelector('#manage-link').value = managementUrl(session.class_session_id);
+      document.querySelector('#session-qr').src = '/api/session-qr?id=' + encodeURIComponent(session.class_session_id);
+      document.querySelector('#explore-course').href = '/?preview=teacher&session=' + encodeURIComponent(session.class_session_id) + '#parcours';
+    }
+
     document.querySelector('#generated-at').textContent = payload.generated_at
-      ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleString('fr-FR')
+      ? 'Actualisé : ' + new Date(payload.generated_at).toLocaleTimeString('fr-FR')
       : '';
 
     document.querySelector('#student-count').textContent = students.length;
@@ -653,17 +674,60 @@
     });
   }
 
+  function stopSessionPolling() {
+    if (sessionPollTimer) window.clearTimeout(sessionPollTimer);
+    sessionPollTimer = null;
+  }
+
+  function scheduleSessionPolling() {
+    stopSessionPolling();
+    if (!currentSessionId || document.hidden) return;
+    sessionPollTimer = window.setTimeout(() => refreshCurrentSession({ automatic:true }), LIVE_REFRESH_MS);
+  }
+
+  async function fetchSessionSummary(id) {
+    const response = await sessionApi('/api/teacher/session-summary?id=' + encodeURIComponent(id), id);
+    return response.json();
+  }
+
+  async function refreshCurrentSession({ automatic = false } = {}) {
+    const id = currentSessionId;
+    if (!id || sessionPollInFlight) return;
+
+    sessionPollInFlight = true;
+    if (!automatic) dashboardStatus.textContent = 'Actualisation…';
+    try {
+      const payload = await fetchSessionSummary(id);
+      if (currentSessionId !== id) return;
+      renderSession(payload, { full:false });
+      if (!automatic) dashboardStatus.textContent = '';
+    } catch (error) {
+      if (currentSessionId !== id) return;
+      if (!automatic) dashboardStatus.textContent = error.message;
+      if (error.message.includes('refusé')) {
+        localStorage.removeItem(sessionTokenKey(id));
+        currentSessionId = '';
+        stopSessionPolling();
+      }
+    } finally {
+      sessionPollInFlight = false;
+      if (currentSessionId === id) scheduleSessionPolling();
+    }
+  }
+
   async function openSession(id) {
     const token = sessionToken(id);
     if (!token) {
       homeStatus.textContent = 'Le lien de gestion de cette séance est nécessaire sur cet appareil.';
       return;
     }
+
+    stopSessionPolling();
     currentSessionId = id;
     dashboardStatus.textContent = 'Actualisation…';
     try {
-      const response = await sessionApi('/api/teacher/session-summary?id=' + encodeURIComponent(id), id);
-      const payload = await response.json();
+      const payload = await fetchSessionSummary(id);
+      if (currentSessionId !== id) return;
       saveRecent(payload.session);
       teacherHome.classList.add('hidden');
       login.classList.add('hidden');
@@ -671,6 +735,7 @@
       renderSession(payload);
       dashboardStatus.textContent = '';
       history.replaceState(null, '', '/teacher?session=' + encodeURIComponent(id));
+      scheduleSessionPolling();
     } catch (error) {
       dashboardStatus.textContent = error.message;
       if (error.message.includes('refusé')) localStorage.removeItem(sessionTokenKey(id));
@@ -766,7 +831,7 @@
   });
 
   document.querySelector('#refresh').addEventListener('click', () => {
-    if (currentSessionId) openSession(currentSessionId);
+    if (currentSessionId) refreshCurrentSession();
   });
 
   document.querySelector('#toggle-corrections').addEventListener('click', async () => {
@@ -781,7 +846,7 @@
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({ class_session_id:currentSessionId, unlocked:nextUnlocked })
       });
-      await openSession(currentSessionId);
+      await refreshCurrentSession({ automatic:true });
       dashboardStatus.textContent = nextUnlocked ? 'Corrigés débloqués pour cette séance.' : 'Corrigés reverrouillés pour cette séance.';
     } catch (error) {
       dashboardStatus.textContent = error.message;
@@ -804,6 +869,7 @@
   document.querySelector('#export-csv').addEventListener('click', () => downloadSession('/api/teacher/session-export.csv', 'maths-lgc-classe-' + currentSessionId + '.csv'));
 
   document.querySelector('#back-home').addEventListener('click', () => {
+    stopSessionPolling();
     sessionDashboard.classList.add('hidden');
     currentSessionId = '';
     history.replaceState(null, '', '/teacher');
@@ -815,11 +881,21 @@
   });
 
   document.querySelector('#logout').addEventListener('click', () => {
+    stopSessionPolling();
+    currentSessionId = '';
     sessionStorage.removeItem('maths-lgc-teacher-token');
     teacherHome.classList.add('hidden');
     sessionDashboard.classList.add('hidden');
     login.classList.remove('hidden');
     tokenInput.value = '';
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopSessionPolling();
+      return;
+    }
+    if (currentSessionId) refreshCurrentSession({ automatic:true });
   });
 
   async function initialize() {

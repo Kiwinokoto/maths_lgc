@@ -386,24 +386,26 @@
   function renderPrehome() {
     if (!teacherPreview && !classContext) {
       shell(`
-        <section class="card hero">
+        <section class="card hero join-landing">
           <p class="eyebrow">CAP PSR · Maths LGC</p>
           <h1>Rejoins la séance de ton professeur.</h1>
-          <p class="lead">Scanne le QR code affiché par ton professeur ou ouvre le lien qu’il t’a envoyé. Tu arriveras automatiquement dans le bon groupe.</p>
+          <p class="lead">Le plus simple est de scanner le QR code affiché par ton professeur. Si tu as reçu un lien, ouvre-le directement&nbsp;: ton groupe sera déjà reconnu.</p>
           ${classContextError ? `<div class="callout"><strong>Ce lien ne fonctionne pas :</strong> ${escapeHtml(classContextError)}</div>` : ''}
-          <div class="identity-card">
+          <div class="identity-card join-code-card">
             <div class="identity-heading">
               <div>
-                <strong>Pas de QR ?</strong>
-                <p>Entre le code de séance donné par ton professeur.</p>
+                <span class="join-code-kicker">Sinon</span>
+                <strong>Entre le code de séance</strong>
+                <p>Utilise le code court donné par ton professeur.</p>
               </div>
+              <span class="identity-badge">QR ou code</span>
             </div>
-            <div class="answer-row">
-              <input id="session-code" type="text" maxlength="64" autocomplete="off" placeholder="Code de séance" />
-              <button class="btn btn-primary" id="join-session">Rejoindre</button>
+            <div class="answer-row join-code-row">
+              <input id="session-code" type="text" maxlength="64" autocomplete="off" placeholder="Code de séance" aria-label="Code de séance" />
+              <button class="btn btn-primary" id="join-session">Rejoindre <span aria-hidden="true">→</span></button>
             </div>
           </div>
-          <p class="footer-note">Tu n’as pas à choisir ton professeur ni ton groupe : le lien de séance s’en charge.</p>
+          <p class="footer-note">Tu n’as pas à choisir ton professeur ni ton groupe : la séance s’en charge automatiquement.</p>
         </section>
       `, 0);
       const join = () => {

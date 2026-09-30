@@ -899,7 +899,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if path == "/api/sso/start":
             tab = str((query.get("tab") or [""])[0]).strip()
-            tab = tab if tab in {"create", "inspect", "corrections"} else "create"
+            tab = tab if tab in {"create", "inspect", "corrections", "live", "reports"} else "create"
             if self._teacher_identity():
                 return self._redirect("/teacher?" + urlencode({"tab": tab}))
 
@@ -931,7 +931,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
             if not code or not state or not secrets.compare_digest(state, pending_state):
                 return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
-            if tab not in {"create", "inspect", "corrections"}:
+            if tab not in {"create", "inspect", "corrections", "live", "reports"}:
                 tab = "create"
 
             try:

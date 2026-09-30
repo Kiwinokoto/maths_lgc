@@ -77,6 +77,8 @@ Le workflow ne redémarre pas Traefik et ne supprime pas les anciennes images Do
 
 ## Suivi enseignant
 
+L’interface enseignant reprend les cinq mêmes espaces que le Portail LGC : **Séances**, **Parcours**, **Corrigés**, **Suivi en direct**, **Rapports**. Cette nomenclature est volontairement commune aux matières internes et externes. Rapports est visible mais encore indiqué « à venir ».
+
 En production, l’accès recommandé part du Portail LGC. Maths génère une demande PKCE, le portail vérifie la session enseignant déjà ouverte et renvoie un code valable 90 secondes et une seule fois. Maths échange ce code côté serveur puis crée sa propre session navigateur HttpOnly. Aucun jeton enseignant n’est transmis dans l’URL ou partagé entre sous-domaines.
 
 Le bouton d’accès par jeton reste disponible dans un bloc « accès de secours » pendant la phase de validation.

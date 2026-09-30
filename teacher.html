@@ -287,7 +287,7 @@
               <input id="manage-link" class="teacher-input" type="text" readonly aria-label="Lien de gestion" />
               <button id="copy-manage-link" class="btn btn-secondary">Copier le lien de gestion</button>
             </div>
-            <p class="teacher-muted"><strong>Important :</strong> le lien de gestion donne accès aux résultats de ce groupe. Garde-le côté enseignant.</p>
+            <p class="teacher-muted"><strong>Accès enseignant :</strong> les nouvelles séances créées via le Portail LGC sont rattachées à ton compte et peuvent être retrouvées sur un autre appareil. Les anciennes séances peuvent encore utiliser leur lien de gestion secret.</p>
             <div class="actions"><button id="open-teacher-space" class="btn btn-primary" type="button">Ouvrir mon espace professeur</button></div>
           </div>
         </div>
@@ -400,6 +400,11 @@
   let currentSessionId = '';
   let sessionPollTimer = null;
   let sessionPollInFlight = false;
+  let portalIdentity = null;
+  let ownedSessions = [];
+
+  const teacherSelect = document.querySelector('#create-teacher');
+  const legacyTeacherOptions = teacherSelect.innerHTML;
 
   const masterToken = () => sessionStorage.getItem('maths-lgc-teacher-token') || '';
   const sessionTokenKey = id => 'maths-lgc-session-token:' + id;
@@ -445,6 +450,46 @@
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recent.slice(0, 12)));
   }
 
+  function visibleSessions() {
+    const merged = new Map();
+    ownedSessions.forEach(session => merged.set(session.class_session_id, session));
+    readRecents().forEach(session => {
+      if (!merged.has(session.class_session_id)) merged.set(session.class_session_id, session);
+    });
+    return [...merged.values()].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  }
+
+  function canAccessSession(id) {
+    return Boolean(sessionToken(id)) || ownedSessions.some(session => session.class_session_id === id);
+  }
+
+  async function loadOwnedSessions() {
+    if (!portalIdentity) {
+      ownedSessions = [];
+      return;
+    }
+    const response = await masterApi('/api/teacher/sessions');
+    const payload = await response.json();
+    ownedSessions = Array.isArray(payload.sessions) ? payload.sessions : [];
+  }
+
+  function configureTeacherSelector() {
+    if (portalIdentity) {
+      teacherSelect.innerHTML = '';
+      const option = document.createElement('option');
+      option.value = 'portal';
+      option.textContent = portalIdentity.display_name;
+      option.selected = true;
+      teacherSelect.append(option);
+      teacherSelect.disabled = true;
+      teacherSelect.title = 'Identité fournie par le Portail LGC';
+      return;
+    }
+    teacherSelect.disabled = false;
+    teacherSelect.title = '';
+    teacherSelect.innerHTML = legacyTeacherOptions;
+  }
+
   const HOME_TABS = ['create', 'inspect', 'corrections', 'live', 'reports'];
 
   function requestedHomeTab() {
@@ -471,7 +516,7 @@
   async function renderCorrectionSessions() {
     const box = document.querySelector('#correction-sessions');
     box.replaceChildren();
-    const recents = readRecents();
+    const recents = visibleSessions();
     if (!recents.length) {
       const empty = document.createElement('section');
       empty.className = 'card hero';
@@ -492,13 +537,13 @@
 
       const status = document.createElement('span');
       status.className = 'pill teacher-release-status locked';
-      status.textContent = sessionToken(session.class_session_id) ? 'Vérification…' : 'Accès requis';
+      status.textContent = canAccessSession(session.class_session_id) ? 'Vérification…' : 'Accès requis';
 
       const button = document.createElement('button');
       button.className = 'btn btn-secondary';
       button.type = 'button';
       button.textContent = 'Gérer les corrigés';
-      button.disabled = !sessionToken(session.class_session_id);
+      button.disabled = !canAccessSession(session.class_session_id);
       button.addEventListener('click', async () => {
         await openSession(session.class_session_id);
         requestAnimationFrame(() => scrollToTeacherSection('#teacher-corrections'));
@@ -507,7 +552,7 @@
       row.append(text, status, button);
       box.append(row);
 
-      if (sessionToken(session.class_session_id)) {
+      if (canAccessSession(session.class_session_id)) {
         try {
           const response = await sessionApi('/api/teacher/session-summary?id=' + encodeURIComponent(session.class_session_id), session.class_session_id);
           const payload = await response.json();
@@ -525,7 +570,7 @@
   function renderLiveSessions() {
     const box = document.querySelector('#live-sessions');
     box.replaceChildren();
-    const recents = readRecents();
+    const recents = visibleSessions();
     if (!recents.length) {
       const empty = document.createElement('section');
       empty.className = 'card hero';
@@ -550,8 +595,8 @@
       const button = document.createElement('button');
       button.className = 'btn btn-primary';
       button.type = 'button';
-      button.textContent = sessionToken(session.class_session_id) ? 'Ouvrir le suivi' : 'Accès requis';
-      button.disabled = !sessionToken(session.class_session_id);
+      button.textContent = canAccessSession(session.class_session_id) ? 'Ouvrir le suivi' : 'Accès requis';
+      button.disabled = !canAccessSession(session.class_session_id);
       button.addEventListener('click', async () => {
         await openSession(session.class_session_id);
         requestAnimationFrame(() => scrollToTeacherSection('#teacher-students'));
@@ -565,11 +610,11 @@
   function renderRecents() {
     const box = document.querySelector('#recent-sessions');
     box.replaceChildren();
-    const recents = readRecents();
+    const recents = visibleSessions();
     if (!recents.length) {
       const empty = document.createElement('p');
       empty.className = 'teacher-muted';
-      empty.textContent = 'Aucune séance créée sur cet appareil pour le moment.';
+      empty.textContent = portalIdentity ? 'Aucune séance créée avec ton compte pour le moment.' : 'Aucune séance créée sur cet appareil pour le moment.';
       box.append(empty);
       return;
     }
@@ -584,8 +629,8 @@
       text.append(title, meta);
       const button = document.createElement('button');
       button.className = 'btn btn-secondary';
-      button.textContent = sessionToken(session.class_session_id) ? 'Ouvrir le suivi' : 'Lien de gestion requis';
-      button.disabled = !sessionToken(session.class_session_id);
+      button.textContent = canAccessSession(session.class_session_id) ? 'Ouvrir le suivi' : 'Lien de gestion requis';
+      button.disabled = !canAccessSession(session.class_session_id);
       button.addEventListener('click', () => openSession(session.class_session_id));
       row.append(text, button);
       box.append(row);
@@ -596,6 +641,9 @@
     try {
       const response = await masterApi('/api/teacher/status');
       const payload = await response.json();
+      portalIdentity = payload && payload.user ? payload.user : null;
+      configureTeacherSelector();
+      await loadOwnedSessions();
       login.classList.add('hidden');
       sessionDashboard.classList.add('hidden');
       teacherHome.classList.remove('hidden');
@@ -605,6 +653,9 @@
       return payload;
     } catch (error) {
       sessionStorage.removeItem('maths-lgc-teacher-token');
+      portalIdentity = null;
+      ownedSessions = [];
+      configureTeacherSelector();
       teacherHome.classList.add('hidden');
       sessionDashboard.classList.add('hidden');
       login.classList.remove('hidden');
@@ -615,7 +666,8 @@
 
   function managementUrl(id) {
     const token = sessionToken(id);
-    return location.origin + '/teacher?session=' + encodeURIComponent(id) + '#token=' + encodeURIComponent(token);
+    const base = location.origin + '/teacher?session=' + encodeURIComponent(id);
+    return token ? base + '#token=' + encodeURIComponent(token) : base;
   }
 
   function studentUrl(id) {
@@ -802,9 +854,8 @@
   }
 
   async function openSession(id) {
-    const token = sessionToken(id);
-    if (!token) {
-      homeStatus.textContent = 'Le lien de gestion de cette séance est nécessaire sur cet appareil.';
+    if (!canAccessSession(id)) {
+      homeStatus.textContent = 'Cette séance n’est pas rattachée à ton compte sur cet appareil. Utilise son ancien lien de gestion si nécessaire.';
       return;
     }
 
@@ -890,12 +941,15 @@
   });
 
   document.querySelector('#create-session').addEventListener('click', async () => {
-    const teacherId = document.querySelector('#create-teacher').value;
+    const teacherId = teacherSelect.value;
     const sessionNumber = Number(document.querySelector('#create-session-number').value);
     const sessionTitle = document.querySelector('#create-session-title').value.trim();
     const groupLabel = document.querySelector('#create-group').value.trim();
-    if (!TEACHERS[teacherId] || !Number.isInteger(sessionNumber) || sessionNumber < 1 || sessionNumber > 999 || !groupLabel) {
-      homeStatus.textContent = 'Choisis le professeur, un numéro de séance valide et renseigne le groupe.';
+    const teacherValid = portalIdentity || Boolean(TEACHERS[teacherId]);
+    if (!teacherValid || !Number.isInteger(sessionNumber) || sessionNumber < 1 || sessionNumber > 999 || !groupLabel) {
+      homeStatus.textContent = portalIdentity
+        ? 'Renseigne un numéro de séance valide et le groupe.'
+        : 'Choisis le professeur, un numéro de séance valide et renseigne le groupe.';
       return;
     }
     const button = document.querySelector('#create-session');
@@ -908,11 +962,16 @@
         body:JSON.stringify({ teacher_id:teacherId, session_number:sessionNumber, session_title:sessionTitle, group_label:groupLabel })
       });
       const created = await response.json();
-      localStorage.setItem(sessionTokenKey(created.session.class_session_id), created.admin_token);
+      if (created.admin_token) {
+        localStorage.setItem(sessionTokenKey(created.session.class_session_id), created.admin_token);
+      }
       saveRecent(created.session);
+      await loadOwnedSessions();
       document.querySelector('#create-session-title').value = '';
       document.querySelector('#create-group').value = '';
-      homeStatus.textContent = 'Séance créée.';
+      homeStatus.textContent = portalIdentity
+        ? 'Séance créée et rattachée à ton compte Portail.'
+        : 'Séance créée.';
       await openSession(created.session.class_session_id);
     } catch (error) {
       homeStatus.textContent = error.message;
@@ -968,13 +1027,13 @@
   document.querySelector('#export-json').addEventListener('click', () => downloadSession('/api/teacher/session-history', 'maths-lgc-historique-' + currentSessionId + '.json', true));
   document.querySelector('#export-csv').addEventListener('click', () => downloadSession('/api/teacher/session-export.csv', 'maths-lgc-classe-' + currentSessionId + '.csv'));
 
-  document.querySelector('#back-home').addEventListener('click', () => {
+  document.querySelector('#back-home').addEventListener('click', async () => {
     stopSessionPolling();
     sessionDashboard.classList.add('hidden');
     currentSessionId = '';
     history.replaceState(null, '', '/teacher');
-    if (masterToken()) validateMasterAndShowHome();
-    else {
+    const authenticated = await validateMasterAndShowHome({ quiet:true });
+    if (!authenticated) {
       teacherHome.classList.add('hidden');
       login.classList.remove('hidden');
     }
@@ -989,6 +1048,9 @@
       // Legacy-token mode has no server-side browser session to revoke.
     }
     sessionStorage.removeItem('maths-lgc-teacher-token');
+    portalIdentity = null;
+    ownedSessions = [];
+    configureTeacherSelector();
     teacherHome.classList.add('hidden');
     sessionDashboard.classList.add('hidden');
     login.classList.remove('hidden');
@@ -1018,11 +1080,19 @@
       return;
     }
     if (masterToken()) {
-      await validateMasterAndShowHome();
+      const authenticated = await validateMasterAndShowHome();
+      if (authenticated && requestedSession && canAccessSession(requestedSession)) {
+        await openSession(requestedSession);
+      }
       return;
     }
     const ssoSession = await validateMasterAndShowHome({ quiet:true });
-    if (ssoSession) return;
+    if (ssoSession) {
+      if (requestedSession && canAccessSession(requestedSession)) {
+        await openSession(requestedSession);
+      }
+      return;
+    }
     login.classList.remove('hidden');
     if (params.get('sso') === 'failed') {
       loginStatus.textContent = 'La connexion avec le Portail LGC a expiré ou a échoué. Réessaie, ou utilise l’accès de secours.';

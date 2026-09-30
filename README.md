@@ -83,7 +83,7 @@ En production, l’accès recommandé part du Portail LGC. Maths génère une de
 
 Le bouton d’accès par jeton reste disponible dans un bloc « accès de secours » pendant la phase de validation.
 
-La route `/teacher` sert d'abord à créer une occurrence de séance (professeur + séance + groupe). Elle affiche ensuite le QR et le lien élève ainsi qu'un lien de gestion secret. Ce secret donne accès uniquement au suivi de cette occurrence : liste des inscrits, avancement, résultats, déblocage des corrigés et exports CSV/JSON.
+La route `/teacher` sert à créer une occurrence de séance puis à la piloter. Avec le SSO Portail, une nouvelle séance est automatiquement rattachée à l’identité enseignant du Portail : elle peut donc être retrouvée après reconnexion sur un autre appareil sans dépendre du `localStorage`. Les anciennes séances restent compatibles avec leur lien/secret de gestion historique. L’accès à une séance reste isolé : un autre compte enseignant du Portail ne peut pas ouvrir ses résultats.
 
 ## Documentation
 

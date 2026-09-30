@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -114,6 +115,78 @@ def main() -> int:
             )
             assert_status(status, 200, "teacher status with token")
             assert status_body.get("ok") is True
+
+            # Portal SSO identity owns new sessions server-side, so they are
+            # recoverable on another browser/device without a local management secret.
+            sso_cookie = "sso_smoke_owner_cookie_1234567890"
+            other_cookie = "sso_smoke_other_cookie_1234567890"
+            db_path = Path(data_dir, "maths_lgc.sqlite3")
+            with sqlite3.connect(db_path) as db:
+                for raw_cookie, portal_id, display_name in [
+                    (sso_cookie, "42", "Kevin Portail"),
+                    (other_cookie, "99", "Autre Prof"),
+                ]:
+                    db.execute(
+                        """INSERT INTO teacher_browser_sessions(
+                            token_hash,portal_user_id,display_name,role,expires_at,created_at
+                        ) VALUES(?,?,?,?,?,?)""",
+                        (
+                            hashlib.sha256(raw_cookie.encode("utf-8")).hexdigest(),
+                            portal_id,
+                            display_name,
+                            "teacher",
+                            "2099-01-01T00:00:00+00:00",
+                            "2026-09-30T11:00:00+00:00",
+                        ),
+                    )
+
+            sso_headers = {"Cookie": f"maths_teacher_session={sso_cookie}"}
+            status, _, sso_status = json_request(
+                base, "/api/teacher/status", headers=sso_headers
+            )
+            assert_status(status, 200, "teacher status with portal SSO cookie")
+            assert sso_status["auth_mode"] == "portal-sso"
+            assert sso_status["user"]["portal_user_id"] == "42"
+
+            status, _, sso_created = json_request(
+                base,
+                "/api/teacher/sessions",
+                method="POST",
+                payload={
+                    "teacher_id": "",
+                    "session_number": 3,
+                    "session_title": "Session SSO",
+                    "group_label": "PSR SSO",
+                },
+                headers=sso_headers,
+            )
+            assert_status(status, 201, "create SSO-owned session")
+            sso_session = sso_created["session"]["class_session_id"]
+            assert sso_created["session"]["teacher_label"] == "Kevin Portail"
+            assert sso_created["session"]["teacher_id"] == "portal-42"
+            assert sso_created["access_mode"] == "portal-owner"
+            assert "admin_token" not in sso_created
+
+            status, _, owned = json_request(
+                base, "/api/teacher/sessions", headers=sso_headers
+            )
+            assert_status(status, 200, "list SSO-owned sessions")
+            assert [item["class_session_id"] for item in owned["sessions"]] == [sso_session]
+
+            status, _, owner_summary = json_request(
+                base,
+                f"/api/teacher/session-summary?id={sso_session}",
+                headers=sso_headers,
+            )
+            assert_status(status, 200, "owner opens SSO-owned session without management token")
+            assert owner_summary["session"]["class_session_id"] == sso_session
+
+            status, _, _ = json_request(
+                base,
+                f"/api/teacher/session-summary?id={sso_session}",
+                headers={"Cookie": f"maths_teacher_session={other_cookie}"},
+            )
+            assert_status(status, 401, "other portal teacher cannot open owned session")
 
             status, _, legacy_public = json_request(
                 base, f"/api/session?id={legacy_session}"

@@ -188,6 +188,88 @@ def main() -> int:
             )
             assert_status(status, 401, "other portal teacher cannot open owned session")
 
+            # Closing a session is reversible: public learner access stops,
+            # history/report access stays teacher-authorized, and corrections relock.
+            status, _, _ = json_request(
+                base,
+                "/api/teacher/session-corrections",
+                method="POST",
+                payload={"class_session_id": sso_session, "unlocked": True},
+                headers=sso_headers,
+            )
+            assert_status(status, 200, "unlock corrections before close")
+
+            status, _, closed = json_request(
+                base,
+                "/api/teacher/session-active",
+                method="POST",
+                payload={"class_session_id": sso_session, "active": False},
+                headers=sso_headers,
+            )
+            assert_status(status, 200, "close SSO-owned session")
+            assert closed["active"] is False
+            assert closed["corrections_unlocked"] is False
+
+            status, _, closed_public = json_request(
+                base, f"/api/session?id={sso_session}"
+            )
+            assert_status(status, 410, "closed session rejects learner entry")
+            assert "fermée" in closed_public["error"]
+
+            status, _, owned_closed = json_request(
+                base, "/api/teacher/sessions", headers=sso_headers
+            )
+            assert_status(status, 200, "closed SSO session remains in teacher list")
+            closed_row = next(
+                item for item in owned_closed["sessions"]
+                if item["class_session_id"] == sso_session
+            )
+            assert closed_row["active"] is False
+
+            status, _, closed_summary = json_request(
+                base,
+                f"/api/teacher/session-summary?id={sso_session}",
+                headers=sso_headers,
+            )
+            assert_status(status, 200, "closed session report remains readable")
+            assert closed_summary["session"]["active"] is False
+
+            status, _, denied_reopen = json_request(
+                base,
+                "/api/teacher/session-active",
+                method="POST",
+                payload={"class_session_id": sso_session, "active": True},
+                headers={"Cookie": f"maths_teacher_session={other_cookie}"},
+            )
+            assert_status(status, 401, "other portal teacher cannot reopen session")
+
+            status, _, closed_correction = json_request(
+                base,
+                "/api/teacher/session-corrections",
+                method="POST",
+                payload={"class_session_id": sso_session, "unlocked": True},
+                headers=sso_headers,
+            )
+            assert_status(status, 400, "closed session corrections stay locked")
+            assert "Réouvre" in closed_correction["error"]
+
+            status, _, reopened = json_request(
+                base,
+                "/api/teacher/session-active",
+                method="POST",
+                payload={"class_session_id": sso_session, "active": True},
+                headers=sso_headers,
+            )
+            assert_status(status, 200, "reopen SSO-owned session")
+            assert reopened["active"] is True
+            assert reopened["corrections_unlocked"] is False
+
+            status, _, reopened_public = json_request(
+                base, f"/api/session?id={sso_session}"
+            )
+            assert_status(status, 200, "same learner link works after reopen")
+            assert reopened_public["active"] is True
+
             status, _, legacy_public = json_request(
                 base, f"/api/session?id={legacy_session}"
             )
@@ -196,6 +278,7 @@ def main() -> int:
             assert legacy_public["session_title"] == ""
             assert legacy_public["course_session"] == "seance-1"
             assert legacy_public["course_session_label"] == "Séance 1"
+            assert legacy_public["active"] is True
 
             status, _, legacy_summary = json_request(
                 base,

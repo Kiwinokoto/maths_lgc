@@ -370,6 +370,7 @@ def public_session(session: dict) -> dict:
         "course_session": course_session,
         "course_session_label": course_session_label,
         "group_label": session["group_label"],
+        "active": bool(session.get("active", True)),
         "corrections_unlocked": bool(session.get("corrections_unlocked", False)),
         "created_at": session["created_at"],
         "updated_at": session.get("updated_at") or session["created_at"],
@@ -437,6 +438,7 @@ def create_class_session(
             "course_session_label": course_session_label,
             "group_label": group_label,
             "admin_token_hash": _hash_session_admin_token(admin_token),
+            "active": True,
             "corrections_unlocked": False,
             "created_at": now,
             "updated_at": now,
@@ -446,12 +448,29 @@ def create_class_session(
     return public_session(session), admin_token
 
 
+def update_session_active(*, class_session_id: str, active: bool) -> dict:
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        session = raw["sessions"].get(class_session_id)
+        if not isinstance(session, dict):
+            raise ValueError("Séance introuvable.")
+        session["active"] = bool(active)
+        if not active:
+            session["corrections_unlocked"] = False
+        session["updated_at"] = utc_now()
+        raw["sessions"][class_session_id] = session
+        _write_sessions_file(raw)
+    return public_session(session)
+
+
 def update_session_corrections(*, class_session_id: str, unlocked: bool) -> dict:
     with SESSIONS_LOCK:
         raw = _read_sessions_file()
         session = raw["sessions"].get(class_session_id)
         if not isinstance(session, dict):
             raise ValueError("Séance introuvable.")
+        if not bool(session.get("active", True)):
+            raise ValueError("Réouvre la séance avant de modifier les corrigés.")
         session["corrections_unlocked"] = bool(unlocked)
         session["updated_at"] = utc_now()
         raw["sessions"][class_session_id] = session
@@ -507,6 +526,8 @@ def validate_payload(raw: object) -> dict:
         class_session = get_class_session(class_session_id)
         if not class_session:
             raise ValueError("Séance de classe invalide ou inconnue.")
+        if not bool(class_session.get("active", True)):
+            raise ValueError("Cette séance est fermée.")
         teacher_id = class_session["teacher_id"]
         course_session = class_session["course_session"]
         group_label = class_session["group_label"]
@@ -1009,11 +1030,15 @@ class Handler(BaseHTTPRequestHandler):
             session = get_class_session(class_session_id)
             if not session:
                 return self._json(404, {"error": "Séance introuvable."})
+            if not bool(session.get("active", True)):
+                return self._json(HTTPStatus.GONE, {"error": "Cette séance est fermée."})
             return self._json(200, public_session(session))
         if path == "/api/session-qr":
             session = get_class_session(class_session_id)
             if not session:
                 return self._json(404, {"error": "Séance introuvable."})
+            if not bool(session.get("active", True)):
+                return self._json(HTTPStatus.GONE, {"error": "Cette séance est fermée."})
             body = session_qr_svg(class_session_id)
             self._headers(200, "image/svg+xml; charset=utf-8", len(body))
             self.wfile.write(body)
@@ -1135,6 +1160,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/teacher/corrections",
             "/api/teacher/sessions",
             "/api/teacher/session-corrections",
+            "/api/teacher/session-active",
         }
         if path not in allowed_paths:
             return self._json(404, {"error": "Route inconnue."})
@@ -1189,6 +1215,23 @@ class Handler(BaseHTTPRequestHandler):
                 response["admin_token"] = admin_token
                 response["manage_url"] += f"#token={admin_token}"
             return self._json(201, response)
+
+        if path == "/api/teacher/session-active":
+            if not isinstance(raw, dict) or not isinstance(raw.get("active"), bool):
+                return self._json(400, {"error": "État de séance invalide."})
+            class_session_id = str(raw.get("class_session_id", "") or "").strip()
+            if not get_class_session(class_session_id):
+                return self._json(404, {"error": "Séance introuvable."})
+            if not self._session_admin_authorized(class_session_id):
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès à cette séance refusé."})
+            try:
+                session = update_session_active(
+                    class_session_id=class_session_id,
+                    active=raw["active"],
+                )
+            except ValueError as exc:
+                return self._json(400, {"error": str(exc)})
+            return self._json(200, session)
 
         if path == "/api/teacher/session-corrections":
             if not isinstance(raw, dict) or not isinstance(raw.get("unlocked"), bool):

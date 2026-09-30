@@ -65,6 +65,10 @@
     .recent-sessions { display:grid; gap:10px; margin-top:14px; }
     .recent-session { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.76); }
     .recent-session small { display:block; color:var(--muted); margin-top:3px; }
+    .recent-session-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+    .recent-session.is-closed { background:#f7f5f8; border-style:dashed; }
+    .session-close-button { border-color:#dbcfd9; color:#765e6e; }
+    .session-qr-disabled { opacity:.28; filter:grayscale(1); }
     .teacher-hub-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-top:16px; }
     .teacher-hub-action { min-height:136px; display:flex; flex-direction:column; justify-content:center; gap:6px; padding:16px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.82); color:var(--ink); text-decoration:none; text-align:left; cursor:pointer; font:inherit; transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease; }
     .teacher-hub-action:hover { transform:translateY(-2px); border-color:#cfc3e5; background:var(--accent-soft); color:var(--accent-strong); box-shadow:0 10px 24px rgba(54,39,83,.08); }
@@ -218,7 +222,7 @@
           <section class="card hero">
             <p class="eyebrow">Reprendre</p>
             <h3>Séances récemment créées</h3>
-            <p class="teacher-muted">Rouvre rapidement une séance déjà préparée sur cet appareil.</p>
+            <p class="teacher-muted">Retrouve tes séances, ferme l’accès élève quand elles sont terminées et réouvre-les plus tard si nécessaire.</p>
             <div id="recent-sessions" class="recent-sessions"></div>
           </section>
         </section>
@@ -312,6 +316,7 @@
         </div>
         <div class="actions" style="margin-top:0">
           <button id="back-home" class="btn btn-ghost">Accueil enseignant</button>
+          <button id="toggle-session-active" class="btn btn-secondary">Fermer la séance</button>
           <button id="refresh" class="btn btn-secondary">Actualiser</button>
           <button id="export-json" class="btn btn-secondary">Exporter JSON</button>
           <button id="export-csv" class="btn btn-primary">Exporter CSV</button>
@@ -491,6 +496,7 @@
       teacher_label: session.teacher_label,
       course_session_label: session.course_session_label,
       group_label: session.group_label,
+      active: session.active !== false,
       created_at: session.created_at
     });
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recent.slice(0, 12)));
@@ -503,6 +509,10 @@
       if (!merged.has(session.class_session_id)) merged.set(session.class_session_id, session);
     });
     return [...merged.values()].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  }
+
+  function isSessionActive(session) {
+    return session?.active !== false;
   }
 
   function canAccessSession(id) {
@@ -584,13 +594,15 @@
 
       const status = document.createElement('span');
       status.className = 'pill teacher-release-status locked';
-      status.textContent = canAccessSession(session.class_session_id) ? 'Vérification…' : 'Accès requis';
+      status.textContent = !isSessionActive(session)
+        ? 'Séance fermée'
+        : canAccessSession(session.class_session_id) ? 'Vérification…' : 'Accès requis';
 
       const button = document.createElement('button');
       button.className = 'btn btn-secondary';
       button.type = 'button';
       button.textContent = 'Gérer les corrigés';
-      button.disabled = !canAccessSession(session.class_session_id);
+      button.disabled = !isSessionActive(session) || !canAccessSession(session.class_session_id);
       button.addEventListener('click', async () => {
         await openSession(session.class_session_id);
         requestAnimationFrame(() => scrollToTeacherSection('#teacher-corrections'));
@@ -599,7 +611,7 @@
       row.append(text, status, button);
       box.append(row);
 
-      if (canAccessSession(session.class_session_id)) {
+      if (isSessionActive(session) && canAccessSession(session.class_session_id)) {
         try {
           const response = await sessionApi('/api/teacher/session-summary?id=' + encodeURIComponent(session.class_session_id), session.class_session_id);
           const payload = await response.json();
@@ -637,13 +649,15 @@
 
       const status = document.createElement('span');
       status.className = 'pill';
-      status.textContent = 'Actualisation 4 s';
+      status.textContent = isSessionActive(session) ? 'Actualisation 4 s' : 'Séance fermée';
 
       const button = document.createElement('button');
       button.className = 'btn btn-primary';
       button.type = 'button';
-      button.textContent = canAccessSession(session.class_session_id) ? 'Ouvrir le suivi' : 'Accès requis';
-      button.disabled = !canAccessSession(session.class_session_id);
+      button.textContent = !isSessionActive(session)
+        ? 'Réouvre la séance'
+        : canAccessSession(session.class_session_id) ? 'Ouvrir le suivi' : 'Accès requis';
+      button.disabled = !isSessionActive(session) || !canAccessSession(session.class_session_id);
       button.addEventListener('click', async () => {
         await openSession(session.class_session_id);
         requestAnimationFrame(() => scrollToTeacherSection('#teacher-students'));
@@ -753,6 +767,9 @@
     const detail = document.querySelector('#report-detail');
     detail.classList.remove('hidden');
     detail.dataset.sessionId = report.session.class_session_id;
+    const reportLiveButton = document.querySelector('#report-open-live');
+    reportLiveButton.disabled = !isSessionActive(report.session);
+    reportLiveButton.textContent = isSessionActive(report.session) ? 'Ouvrir le suivi' : 'Séance fermée';
     document.querySelector('#report-detail-title').textContent = report.session.group_label;
     document.querySelector('#report-detail-meta').textContent =
       report.session.course_session_label + ' · ' + report.session.teacher_label + ' · créée ' +
@@ -905,7 +922,7 @@
       const title = document.createElement('strong');
       title.textContent = report.session.group_label;
       const meta = document.createElement('small');
-      meta.textContent = report.session.course_session_label + ' · ' + new Date(report.session.created_at).toLocaleDateString('fr-FR');
+      meta.textContent = report.session.course_session_label + ' · ' + new Date(report.session.created_at).toLocaleDateString('fr-FR') + (isSessionActive(report.session) ? '' : ' · fermée');
       text.append(title, meta);
       const open = document.createElement('button');
       open.className = 'btn btn-secondary';
@@ -942,19 +959,42 @@
     }
     recents.forEach(session => {
       const row = document.createElement('div');
-      row.className = 'recent-session';
+      row.className = 'recent-session' + (isSessionActive(session) ? '' : ' is-closed');
+
       const text = document.createElement('div');
       const title = document.createElement('strong');
       title.textContent = session.teacher_label + ' · ' + session.group_label;
       const meta = document.createElement('small');
-      meta.textContent = session.course_session_label + ' · ' + new Date(session.created_at).toLocaleString('fr-FR');
+      meta.textContent = session.course_session_label + ' · ' + new Date(session.created_at).toLocaleString('fr-FR') + (isSessionActive(session) ? '' : ' · séance fermée');
       text.append(title, meta);
-      const button = document.createElement('button');
-      button.className = 'btn btn-secondary';
-      button.textContent = canAccessSession(session.class_session_id) ? 'Ouvrir le suivi' : 'Lien de gestion requis';
-      button.disabled = !canAccessSession(session.class_session_id);
-      button.addEventListener('click', () => openSession(session.class_session_id));
-      row.append(text, button);
+
+      const actions = document.createElement('div');
+      actions.className = 'recent-session-actions';
+
+      if (isSessionActive(session)) {
+        const open = document.createElement('button');
+        open.className = 'btn btn-secondary';
+        open.textContent = canAccessSession(session.class_session_id) ? 'Ouvrir le suivi' : 'Lien de gestion requis';
+        open.disabled = !canAccessSession(session.class_session_id);
+        open.addEventListener('click', () => openSession(session.class_session_id));
+        actions.append(open);
+      } else {
+        const reports = document.createElement('button');
+        reports.className = 'btn btn-secondary';
+        reports.textContent = 'Rapports';
+        reports.disabled = !canAccessSession(session.class_session_id);
+        reports.addEventListener('click', () => setHomeTab('reports'));
+        actions.append(reports);
+      }
+
+      const lifecycle = document.createElement('button');
+      lifecycle.className = 'btn ' + (isSessionActive(session) ? 'btn-ghost session-close-button' : 'btn-secondary');
+      lifecycle.textContent = isSessionActive(session) ? 'Fermer' : 'Réouvrir';
+      lifecycle.disabled = !canAccessSession(session.class_session_id);
+      lifecycle.addEventListener('click', () => setMathsSessionActive(session.class_session_id, !isSessionActive(session)));
+      actions.append(lifecycle);
+
+      row.append(text, actions);
       box.append(row);
     });
   }
@@ -1065,13 +1105,25 @@
     document.querySelector('#diagnostic-complete').textContent = students.filter(s => Boolean(s.diagnostic)).length;
     document.querySelector('#challenge-complete').textContent = students.filter(s => (s.challenge || {}).score === 3).length;
 
+    const active = isSessionActive(session);
+    const lifecycleButton = document.querySelector('#toggle-session-active');
+    lifecycleButton.textContent = active ? 'Fermer la séance' : 'Réouvrir la séance';
+    lifecycleButton.dataset.active = active ? 'true' : 'false';
+    lifecycleButton.className = 'btn ' + (active ? 'btn-ghost session-close-button' : 'btn-secondary');
+
     const releaseStatus = document.querySelector('#correction-release-status');
     const releaseButton = document.querySelector('#toggle-corrections');
     const unlocked = Boolean(session.corrections_unlocked);
-    releaseStatus.textContent = unlocked ? 'Débloqués' : 'Verrouillés';
-    releaseStatus.className = 'pill teacher-release-status ' + (unlocked ? 'unlocked' : 'locked');
+    releaseStatus.textContent = active ? (unlocked ? 'Débloqués' : 'Verrouillés') : 'Séance fermée · verrouillés';
+    releaseStatus.className = 'pill teacher-release-status ' + (active && unlocked ? 'unlocked' : 'locked');
     releaseButton.textContent = unlocked ? 'Reverrouiller' : 'Débloquer pour les élèves';
     releaseButton.dataset.unlocked = unlocked ? 'true' : 'false';
+    releaseButton.disabled = !active;
+
+    document.querySelector('#copy-student-link').disabled = !active;
+    document.querySelector('#student-link').disabled = !active;
+    document.querySelector('#session-qr').classList.toggle('session-qr-disabled', !active);
+    document.querySelector('#live-refresh-state').classList.toggle('hidden', !active);
 
     renderRoster(students);
 
@@ -1141,7 +1193,7 @@
 
   function scheduleSessionPolling() {
     stopSessionPolling();
-    if (!currentSessionId || document.hidden) return;
+    if (!currentSessionId || document.hidden || data?.session?.active === false) return;
     sessionPollTimer = window.setTimeout(() => refreshCurrentSession({ automatic:true }), LIVE_REFRESH_MS);
   }
 
@@ -1199,6 +1251,40 @@
       dashboardStatus.textContent = error.message;
       if (error.message.includes('refusé')) localStorage.removeItem(sessionTokenKey(id));
     }
+  }
+
+  async function setMathsSessionActive(id, active) {
+    const session = visibleSessions().find(item => item.class_session_id === id);
+    if (!session || !canAccessSession(id)) return;
+    if (!active) {
+      const ok = confirm(
+        'Fermer cette séance ?\n\nLe lien et le QR élève cesseront immédiatement de fonctionner. Les résultats et rapports restent conservés, et tu pourras réouvrir la séance plus tard. Les corrigés seront reverrouillés.'
+      );
+      if (!ok) return;
+    }
+
+    const response = await sessionApi('/api/teacher/session-active', id, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ class_session_id:id, active })
+    });
+    const updated = await response.json();
+
+    ownedSessions = ownedSessions.map(item => item.class_session_id === id ? updated : item);
+    saveRecent(updated);
+    renderRecents();
+
+    if (currentSessionId === id) {
+      data = { ...(data || {}), session: updated };
+      if (!active) stopSessionPolling();
+      await refreshCurrentSession({ automatic:true });
+    }
+
+    const selectedTab = requestedHomeTab() || sessionStorage.getItem(HOME_TAB_KEY) || 'create';
+    if (selectedTab === 'corrections') renderCorrectionSessions();
+    if (selectedTab === 'live') renderLiveSessions();
+    if (selectedTab === 'reports') renderReports();
+    return updated;
   }
 
   async function copyText(value, button) {
@@ -1313,8 +1399,28 @@
     if (currentSessionId) refreshCurrentSession();
   });
 
-  document.querySelector('#toggle-corrections').addEventListener('click', async () => {
+  document.querySelector('#toggle-session-active').addEventListener('click', async () => {
     if (!currentSessionId) return;
+    const active = document.querySelector('#toggle-session-active').dataset.active !== 'true';
+    const button = document.querySelector('#toggle-session-active');
+    button.disabled = true;
+    try {
+      await setMathsSessionActive(currentSessionId, active);
+      dashboardStatus.textContent = active
+        ? 'Séance réouverte : le lien élève fonctionne de nouveau.'
+        : 'Séance fermée : lien élève désactivé, résultats conservés.';
+    } catch (error) {
+      dashboardStatus.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector('#toggle-corrections').addEventListener('click', async () => {
+    if (!currentSessionId || data?.session?.active === false) {
+      dashboardStatus.textContent = 'Réouvre la séance avant de modifier les corrigés.';
+      return;
+    }
     const button = document.querySelector('#toggle-corrections');
     const nextUnlocked = button.dataset.unlocked !== 'true';
     if (nextUnlocked && !confirm('Débloquer maintenant les corrigés détaillés pour les élèves de cette séance ?')) return;

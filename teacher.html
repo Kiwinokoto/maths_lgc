@@ -14,31 +14,31 @@
     .teacher-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
     .teacher-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:14px 0 18px; }
     .teacher-filters label { display:grid; gap:6px; min-width:220px; font-size:.82rem; font-weight:800; color:var(--muted); }
-    .teacher-select { min-height:44px; border:1px solid #cfc7ba; border-radius:12px; padding:.65rem .8rem; background:#fff; color:var(--ink); }
+    .teacher-select { min-height:44px; border:1px solid var(--line-strong); border-radius:12px; padding:.65rem .8rem; background:#fff; color:var(--ink); }
     .teacher-roster { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .teacher-roster-item { display:flex; gap:8px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.82); font-size:.84rem; }
     .teacher-roster-item strong { font-size:.86rem; }
     .teacher-roster-empty { color:var(--muted); font-size:.9rem; }
-    .teacher-input { min-height:46px; width:min(100%,420px); border:1px solid #cfc7ba; border-radius:12px; padding:.7rem .85rem; background:#fff; }
+    .teacher-input { min-height:46px; width:min(100%,420px); border:1px solid var(--line-strong); border-radius:12px; padding:.7rem .85rem; background:#fff; }
     .teacher-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .teacher-stat { padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.7); }
-    .teacher-stat strong { display:block; font-size:2rem; margin-top:4px; }
+    .teacher-stat strong { display:block; margin-top:4px; color:var(--accent-strong); font-size:2rem; }
     .teacher-table-wrap { min-width:0; overflow:auto; border:1px solid var(--line); border-radius:16px; background:#fff; }
     .teacher-table { width:100%; border-collapse:collapse; min-width:1120px; }
     .teacher-table th,.teacher-table td { padding:12px 14px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    .teacher-table th { position:sticky; top:0; background:#fbfaf7; z-index:1; }
+    .teacher-table th { position:sticky; top:0; background:#f8f6ff; color:var(--accent-strong); z-index:1; }
     .teacher-inspect-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:16px; }
     .teacher-inspect-link { display:block; padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.76); color:var(--ink); text-decoration:none; font-weight:850; }
     .teacher-inspect-link:hover { border-color:#cfc3e5; background:var(--accent-soft); color:var(--accent-strong); }
     .teacher-inspect-link small { display:block; margin-top:5px; color:var(--muted); font-weight:650; line-height:1.35; }
     .teacher-table tr:last-child td { border-bottom:0; }
     .teacher-muted { color:var(--muted); font-size:.86rem; }
-    .teacher-timing-note { margin:12px 0 20px; padding:13px 15px; border:1px solid #eadcc5; border-radius:13px; background:#fff7e9; color:#75542f; font-size:.84rem; line-height:1.5; }
-    .teacher-release-card { display:flex; justify-content:space-between; gap:18px; align-items:center; margin:0 0 20px; padding:16px 18px; border:1px solid #ddd3ef; border-radius:16px; background:linear-gradient(135deg,#f8f4ff,#fffaf2); }
+    .teacher-timing-note { margin:12px 0 20px; padding:13px 15px; border:1px solid #d7defe; border-radius:13px; background:var(--blue-soft); color:#4056c8; font-size:.84rem; line-height:1.5; }
+    .teacher-release-card { display:flex; justify-content:space-between; gap:18px; align-items:center; margin:0 0 20px; padding:16px 18px; border:1px solid #d8ceec; border-radius:16px; background:linear-gradient(135deg,#f8f4ff,#edf1ff); }
     .teacher-release-card p { margin:4px 0 0; color:var(--muted); font-size:.86rem; line-height:1.5; }
     .teacher-release-actions { display:flex; gap:10px; align-items:center; flex:0 0 auto; }
-    .teacher-release-status.locked { color:#8a5367; background:#fdebf2; }
-    .teacher-release-status.unlocked { color:#155944; background:#e7fff4; }
+    .teacher-release-status.locked { color:var(--muted); background:#f0edf5; }
+    .teacher-release-status.unlocked { color:var(--accent-strong); background:var(--accent-soft); }
     .timing-cell { min-width:165px; white-space:pre-line; }
     @media (max-width:760px) { .teacher-release-card { align-items:stretch; flex-direction:column; } .teacher-release-actions { justify-content:space-between; } }
     .teacher-errors { display:flex; flex-wrap:wrap; gap:8px; }
@@ -59,7 +59,7 @@
     .teacher-hub-action:hover { border-color:#cfc3e5; background:var(--accent-soft); color:var(--accent-strong); }
     .teacher-hub-action strong { font-size:1rem; }
     .teacher-hub-action span { color:var(--muted); font-size:.84rem; line-height:1.4; }
-    .teacher-hub-action.primary { border-color:#cfc3e5; background:linear-gradient(135deg,#f7f1ff,#fffaf2); }
+    .teacher-hub-action.primary { border-color:#cfc3e5; background:linear-gradient(135deg,#f7f1ff,#edf1ff); }
     .teacher-home-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:14px; margin-bottom:4px; }
     .teacher-home-head h1 { margin:.15rem 0 .35rem; font-size:clamp(2rem,5vw,3.6rem); }
     .teacher-tabs-shell { display:grid; gap:18px; }
@@ -80,7 +80,7 @@
     .correction-session-list { display:grid; gap:10px; }
     .correction-session-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:14px 16px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.82); }
     .correction-session-row small { display:block; margin-top:3px; color:var(--muted); }
-    .report-placeholder { border:1px dashed #cfc7d9; background:linear-gradient(135deg,rgba(247,241,255,.72),rgba(255,250,242,.72)); }
+    .report-placeholder { border:1px dashed #cfc7d9; background:linear-gradient(135deg,rgba(247,241,255,.82),rgba(237,241,255,.74)); }
     @media (max-width:760px) {
       .session-create-grid,.session-share,.teacher-hub-grid,.teacher-course-grid { grid-template-columns:1fr; }
       .session-link-row { grid-template-columns:1fr; }

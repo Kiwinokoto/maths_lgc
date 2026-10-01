@@ -125,6 +125,35 @@ def _pkce_challenge(verifier: str) -> str:
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
+def redeem_portal_user(code: str, verifier: str) -> dict:
+    code = str(code or "").strip()
+    verifier = str(verifier or "").strip()
+    if not code or not verifier:
+        raise ValueError("Preuve Portail manquante.")
+    body = json.dumps({
+        "target": "maths",
+        "code": code,
+        "verifier": verifier,
+    }, separators=(",", ":")).encode("utf-8")
+    request = urllib.request.Request(
+        PORTAL_BASE_URL + "/api/sso/redeem",
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=5) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    user = payload.get("user") if isinstance(payload, dict) else None
+    if not isinstance(user, dict):
+        raise ValueError("Réponse SSO invalide.")
+    role = str(user.get("role") or "")
+    display_name = " ".join(str(user.get("display_name") or "").split()).strip()
+    portal_user_id = str(user.get("id") or "")
+    if role not in {"admin", "teacher"} or not portal_user_id or not (1 <= len(display_name) <= 80):
+        raise ValueError("Identité enseignant invalide.")
+    return user
+
+
 def create_teacher_browser_session(user: dict) -> tuple[str, datetime]:
     role = str(user.get("role") or "")
     display_name = " ".join(str(user.get("display_name") or "").split()).strip()
@@ -963,13 +992,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/sso/start":
             tab = str((query.get("tab") or [""])[0]).strip()
             tab = tab if tab in {"create", "inspect", "corrections", "live", "reports"} else "create"
+            requested_session = str((query.get("session") or [""])[0]).strip()
+            if requested_session and not CLASS_SESSION_ID_RE.fullmatch(requested_session):
+                requested_session = ""
             if self._teacher_identity():
-                return self._redirect("/teacher?" + urlencode({"tab": tab}))
+                target_query = {"tab": tab}
+                if requested_session:
+                    target_query["session"] = requested_session
+                return self._redirect("/teacher?" + urlencode(target_query))
 
             verifier = secrets.token_urlsafe(48)
             state = secrets.token_urlsafe(24)
             challenge = _pkce_challenge(verifier)
-            pending = f"{state}.{verifier}.{tab}"
+            pending = f"{state}.{verifier}.{tab}.{requested_session}"
             pending_cookie = self._cookie_header(
                 SSO_PENDING_COOKIE,
                 pending,
@@ -989,31 +1024,23 @@ class Handler(BaseHTTPRequestHandler):
             pending = self._cookie(SSO_PENDING_COOKIE)
             clear_pending = self._clear_cookie(SSO_PENDING_COOKIE, path="/api/sso")
             try:
-                pending_state, verifier, tab = pending.split(".", 2)
+                pending_parts = pending.split(".", 3)
+                if len(pending_parts) == 3:
+                    pending_state, verifier, tab = pending_parts
+                    requested_session = ""
+                else:
+                    pending_state, verifier, tab, requested_session = pending_parts
             except ValueError:
                 return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
             if not code or not state or not secrets.compare_digest(state, pending_state):
                 return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
             if tab not in {"create", "inspect", "corrections", "live", "reports"}:
                 tab = "create"
+            if requested_session and not CLASS_SESSION_ID_RE.fullmatch(requested_session):
+                requested_session = ""
 
             try:
-                body = json.dumps({
-                    "target": "maths",
-                    "code": code,
-                    "verifier": verifier,
-                }, separators=(",", ":")).encode("utf-8")
-                request = urllib.request.Request(
-                    PORTAL_BASE_URL + "/api/sso/redeem",
-                    data=body,
-                    method="POST",
-                    headers={"Content-Type": "application/json"},
-                )
-                with urllib.request.urlopen(request, timeout=5) as response:
-                    payload = json.loads(response.read().decode("utf-8"))
-                user = payload.get("user") if isinstance(payload, dict) else None
-                if not isinstance(user, dict):
-                    raise ValueError("Réponse SSO invalide.")
+                user = redeem_portal_user(code, verifier)
                 raw_session, expires = create_teacher_browser_session(user)
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
                 return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
@@ -1026,8 +1053,11 @@ class Handler(BaseHTTPRequestHandler):
                 path="/",
                 same_site="Strict",
             )
+            target_query = {"tab": tab}
+            if requested_session:
+                target_query["session"] = requested_session
             return self._redirect(
-                "/teacher?" + urlencode({"tab": tab}),
+                "/teacher?" + urlencode(target_query),
                 cookies=[teacher_cookie, clear_pending],
             )
         if path == "/api/session":
@@ -1161,6 +1191,7 @@ class Handler(BaseHTTPRequestHandler):
 
         allowed_paths = {
             "/api/progress",
+            "/api/portal/session-summaries",
             "/api/teacher/corrections",
             "/api/teacher/sessions",
             "/api/teacher/session-corrections",
@@ -1180,6 +1211,18 @@ class Handler(BaseHTTPRequestHandler):
             raw = json.loads(self.rfile.read(length))
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             return self._json(400, {"error": str(exc)})
+
+        if path == "/api/portal/session-summaries":
+            if not isinstance(raw, dict):
+                return self._json(400, {"error": "Preuve Portail invalide."})
+            try:
+                user = redeem_portal_user(raw.get("code"), raw.get("verifier"))
+            except urllib.error.HTTPError:
+                return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Preuve Portail refusée."})
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+                return self._json(HTTPStatus.BAD_GATEWAY, {"error": "Portail LGC indisponible."})
+            sessions = teacher_owned_sessions(str(user["id"]))
+            return self._json(200, {"sessions": sessions})
 
         if path == "/api/teacher/sessions":
             if not isinstance(raw, dict):

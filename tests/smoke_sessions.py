@@ -54,6 +54,29 @@ def assert_status(actual: int, expected: int, label: str) -> None:
 def main() -> int:
     port = free_port()
     base = f"http://127.0.0.1:{port}"
+    portal_port = free_port()
+    portal_base = f"http://127.0.0.1:{portal_port}"
+    portal_process = subprocess.Popen(
+        [sys.executable, "tests/fake_portal.py"],
+        cwd=ROOT,
+        env={**os.environ, "FAKE_PORTAL_PORT": str(portal_port)},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        try:
+            status, _, _ = request(portal_base, "/healthz")
+            if status == 200:
+                break
+        except OSError:
+            pass
+        time.sleep(0.1)
+    else:
+        portal_process.terminate()
+        raise AssertionError("fake portal did not become healthy")
+
     with tempfile.TemporaryDirectory(prefix="maths-lgc-smoke-") as data_dir:
         legacy_session = "legacy_session_0001"
         legacy_admin = "legacy_admin_token_smoke_0001"
@@ -84,6 +107,7 @@ def main() -> int:
             "MATHS_DATA_DIR": data_dir,
             "MATHS_TEACHER_TOKEN": MASTER_TOKEN,
             "MATHS_PUBLIC_URL": base,
+            "MATHS_PORTAL_URL": portal_base,
         }
         process = subprocess.Popen(
             [sys.executable, "server.py"],
@@ -172,6 +196,24 @@ def main() -> int:
             )
             assert_status(status, 200, "list SSO-owned sessions")
             assert [item["class_session_id"] for item in owned["sessions"]] == [sso_session]
+
+            status, _, portal_summary = json_request(
+                base,
+                "/api/portal/session-summaries",
+                method="POST",
+                payload={"code": "summary-code", "verifier": "v" * 48},
+            )
+            assert_status(status, 200, "portal-authenticated session summary")
+            assert [item["class_session_id"] for item in portal_summary["sessions"]] == [sso_session]
+
+            status, _, replay = json_request(
+                base,
+                "/api/portal/session-summaries",
+                method="POST",
+                payload={"code": "summary-code", "verifier": "v" * 48},
+            )
+            assert_status(status, 401, "portal summary code is one-time")
+            assert "refusée" in replay["error"]
 
             status, _, owner_summary = json_request(
                 base,
@@ -534,6 +576,16 @@ def main() -> int:
                 process.wait(timeout=5)
             if process.returncode not in {0, -15}:
                 stderr = process.stderr.read() if process.stderr else ""
+                if stderr:
+                    print(stderr, file=sys.stderr)
+            portal_process.terminate()
+            try:
+                portal_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                portal_process.kill()
+                portal_process.wait(timeout=5)
+            if portal_process.returncode not in {0, -15}:
+                stderr = portal_process.stderr.read() if portal_process.stderr else ""
                 if stderr:
                     print(stderr, file=sys.stderr)
 

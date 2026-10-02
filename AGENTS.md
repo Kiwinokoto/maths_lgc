@@ -3,6 +3,8 @@
 ## Statut — 2 octobre 2026
 Ce dépôt est désormais **legacy / maintenance uniquement**. `Kiwinokoto/portail` est le dépôt et site canonique pour les nouveaux cours, nouvelles séances, outils prof et migrations de contenu. Garder `maths.lagrandeclasse.fr` en ligne pour les cohortes et séances historiques existantes ; ne pas y ajouter de nouvelles fonctionnalités sauf correctif critique nécessaire à ces usages.
 
+Les correctifs de **compatibilité historique** restent autorisés quand ils évitent de perdre l'accès à une séance existante. En particulier, les séances créées avant le SSO Portail peuvent être rattachées à l'identité Portail seulement si le nom de l'ancien professeur correspond de façon unique ; ne jamais écraser un `owner_portal_user_id` existant ni modifier l'id, le contenu ou le secret historique de la séance.
+
 La migration doit reprendre le **contenu pédagogique utile** dans Portail, pas recopier la navigation/auth/session technique de ce site.
 
 ## But historique du projet

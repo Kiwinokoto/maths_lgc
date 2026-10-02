@@ -339,7 +339,6 @@
               <button id="copy-manage-link" class="btn btn-secondary">Copier le lien de gestion</button>
             </div>
             <p class="teacher-muted"><strong>Accès enseignant :</strong> les nouvelles séances créées via le Portail LGC sont rattachées à ton compte et peuvent être retrouvées sur un autre appareil. Les anciennes séances peuvent encore utiliser leur lien de gestion secret.</p>
-            <div class="actions"><button id="open-teacher-space" class="btn btn-primary" type="button">Ouvrir mon espace professeur</button></div>
           </div>
         </div>
       </section>
@@ -1227,7 +1226,19 @@
     }
   }
 
-  async function openSession(id) {
+  function focusSessionWorkspace(tab) {
+    const targets = {
+      create:'#teacher-session-share',
+      live:'#teacher-students',
+      corrections:'#teacher-corrections',
+    };
+    const selector = targets[tab];
+    if (!selector) return;
+    const target = document.querySelector(selector);
+    if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  async function openSession(id, { focusTab = '' } = {}) {
     if (!canAccessSession(id)) {
       homeStatus.textContent = 'Cette séance n’est pas rattachée à ton compte sur cet appareil. Utilise son ancien lien de gestion si nécessaire.';
       return;
@@ -1245,7 +1256,10 @@
       sessionDashboard.classList.remove('hidden');
       renderSession(payload);
       dashboardStatus.textContent = '';
-      history.replaceState(null, '', '/teacher?session=' + encodeURIComponent(id));
+      const query = new URLSearchParams({ session:id });
+      if (HOME_TABS.includes(focusTab)) query.set('tab', focusTab);
+      history.replaceState(null, '', '/teacher?' + query.toString());
+      if (focusTab) requestAnimationFrame(() => focusSessionWorkspace(focusTab));
       scheduleSessionPolling();
     } catch (error) {
       dashboardStatus.textContent = error.message;
@@ -1444,7 +1458,6 @@
     const target = document.querySelector(id);
     if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
   };
-  document.querySelector('#open-teacher-space').addEventListener('click', () => scrollToTeacherSection('#teacher-space'));
   document.querySelector('#go-session').addEventListener('click', () => scrollToTeacherSection('#teacher-session-share'));
   document.querySelector('#go-students').addEventListener('click', () => scrollToTeacherSection('#teacher-students'));
   document.querySelector('#go-reports').addEventListener('click', () => {
@@ -1504,27 +1517,30 @@
   async function initialize() {
     const params = new URLSearchParams(location.search);
     const requestedSession = params.get('session') || '';
+    const requestedTab = requestedHomeTab();
     const fragment = new URLSearchParams(location.hash.replace(/^#/, ''));
     const fragmentToken = fragment.get('token') || '';
     if (requestedSession && fragmentToken) {
       localStorage.setItem(sessionTokenKey(requestedSession), fragmentToken);
-      history.replaceState(null, '', '/teacher?session=' + encodeURIComponent(requestedSession));
+      const clean = new URLSearchParams({ session:requestedSession });
+      if (requestedTab) clean.set('tab', requestedTab);
+      history.replaceState(null, '', '/teacher?' + clean.toString());
     }
     if (requestedSession && sessionToken(requestedSession)) {
-      await openSession(requestedSession);
+      await openSession(requestedSession, { focusTab:requestedTab });
       return;
     }
     if (masterToken()) {
       const authenticated = await validateMasterAndShowHome();
       if (authenticated && requestedSession && canAccessSession(requestedSession)) {
-        await openSession(requestedSession);
+        await openSession(requestedSession, { focusTab:requestedTab });
       }
       return;
     }
     const ssoSession = await validateMasterAndShowHome({ quiet:true });
     if (ssoSession) {
       if (requestedSession && canAccessSession(requestedSession)) {
-        await openSession(requestedSession);
+        await openSession(requestedSession, { focusTab:requestedTab });
       }
       return;
     }

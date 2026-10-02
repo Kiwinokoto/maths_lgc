@@ -48,7 +48,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(HTTPStatus.UNAUTHORIZED, {"error": "invalid code"})
         used = True
         return self._json(200, {
-            "user": {"id": 42, "display_name": "Kevin Portail", "role": "teacher"}
+            "user": {"id": 42, "display_name": "Kevin", "role": "teacher"}
         })
 
 

@@ -3,6 +3,8 @@
 > **Statut depuis le 2 octobre 2026 : legacy / maintenance.**
 >
 > Les nouvelles séances et le développement des cours PSR Maths migrent vers [`Kiwinokoto/portail`](https://github.com/Kiwinokoto/portail). Ce site reste en production pour les cohortes et liens historiques existants. Aucun nouveau développement produit ne doit être lancé ici, hors correctif critique.
+
+Les séances historiques pré-SSO restent compatibles : lorsqu'un compte Portail correspond sans ambiguïté à l'ancien libellé professeur, le serveur peut rattacher ces séances à cette identité Portail afin qu'elles réapparaissent dans le Portail. Ce rattachement ne change ni l'identifiant de séance ni ses données et n'écrase jamais un propriétaire existant.
 Support interactif de mathématiques pour les CAP Production et service en restaurations (PSR) de La Grande Classe.
 
 ## V1 — rentrée

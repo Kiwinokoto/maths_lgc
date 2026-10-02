@@ -419,6 +419,62 @@ def get_class_session(class_session_id: str) -> dict | None:
     return dict(session) if isinstance(session, dict) else None
 
 
+def _legacy_teacher_name(value: object) -> str:
+    name = " ".join(str(value or "").split()).strip().casefold()
+    for prefix in ("monsieur ", "madame ", "m. ", "mme "):
+        if name.startswith(prefix):
+            name = name[len(prefix):].strip()
+            break
+    return name
+
+
+def legacy_teacher_id_for_portal_name(display_name: object) -> str:
+    target = _legacy_teacher_name(display_name)
+    if not target:
+        return ""
+    matches = [
+        teacher_id
+        for teacher_id, label in TEACHERS.items()
+        if _legacy_teacher_name(label) == target
+    ]
+    return matches[0] if len(matches) == 1 else ""
+
+
+def adopt_legacy_sessions_for_portal_user(user: dict | None) -> int:
+    """Attach pre-SSO sessions only when the legacy teacher name is unambiguous.
+
+    This compatibility migration is intentionally narrow: it never changes
+    sessions already owned by another Portail identity, and it keeps all
+    historical session ids / management tokens intact.
+    """
+    if not isinstance(user, dict):
+        return 0
+    portal_user_id = str(user.get("portal_user_id") or user.get("id") or "").strip()
+    display_name = str(user.get("display_name") or "").strip()
+    teacher_id = legacy_teacher_id_for_portal_name(display_name)
+    if not portal_user_id or not teacher_id:
+        return 0
+
+    changed = 0
+    with SESSIONS_LOCK:
+        raw = _read_sessions_file()
+        sessions = raw.get("sessions")
+        if not isinstance(sessions, dict):
+            return 0
+        for session in sessions.values():
+            if not isinstance(session, dict):
+                continue
+            if str(session.get("owner_portal_user_id") or ""):
+                continue
+            if str(session.get("teacher_id") or "") != teacher_id:
+                continue
+            session["owner_portal_user_id"] = portal_user_id
+            changed += 1
+        if changed:
+            _write_sessions_file(raw)
+    return changed
+
+
 def teacher_owned_sessions(portal_user_id: str) -> list[dict]:
     if not portal_user_id:
         return []
@@ -1041,6 +1097,7 @@ class Handler(BaseHTTPRequestHandler):
 
             try:
                 user = redeem_portal_user(code, verifier)
+                adopt_legacy_sessions_for_portal_user(user)
                 raw_session, expires = create_teacher_browser_session(user)
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
                 return self._redirect("/teacher?sso=failed", cookies=[clear_pending])
@@ -1093,6 +1150,8 @@ class Handler(BaseHTTPRequestHandler):
             if not self._authorized():
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Accès enseignant refusé."})
             identity = self._teacher_identity()
+            if identity:
+                adopt_legacy_sessions_for_portal_user(identity)
             sessions = teacher_owned_sessions(str(identity["portal_user_id"])) if identity else []
             return self._json(200, {
                 "sessions": sessions,
@@ -1221,6 +1280,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(HTTPStatus.UNAUTHORIZED, {"error": "Preuve Portail refusée."})
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
                 return self._json(HTTPStatus.BAD_GATEWAY, {"error": "Portail LGC indisponible."})
+            adopt_legacy_sessions_for_portal_user(user)
             sessions = teacher_owned_sessions(str(user["id"]))
             return self._json(200, {"sessions": sessions})
 

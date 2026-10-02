@@ -147,7 +147,7 @@ def main() -> int:
             db_path = Path(data_dir, "maths_lgc.sqlite3")
             with sqlite3.connect(db_path) as db:
                 for raw_cookie, portal_id, display_name in [
-                    (sso_cookie, "42", "Kevin Portail"),
+                    (sso_cookie, "42", "Kevin"),
                     (other_cookie, "99", "Autre Prof"),
                 ]:
                     db.execute(
@@ -186,7 +186,7 @@ def main() -> int:
             )
             assert_status(status, 201, "create SSO-owned session")
             sso_session = sso_created["session"]["class_session_id"]
-            assert sso_created["session"]["teacher_label"] == "Kevin Portail"
+            assert sso_created["session"]["teacher_label"] == "Kevin"
             assert sso_created["session"]["teacher_id"] == "portal-42"
             assert sso_created["access_mode"] == "portal-owner"
             assert "admin_token" not in sso_created
@@ -195,7 +195,23 @@ def main() -> int:
                 base, "/api/teacher/sessions", headers=sso_headers
             )
             assert_status(status, 200, "list SSO-owned sessions")
-            assert [item["class_session_id"] for item in owned["sessions"]] == [sso_session]
+            owned_ids = [item["class_session_id"] for item in owned["sessions"]]
+            assert sso_session in owned_ids
+            assert legacy_session in owned_ids
+
+            # A pre-SSO session for the same unambiguous legacy teacher name
+            # is adopted once and becomes directly recoverable from Portail.
+            status, _, adopted_legacy = json_request(
+                base,
+                f"/api/teacher/session-summary?id={legacy_session}",
+                headers=sso_headers,
+            )
+            assert_status(status, 200, "same teacher recovers pre-SSO legacy session")
+            assert adopted_legacy["session"]["class_session_id"] == legacy_session
+
+            with Path(data_dir, "sessions.json").open(encoding="utf-8") as handle:
+                adopted_file = json.load(handle)
+            assert adopted_file["sessions"][legacy_session]["owner_portal_user_id"] == "42"
 
             status, _, portal_summary = json_request(
                 base,
@@ -204,7 +220,9 @@ def main() -> int:
                 payload={"code": "summary-code", "verifier": "v" * 48},
             )
             assert_status(status, 200, "portal-authenticated session summary")
-            assert [item["class_session_id"] for item in portal_summary["sessions"]] == [sso_session]
+            portal_ids = [item["class_session_id"] for item in portal_summary["sessions"]]
+            assert sso_session in portal_ids
+            assert legacy_session in portal_ids
 
             status, _, replay = json_request(
                 base,
@@ -229,6 +247,13 @@ def main() -> int:
                 headers={"Cookie": f"maths_teacher_session={other_cookie}"},
             )
             assert_status(status, 401, "other portal teacher cannot open owned session")
+
+            status, _, _ = json_request(
+                base,
+                f"/api/teacher/session-summary?id={legacy_session}",
+                headers={"Cookie": f"maths_teacher_session={other_cookie}"},
+            )
+            assert_status(status, 401, "other portal teacher cannot claim adopted legacy session")
 
             # Closing a session is reversible: public learner access stops,
             # history/report access stays teacher-authorized, and corrections relock.

@@ -1,6 +1,11 @@
 # AGENTS.md — maths_lgc
 
-## But du projet
+## Statut — 2 octobre 2026
+Ce dépôt est désormais **legacy / maintenance uniquement**. `Kiwinokoto/portail` est le dépôt et site canonique pour les nouveaux cours, nouvelles séances, outils prof et migrations de contenu. Garder `maths.lagrandeclasse.fr` en ligne pour les cohortes et séances historiques existantes ; ne pas y ajouter de nouvelles fonctionnalités sauf correctif critique nécessaire à ces usages.
+
+La migration doit reprendre le **contenu pédagogique utile** dans Portail, pas recopier la navigation/auth/session technique de ce site.
+
+## But historique du projet
 Support web interactif de mathématiques pour les CAP Production et service en restaurations (PSR) de La Grande Classe.
 
 ## Principes
@@ -75,15 +80,9 @@ Support web interactif de mathématiques pour les CAP Production et service en r
 - Limite V1 : les clés de réponse du diagnostic restent dans le JavaScript client. Le verrou empêche la consultation normale/casuelle, mais n'est pas une sécurité d'examen face à un élève inspectant le code ; si le site sert un jour à une évaluation notée, déplacer la validation sensible côté serveur.
 - Déploiement production actif depuis `main` via GitHub Actions ; Traefik/HTTPS vérifiés automatiquement.
 
-## Prochaines étapes
-1. Tester la séance 1 et les huit modules disponibles sur téléphone en conditions réelles.
-2. Avant la classe, vérifier depuis `/teacher` que les corrigés élèves sont bien **verrouillés** ; ne les débloquer qu'au moment choisi.
-3. Utiliser le tableau enseignant et l'historique JSON pour analyser forces, erreurs, réponses « Je ne sais pas » et écarts de rythme sans interpréter les durées isolément.
-4. Tester **Rapports V1** sur de vraies séances et ajuster les indicateurs utiles avant d’ajouter toute interprétation pédagogique supplémentaire.
-5. Ajuster la remédiation et l'ordre des modules à partir des résultats réels.
-6. Enrichir progressivement les exercices de chaque module plutôt que créer de nouveaux chapitres sans besoin identifié.
-7. Décider quand les résultats des modules post-diagnostic doivent rejoindre le suivi serveur.
-8. La récupération multi-appareil des séances liées à l’identité Portail a été validée le 1er octobre 2026. Revalider après chaque changement SSO que les deep-links Portail → Maths conservent la séance et l’espace demandé. Les anciennes séances non liées restent accessibles par leur secret de gestion.
-9. Valider sur une séance jetable le cycle **fermer → lien élève refusé → rapports toujours lisibles → réouvrir → même lien fonctionnel**.
-10. Définir une politique de conservation/suppression des données si Maths LGC devient durable ou intégré à Moodle.
-11. Décider après usage réel quels contenus migrent vers Moodle et quelles interactions restent sur Maths LGC.
+## Prochaines étapes — legacy
+1. Ne plus créer de nouveau chantier produit ici.
+2. Maintenir les liens/séances utilisés par les cohortes existantes et corriger uniquement les régressions critiques.
+3. Considérer `docs/`, le diagnostic, le défi et les huit modules comme source pédagogique de migration vers `Kiwinokoto/portail`.
+4. Ne pas étendre le SSO, le tableau enseignant ni la navigation interne : les nouvelles séances doivent vivre dans Portail.
+5. Quand plus aucune cohorte active n’en dépend, exporter ce qui doit l’être puis archiver proprement le service.

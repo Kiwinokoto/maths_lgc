@@ -13,7 +13,7 @@ permissions:
 
 env:
   DEPLOY_HOST: 173.212.214.227
-  DEPLOY_USER: root
+  DEPLOY_USER: deploy-maths
   PROJECT_DIR: /opt/maths_lgc
   PUBLIC_HOST: maths.lagrandeclasse.fr
 
@@ -65,14 +65,15 @@ jobs:
             docker ps --format "{{.Names}}" | grep -qx traefik
           '
 
-      - name: Prepare persistent directories
+      - name: Verify existing persistent directories (non-root)
         run: |
           set -euo pipefail
-          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "
-            set -euo pipefail
-            install -d -m 0755 '${PROJECT_DIR}'
-            install -d -o 65532 -g 65532 -m 0750 '${PROJECT_DIR}/data'
-          "
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "PROJECT_DIR='${PROJECT_DIR}' bash -se" <<'EOF'
+          set -euo pipefail
+          test -d "$PROJECT_DIR"
+          test -d "$PROJECT_DIR/data"
+          test "$(stat -c '%u:%g' "$PROJECT_DIR/data")" = "65532:65532"
+          EOF
 
       - name: Sync application
         run: |
